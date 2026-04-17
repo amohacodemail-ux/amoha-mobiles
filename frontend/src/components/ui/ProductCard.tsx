@@ -86,8 +86,8 @@ function ProductCard({ product }: ProductCardProps) {
     : 0;
 
   return (
-    <Link href={`/product/${product.slug}`} prefetch={true} className="group block">
-      <div className="relative flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:border-gray-200 hover:shadow-lg dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:border-white/10 dark:hover:shadow-black/20">
+    <Link href={`/product/${product.slug}`} prefetch={true} className="group flex h-full flex-col">
+      <div className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:border-gray-200 hover:shadow-lg dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:border-white/10 dark:hover:shadow-black/20">
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-gray-50 dark:bg-white/[0.03]">
           <Image

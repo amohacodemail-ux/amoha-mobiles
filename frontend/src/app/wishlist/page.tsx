@@ -75,7 +75,7 @@ export default function WishlistPage() {
       ) : items.length > 0 ? (
         <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
           {items.filter((i) => i.product).map((item) => (
-            <div key={item._id} className="glass-card-sm group overflow-hidden">
+            <div key={item._id} className="glass-card-sm group overflow-hidden flex flex-col">
               <Link href={`/product/${item.product?.slug || '#'}`} className="relative block aspect-square overflow-hidden bg-gray-100 dark:bg-white/5">
                 <Image
                   src={item.product?.thumbnail || '/images/no-product.svg'}
@@ -89,7 +89,7 @@ export default function WishlistPage() {
                   <span className="absolute left-2 top-2 badge-discount">{item.product?.discount}% OFF</span>
                 )}
               </Link>
-              <div className="p-3 sm:p-4">
+              <div className="flex flex-1 flex-col p-3 sm:p-4">
                 <p className="text-xs font-semibold uppercase text-primary-600 dark:text-primary-400">{item.product?.brand || ''}</p>
                 <Link href={`/product/${item.product?.slug || '#'}`} className="mt-1 block text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 hover:text-primary-400 transition-colors">
                   {item.product?.name || 'Product'}
@@ -100,7 +100,7 @@ export default function WishlistPage() {
                     <span className="text-xs text-gray-500 line-through">{formatPrice(item.product?.originalPrice ?? 0)}</span>
                   )}
                 </div>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-auto flex gap-2 pt-3">
                   <button
                     onClick={() => handleMoveToCart(item.product?._id || '')}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary-600 py-2.5 text-xs font-semibold text-white transition-all hover:bg-primary-500"
