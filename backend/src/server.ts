@@ -2,6 +2,7 @@ import app from './app';
 import connectDB from './config/db';
 import env from './config/env';
 import logger from './utils/logger.util';
+import { runV4Migration } from './migrations/v4-order-items-nullable-product';
 
 // Keep-alive cron for Render free tier (pings health endpoint every 14 minutes)
 const startKeepAlive = (port: number | string): void => {
@@ -30,6 +31,11 @@ const startServer = async (): Promise<void> => {
   try {
     // Connect to Supabase PostgreSQL
     await connectDB();
+
+    // Run pending schema migrations (non-blocking — server starts regardless)
+    runV4Migration().catch((err) =>
+      logger.warn('[migration-v4] unexpected error:', err),
+    );
 
     // Render provides PORT dynamically
     const PORT = process.env.PORT || env.PORT || 5001;
