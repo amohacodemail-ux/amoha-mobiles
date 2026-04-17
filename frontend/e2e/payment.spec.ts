@@ -18,48 +18,71 @@ import { test, expect, Page } from '@playwright/test';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://www.amohamobiles.com';
 const API_URL = process.env.API_URL || 'https://amoha-backend-v2.onrender.com/api';
 
-const TS = Date.now();
-const TEST_USER = {
-  name: 'Payment Test User',
-  email: `payspec_${TS}@amohatest.com`,
-  password: 'Test@1234Secure!',
-  phone: '9876543210',
-};
+// Use env-var overrides when registration is rate-limited on CI/repeated runs.
+// First run: registers the user. Subsequent runs: logs in.
+const TEST_EMAIL = process.env.PAYMENT_TEST_EMAIL || 'payment_e2e_stable@amohatest.com';
+const TEST_PASSWORD = process.env.PAYMENT_TEST_PASSWORD || 'Test@1234Secure!';
+const TEST_NAME = 'Payment E2E User';
+const TEST_PHONE = '9876543210';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function apiRegisterAndLogin(): Promise<string> {
-  // Directly call the API to get a token (avoids UI rate limits on registration page).
-  const regBody = JSON.stringify({ name: TEST_USER.name, email: TEST_USER.email, password: TEST_USER.password });
-  const regResp = await fetch(`${API_URL}/auth/register`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: regBody,
-  });
-  const regData = await regResp.json();
-  if (regData.token) return regData.token as string;
-  // If registration fails (rate limit / duplicate), fall back to login
-  const loginBody = JSON.stringify({ email: TEST_USER.email, password: TEST_USER.password });
+  // First try login (fast-path for repeated runs).
+  const loginBody = JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD });
   const loginResp = await fetch(`${API_URL}/auth/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: loginBody,
   });
   const loginData = await loginResp.json();
-  if (!loginData.token) throw new Error(`Could not authenticate: ${JSON.stringify(loginData)}`);
-  return loginData.token as string;
+  if (loginData.token) {
+    console.log('Logged in with existing test account');
+    return loginData.token as string;
+  }
+
+  // Login failed → try registration (first run only).
+  const regBody = JSON.stringify({
+    name: TEST_NAME, email: TEST_EMAIL,
+    password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD,
+    phone: TEST_PHONE,
+  });
+  const regResp = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: regBody,
+  });
+  const regData = await regResp.json();
+  if (regData.token) {
+    console.log('Registered new test account');
+    return regData.token as string;
+  }
+
+  // Registration may be rate-limited (429) — login one more time in case the user exists.
+  const retry = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: loginBody,
+  });
+  const retryData = await retry.json();
+  if (retryData.token) return retryData.token as string;
+
+  throw new Error(
+    `Cannot authenticate test user.\n` +
+    `Register: ${JSON.stringify(regData)}\n` +
+    `Login: ${JSON.stringify(retryData)}\n` +
+    `Tip: set PAYMENT_TEST_EMAIL / PAYMENT_TEST_PASSWORD env vars to an existing account.`
+  );
 }
 
 async function injectAuthToken(page: Page, token: string) {
   // Set auth state in localStorage/store so the checkout page considers the user logged in.
-  await page.evaluate((t) => {
+  await page.evaluate(([t, email, name]) => {
     // Zustand persist stores auth in localStorage under 'auth-storage'
     const stored = {
       state: {
-        user: { name: 'Payment Test User', email: 'payspec@amohatest.com', role: 'customer' },
+        user: { name, email, role: 'customer' },
         token: t,
         isAuthenticated: true,
       },
       version: 0,
     };
     localStorage.setItem('auth-storage', JSON.stringify(stored));
-  }, token);
+  }, [token, TEST_EMAIL, TEST_NAME] as [string, string, string]);
 }
 
 async function addProductToCartViaApi(token: string): Promise<void> {
