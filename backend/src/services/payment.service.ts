@@ -13,13 +13,27 @@ class PaymentService {
     if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
       throw new BadRequestError('Payment gateway is not configured. Please contact support.');
     }
+    const amountInPaise = Math.round(amount * 100);
     const options = {
-      amount: Math.round(amount * 100),
+      amount: amountInPaise,
       currency,
       receipt: receipt || `rcpt_${Date.now()}`,
     };
-    const order = await razorpay.orders.create(options);
-    return order;
+    logger.info(`Creating Razorpay order: amount=${amountInPaise} paise (₹${amount}), currency=${currency}`);
+    try {
+      const order = await razorpay.orders.create(options);
+      logger.info(`Razorpay order created: ${order.id}`);
+      return order;
+    } catch (rzpErr: any) {
+      // Razorpay SDK rejects with a plain object (API response body), not an Error instance.
+      // Extract the description from the Razorpay error response.
+      logger.error('Razorpay order creation failed:', JSON.stringify(rzpErr));
+      const description =
+        rzpErr?.error?.description ||
+        rzpErr?.message ||
+        'Payment gateway error. Please try again.';
+      throw new BadRequestError(description);
+    }
   }
 
   async verifyPayment(paymentData: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {

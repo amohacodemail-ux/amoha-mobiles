@@ -86,6 +86,16 @@ export const errorHandler = (
   // Log unexpected errors
   logger.error('Unhandled error:', err);
 
+  // Razorpay SDK and some third-party libraries reject with plain objects (not Error instances).
+  // Surface the description rather than swallowing it as a generic 500.
+  if (err && typeof err === 'object' && !(err instanceof Error)) {
+    const rzpDesc = (err as any)?.error?.description;
+    if (rzpDesc) {
+      res.status(400).json({ success: false, message: rzpDesc });
+      return;
+    }
+  }
+
   res.status(500).json({
     success: false,
     message: env.IS_PRODUCTION ? 'Internal server error' : err.message,
