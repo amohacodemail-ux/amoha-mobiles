@@ -363,7 +363,7 @@ export default function InventoryPage() {
     { key: 'product', header: 'Product', render: (a) => <span className="font-medium">{(a as any).product?.name || '-'}</span> },
     {
       key: 'alertType', header: 'Alert',
-      render: (a) => <Badge variant="outline">{a.alertType.replace(/_/g, ' ')}</Badge>,
+      render: (a) => <Badge variant="outline">{(a.alertType || '').replace(/_/g, ' ') || '-'}</Badge>,
     },
     { key: 'threshold', header: 'Threshold', render: (a) => <span className="font-mono text-sm">{a.threshold}</span> },
     {
@@ -392,7 +392,7 @@ export default function InventoryPage() {
           stock_adjusted: 'bg-purple-50 text-purple-700',
           damaged: 'bg-orange-50 text-orange-700',
         };
-        return <Badge variant="outline" className={colors[l.action] || ''}>{l.action.replace(/_/g, ' ')}</Badge>;
+        return <Badge variant="outline" className={colors[l.action] || ''}>{(l.action || '').replace(/_/g, ' ') || '-'}</Badge>;
       },
     },
     { key: 'quantityChanged', header: 'Qty', render: (l) => <span className="font-mono">{l.quantityChanged}</span> },
@@ -527,10 +527,10 @@ export default function InventoryPage() {
             <div className="py-12 text-center text-muted-foreground">No forecasts available. Click &quot;Generate Forecasts&quot; to create them.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {forecasts.map(f => (
-                <div key={f._id} className="bg-card border border-border rounded-xl p-5 space-y-3">
+              {forecasts.map((f, idx) => (
+                <div key={f._id || `forecast-${idx}` || `forecast-${idx}`} className="bg-card border border-border rounded-xl p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm">{(f as any).product?.name || '-'}</h4>
+                    <h4 className="font-medium text-sm">{(f as any).products?.name || (f as any).products?.name || (f as any).product?.name || '-'}</h4>
                     {f.reorderRecommended && <Badge variant="outline" className="bg-red-50 text-red-700">Reorder</Badge>}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">

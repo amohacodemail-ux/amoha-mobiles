@@ -42,12 +42,18 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(date: string | Date): string {
-  return format(new Date(date), 'dd MMM yyyy');
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return '-';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  return format(d, 'dd MMM yyyy');
 }
 
-export function formatDateTime(date: string | Date): string {
-  return format(new Date(date), 'dd MMM yyyy, hh:mm a');
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (!date) return '-';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  return format(d, 'dd MMM yyyy, hh:mm a');
 }
 
 export function formatNumber(num: number): string {
