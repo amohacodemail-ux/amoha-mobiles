@@ -56,11 +56,9 @@ export default function ProductsPage() {
     setDeleting(true);
     const removedId = deleteId;
     try {
-      const message = await productService.delete(removedId);
-      toast.success(message || 'Product removed from catalog');
+      await productService.delete(removedId);
+      toast.success('Product deleted successfully');
       setDeleteId(null);
-      // Optimistically remove from list — archived products (stock=0, is_active=false)
-      // would reappear on reload, so remove from state directly instead.
       setProducts((prev) => prev.filter((p) => p._id !== removedId));
       setTotalItems((prev) => Math.max(0, prev - 1));
     } catch (error: any) {

@@ -159,24 +159,15 @@ class ProductService {
       };
     }
 
+    // FK violation — order_items still reference this product.
+    // This means supabase-migration-v4.sql has not been applied yet
+    // (makes order_items.product_id nullable ON DELETE SET NULL).
+    // Once the migration runs on server startup, this branch will never be hit.
     if ((error as any).code === '23503') {
-      const { error: archiveError } = await supabase
-        .from('products')
-        .update({
-          is_active: false,
-          is_featured: false,
-          is_trending: false,
-          stock: 0,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', productId);
-
-      if (archiveError) throw archiveError;
-
-      return {
-        mode: 'archived' as const,
-        message: 'Product removed from the catalog and preserved in past orders',
-      };
+      throw new BadRequestError(
+        'Cannot delete product: it is still referenced by past orders. ' +
+        'Apply supabase-migration-v4.sql in Supabase SQL Editor and restart the server to enable hard delete for products with order history.'
+      );
     }
 
     throw error;
