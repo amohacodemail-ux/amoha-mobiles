@@ -73,7 +73,7 @@ export default function CategoriesPage() {
     if (!deleteId) return;
     setDeleting(true);
     try { await categoryService.delete(deleteId); toast.success('Category deleted'); setDeleteId(null); load(); }
-    catch { toast.error('Delete failed'); }
+    catch (err: any) { toast.error(err?.response?.data?.message ?? 'Delete failed'); }
     finally { setDeleting(false); }
   };
 

@@ -51,11 +51,15 @@ export default function ProductsPage() {
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
+    const removedId = deleteId;
     try {
-      const message = await productService.delete(deleteId);
+      const message = await productService.delete(removedId);
       toast.success(message || 'Product removed from catalog');
       setDeleteId(null);
-      await load();
+      // Optimistically remove from list — archived products (stock=0, is_active=false)
+      // would reappear on reload, so remove from state directly instead.
+      setProducts((prev) => prev.filter((p) => p._id !== removedId));
+      setTotalItems((prev) => Math.max(0, prev - 1));
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Delete failed');
     } finally {

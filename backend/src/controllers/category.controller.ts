@@ -50,8 +50,8 @@ class CategoryController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      await categoryService.delete(req.params.id);
-      sendMessage(res, 'Category deleted');
+      const result = await categoryService.delete(req.params.id);
+      sendMessage(res, result?.message || 'Category deleted');
     } catch (error) {
       next(error);
     }

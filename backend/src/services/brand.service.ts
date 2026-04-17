@@ -1,6 +1,6 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
-import { NotFoundError } from '../errors/app-error';
+import { NotFoundError, BadRequestError } from '../errors/app-error';
 
 class BrandService {
   async getBrands(query: any = {}) {
@@ -47,8 +47,20 @@ class BrandService {
   }
 
   async deleteBrand(id: string) {
+    // Check for linked products before attempting delete
+    const { count, error: countError } = await supabase
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('brand_id', id);
+    if (countError) throw countError;
+    if ((count ?? 0) > 0) {
+      throw new BadRequestError(
+        `Cannot delete brand: ${count} product${count === 1 ? ' is' : 's are'} linked to it. Reassign or delete those products first.`
+      );
+    }
     const { error } = await supabase.from('brands').delete().eq('id', id);
     if (error) throw error;
+    return { message: 'Brand deleted successfully' };
   }
 
   // Controller aliases

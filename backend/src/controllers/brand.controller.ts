@@ -50,8 +50,8 @@ class BrandController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      await brandService.delete(req.params.id);
-      sendMessage(res, 'Brand deleted');
+      const result = await brandService.delete(req.params.id);
+      sendMessage(res, result?.message || 'Brand deleted');
     } catch (error) {
       next(error);
     }

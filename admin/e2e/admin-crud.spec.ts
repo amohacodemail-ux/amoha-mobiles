@@ -127,6 +127,13 @@ test.describe.serial('Admin Panel CRUD', () => {
     await page.getByRole('button', { name: /sign in/i }).click();
     await expect(page).toHaveURL(/dashboard/, { timeout: 30000 });
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 10000 });
+
+    // Cache the token from cookies so subsequent tests don't need to call login again
+    const cookies = await page.context().cookies();
+    const tokenCookie = cookies.find(c => c.name === 'admin_token');
+    const refreshCookie = cookies.find(c => c.name === 'admin_refresh_token');
+    if (tokenCookie?.value) _cachedToken = tokenCookie.value;
+    if (refreshCookie?.value) _cachedRefreshToken = refreshCookie.value;
   });
 
   test('1.2 — Reject invalid credentials', async ({ page }) => {
@@ -328,6 +335,106 @@ test.describe.serial('Admin Panel CRUD', () => {
   });
 
   // =====================================================================
+  // 4.4 — Brand delete with linked products shows dependency error
+  // =====================================================================
+
+  test('4.4 — Brand delete blocked when products are linked', async ({ page }) => {
+    await adminLogin(page);
+    const { token } = await getApiToken();
+
+    // Get the test brand id
+    const brandsRes = await page.request.get(`${API_URL}/admin/brands`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const brandsBody = await brandsRes.json();
+    const brands = brandsBody?.data?.brands || brandsBody?.data || [];
+    const found = (Array.isArray(brands) ? brands : []).find((b: any) => b.name === testBrandName);
+    if (!found) { test.skip(); return; }
+    const brandId = found.id || found._id;
+
+    // Create a product linked to this brand so the delete is blocked
+    const catsRes = await page.request.get(`${API_URL}/admin/categories`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const catsBody = await catsRes.json();
+    const categories = catsBody?.data?.categories || catsBody?.data || [];
+    const anyCat = (Array.isArray(categories) ? categories : [])[0];
+    if (!anyCat) { test.skip(); return; }
+
+    const tempProductPayload = {
+      name: `TempProd-${TS}`,
+      slug: `tempprod-${TS}`,
+      brand: brandId,
+      category: anyCat.id || anyCat._id,
+      description: 'Temporary product to test brand delete blocking in E2E',
+      price: 999,
+      originalPrice: 1299,
+      stock: 1,
+      images: ['https://placehold.co/200x200/png'],
+      thumbnail: 'https://placehold.co/200x200/png',
+    };
+    const tempProdRes = await page.request.post(`${API_URL}/admin/products`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: tempProductPayload,
+    });
+    expect(tempProdRes.ok()).toBeTruthy();
+
+    // Attempt brand delete via API — should fail with 400
+    const delRes = await page.request.delete(`${API_URL}/admin/brands/${brandId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(delRes.status()).toBe(400);
+    const delBody = await delRes.json();
+    expect(delBody.success).toBe(false);
+    // Message may be the new pre-check message or the generic FK constraint message
+    expect(delBody.message).toMatch(/cannot.*(delete|be deleted)|linked to existing|product.*linked/i);
+
+    // Also verify the UI shows the error (not generic "Delete failed")
+    await page.goto(`${ADMIN_URL}/brands`);
+    await waitForTableLoad(page);
+    const searchInput = page.locator('input[placeholder*="Search"]');
+    if (await searchInput.isVisible()) {
+      await searchInput.fill(testBrandName);
+      await page.waitForTimeout(1000);
+    }
+    const row = page.locator('table tbody tr', { hasText: testBrandName }).first();
+    await expect(row).toBeVisible({ timeout: 10000 });
+    // Click delete button (last button in row)
+    await row.locator('button').last().click();
+    // Confirm modal appears
+    const modal = page.getByRole('dialog');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+    await modal.getByRole('button', { name: /delete/i }).last().click();
+    // Wait for toast
+    await page.waitForTimeout(3000);
+    // Toast should contain the real error, not generic "Delete failed"
+    const toast = page.locator('[data-sonner-toast], [class*="toast"], [id*="toast"]').first();
+    if (await toast.isVisible().catch(() => false)) {
+      const toastText = await toast.textContent();
+      expect(toastText).not.toBe('Delete failed');
+    }
+    // Brand should still be in the list
+    if (await searchInput.isVisible()) {
+      await searchInput.fill(testBrandName);
+      await page.waitForTimeout(1000);
+    }
+    await expect(page.getByText(testBrandName).first()).toBeVisible({ timeout: 5000 });
+
+    // Cleanup: delete the temp product so brand can be deleted later
+    const prodsSearchRes = await page.request.get(
+      `${API_URL}/admin/products?search=${encodeURIComponent(`TempProd-${TS}`)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const prodsBody = await prodsSearchRes.json();
+    const tempProd = (prodsBody?.data?.products || []).find((p: any) => p.name === `TempProd-${TS}`);
+    if (tempProd) {
+      await page.request.delete(`${API_URL}/admin/products/${tempProd.id || tempProd._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+  });
+
+  // =====================================================================
   // 5. PRODUCTS — FULL CRUD (the critical flow)
   // =====================================================================
 
@@ -497,6 +604,121 @@ test.describe.serial('Admin Panel CRUD', () => {
     const currentUrl = page.url();
     // Either redirected to /products or still on edit with success toast
     expect(currentUrl.includes('/products')).toBeTruthy();
+  });
+
+  // =====================================================================
+  // 5.6 — UI: Product delete removes item from list (no stale state)
+  // =====================================================================
+
+  test('5.6 — UI product delete removes item from list immediately', async ({ page }) => {
+    await adminLogin(page);
+    await page.goto(`${ADMIN_URL}/products`);
+    await waitForTableLoad(page);
+
+    // Search for the test product
+    const searchInput = page.locator('input[placeholder*="Search"]');
+    await searchInput.fill(testProductName);
+    await page.waitForTimeout(2000);
+
+    const row = page.locator('table tbody tr', { hasText: testProductName }).first();
+    await expect(row).toBeVisible({ timeout: 10000 });
+
+    // Click delete (last button in row)
+    await row.locator('button').last().click();
+
+    // Confirm modal
+    const modal = page.getByRole('dialog');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+    await expect(modal.getByRole('heading', { name: /delete product/i })).toBeVisible();
+    await modal.getByRole('button', { name: /delete product/i }).click();
+
+    // Wait for operation
+    await page.waitForTimeout(3000);
+
+    // CRITICAL: Product must NOT be visible — no stale state from archived product
+    const remaining = page.locator('table tbody tr', { hasText: testProductName });
+    await expect(remaining).toHaveCount(0, { timeout: 10000 });
+
+    // Also confirm via API that either it's deleted OR archived (is_active=false)
+    const { token } = await getApiToken();
+    const prodsRes = await page.request.get(
+      `${API_URL}/admin/products?search=${encodeURIComponent(testProductName)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const prodsBody = await prodsRes.json();
+    const products = prodsBody?.data?.products || [];
+    // Products returned from admin list should not include the deleted/archived one
+    // (archived products have is_active=false, admin list should not show them by default)
+    const activeMatch = products.filter(
+      (p: any) => p.name === testProductName && p.isActive !== false && p.is_active !== false
+    );
+    expect(activeMatch.length).toBe(0);
+  });
+
+  // =====================================================================
+  // 5.7 — API: Verify delete response mode (deleted vs archived)
+  // =====================================================================
+
+  test('5.7 — Category delete blocked when products are linked', async ({ page }) => {
+    await adminLogin(page);
+    const { token } = await getApiToken();
+
+    // Get test category id
+    const catsRes = await page.request.get(`${API_URL}/admin/categories`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const catsBody = await catsRes.json();
+    const categories = catsBody?.data?.categories || catsBody?.data || [];
+    const found = (Array.isArray(categories) ? categories : []).find((c: any) => c.name === testCategoryName);
+    if (!found) { test.skip(); return; }
+    const categoryId = found.id || found._id;
+
+    // Create a temp product linked to this category
+    const brandsRes = await page.request.get(`${API_URL}/admin/brands`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const brandsBody = await brandsRes.json();
+    const anyBrand = (brandsBody?.data?.brands || brandsBody?.data || [])[0];
+
+    const tempRes = await page.request.post(`${API_URL}/admin/products`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        name: `TempCatProd-${TS}`,
+        slug: `tempcatprod-${TS}`,
+        brand: anyBrand?.id || anyBrand?._id,
+        category: categoryId,
+        description: 'Temp product for category delete blocking test in E2E',
+        price: 999,
+        originalPrice: 1299,
+        stock: 1,
+        images: ['https://placehold.co/200x200/png'],
+        thumbnail: 'https://placehold.co/200x200/png',
+      },
+    });
+    expect(tempRes.ok()).toBeTruthy();
+
+    // Try to delete category — should fail with 400
+    const delRes = await page.request.delete(`${API_URL}/admin/categories/${categoryId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(delRes.status()).toBe(400);
+    const delBody = await delRes.json();
+    expect(delBody.success).toBe(false);
+    // Message may be the new pre-check message or the generic FK constraint message
+    expect(delBody.message).toMatch(/cannot.*(delete|be deleted)|linked to existing|product.*linked/i);
+
+    // Cleanup temp product
+    const prodsRes = await page.request.get(
+      `${API_URL}/admin/products?search=${encodeURIComponent(`TempCatProd-${TS}`)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const prodsBody = await prodsRes.json();
+    const tempProd = (prodsBody?.data?.products || []).find((p: any) => p.name === `TempCatProd-${TS}`);
+    if (tempProd) {
+      await page.request.delete(`${API_URL}/admin/products/${tempProd.id || tempProd._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
   });
 
   // =====================================================================

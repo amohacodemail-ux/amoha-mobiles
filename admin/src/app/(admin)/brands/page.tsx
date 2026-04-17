@@ -74,7 +74,7 @@ export default function BrandsPage() {
     if (!deleteId) return;
     setDeleting(true);
     try { await brandService.delete(deleteId); toast.success('Brand deleted'); setDeleteId(null); load(); }
-    catch { toast.error('Delete failed'); }
+    catch (err: any) { toast.error(err?.response?.data?.message ?? 'Delete failed'); }
     finally { setDeleting(false); }
   };
 

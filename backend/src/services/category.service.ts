@@ -1,6 +1,6 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
-import { NotFoundError } from '../errors/app-error';
+import { NotFoundError, BadRequestError } from '../errors/app-error';
 
 class CategoryService {
   async getCategories(query: any = {}) {
@@ -49,8 +49,20 @@ class CategoryService {
   }
 
   async deleteCategory(id: string) {
+    // Check for linked products before attempting delete
+    const { count, error: countError } = await supabase
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .eq('category_id', id);
+    if (countError) throw countError;
+    if ((count ?? 0) > 0) {
+      throw new BadRequestError(
+        `Cannot delete category: ${count} product${count === 1 ? ' is' : 's are'} linked to it. Reassign or delete those products first.`
+      );
+    }
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) throw error;
+    return { message: 'Category deleted successfully' };
   }
 
   // Controller aliases
