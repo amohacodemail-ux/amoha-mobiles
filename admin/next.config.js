@@ -2,7 +2,7 @@
 // v2
 const nextConfig = {
   experimental: {
-    optimizePackageImports: ['recharts'],
+    optimizePackageImports: ['recharts', 'lucide-react', 'date-fns'],
   },
   ...(process.env.NODE_ENV === 'production' ? {
     compiler: {

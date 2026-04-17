@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { Trash2, Eye, MailOpen, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -27,10 +28,12 @@ export default function ContactMessagesPage() {
   const [deleting, setDeleting] = useState(false);
   const [detailMessage, setDetailMessage] = useState<ContactMessage | null>(null);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await contactService.getAll({ page, limit: LIMIT, search });
+      const res = await contactService.getAll({ page, limit: LIMIT, search: debouncedSearch });
       setMessages(Array.isArray(res.messages) ? res.messages : []);
       setTotalPages(res.totalPages);
       setTotalItems(res.totalMessages);
@@ -40,10 +43,10 @@ export default function ContactMessagesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   const handleDelete = async () => {
     if (!deleteId) return;

@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { ShieldBan, ShieldCheck, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -24,19 +25,21 @@ export default function UsersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await userService.getAll({ page, limit: LIMIT, search });
+      const res = await userService.getAll({ page, limit: LIMIT, search: debouncedSearch });
       setUsers(Array.isArray(res.users) ? res.users : []);
       setTotalPages(res.totalPages);
       setTotalItems(res.totalUsers);
     } catch { toast.error('Failed to load users'); setUsers([]); }
     finally { setLoading(false); }
-  }, [page, search]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   const handleToggleBlock = async (user: User) => {
     try {

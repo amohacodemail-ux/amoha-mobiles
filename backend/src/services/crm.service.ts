@@ -17,22 +17,24 @@ class CrmService {
     const limit = parseInt(query.limit) || 20;
     const search = query.search || null;
     const segment = query.segment || null;
-    const offset = (page - 1) * limit;
 
-    // Step 1: Fetch all non-admin users with order aggregate
-    // We fetch all first so we can compute segment and filter
+    // When segment filtering is active, we must compute segments from order data,
+    // so cap the scan to a reasonable number of users (500) instead of unbounded.
+    const fetchLimit = segment && segment !== 'all' ? 500 : limit;
+    const offset = segment && segment !== 'all' ? 0 : (page - 1) * limit;
+
     let qb = supabase.from('users').select('id, name, email, phone, created_at', { count: 'exact' }).eq('role', 'user');
     if (search) qb = qb.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
-    qb = qb.order('created_at', { ascending: false });
+    qb = qb.order('created_at', { ascending: false }).range(offset, offset + fetchLimit - 1);
 
     const { data: users, error: usersError, count: usersCount } = await qb;
     if (usersError) throw usersError;
 
     const allUsers = users || [];
 
-    // Step 2: Fetch order stats for all fetched users in one query
+    // Batch fetch order stats for all fetched users in one query
     const userIds = allUsers.map((u: any) => u.id);
-    let orderStats: Record<string, { totalOrders: number; totalSpent: number; lastOrderDate: string | null }> = {};
+    const orderStats: Record<string, { totalOrders: number; totalSpent: number; lastOrderDate: string | null }> = {};
 
     if (userIds.length > 0) {
       const { data: orders } = await supabase
@@ -50,7 +52,7 @@ class CrmService {
       }
     }
 
-    // Step 3: Build customer list with segment, apply segment filter, paginate
+    // Build customer list with computed segment
     let customers = allUsers.map((u: any) => {
       const stats = orderStats[u.id] || { totalOrders: 0, totalSpent: 0, lastOrderDate: null };
       const seg = computeSegment(stats.totalSpent, stats.totalOrders);
@@ -69,18 +71,18 @@ class CrmService {
       };
     });
 
-    // Apply segment filter in-memory (since it depends on computed field)
+    // Apply segment filter if needed, then paginate
     if (segment && segment !== 'all') {
       customers = customers.filter((c: any) => c.segment === segment);
+      const total = customers.length;
+      const paginated = customers.slice((page - 1) * limit, (page - 1) * limit + limit);
+      return { customers: paginated, total, totalPages: Math.ceil(total / limit), page };
     }
 
-    const total = customers.length;
-    const paginated = customers.slice(offset, offset + limit);
-
     return {
-      customers: paginated,
-      total,
-      totalPages: Math.ceil(total / limit),
+      customers,
+      total: usersCount || allUsers.length,
+      totalPages: Math.ceil((usersCount || allUsers.length) / limit),
       page,
     };
   }

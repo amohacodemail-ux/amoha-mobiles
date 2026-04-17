@@ -175,7 +175,7 @@ export default function InventoryPage() {
     setForecastLoading(true);
     try {
       const data = await inventoryService.getForecasts();
-      setForecasts(data);
+      setForecasts(Array.isArray(data) ? data : data?.forecasts || []);
     } catch { toast.error('Failed to load forecasts'); }
     finally { setForecastLoading(false); }
   }, []);
@@ -421,7 +421,7 @@ export default function InventoryPage() {
           <StatCard title="Low Stock" value={stats.lowStock || 0} icon={AlertTriangle} color="bg-yellow-500" />
           <StatCard title="Out of Stock" value={stats.outOfStock || 0} icon={Package} color="bg-red-500" />
           <StatCard title="Pending Entries" value={stats.pendingEntries || 0} icon={Warehouse} color="bg-indigo-500" />
-          <StatCard title="Total Value" value={`â‚¹${(stats.totalStockValue || 0).toLocaleString()}`} icon={TrendingUp} color="bg-green-500" />
+          <StatCard title="Total Value" value={`₹${(typeof stats.totalStockValue === 'number' && isFinite(stats.totalStockValue) ? stats.totalStockValue : 0).toLocaleString()}`} icon={TrendingUp} color="bg-green-500" />
         </div>
       )}
 

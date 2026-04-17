@@ -302,7 +302,7 @@ class InventoryLedgerService {
     const totalAvailable = items.reduce((s, i) => s + i.available_stock, 0);
     const totalReserved = items.reduce((s, i) => s + i.reserved_stock, 0);
     const totalSold = items.reduce((s, i) => s + i.sold_stock, 0);
-    const totalStockValue = items.reduce((s, i) => s + (i.available_stock * (i.cost_price || 0)), 0);
+    const totalStockValue = items.reduce((s, i) => s + ((Number(i.available_stock) || 0) * (Number(i.cost_price) || 0)), 0);
 
     // Pending supplier entries
     const { count: pendingEntries } = await supabase

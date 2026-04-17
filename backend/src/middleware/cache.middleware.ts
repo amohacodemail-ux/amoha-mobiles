@@ -2,10 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 
 /**
  * Sets Cache-Control headers for public GET responses.
- * Short TTL (60s) so content stays fresh under high traffic
- * while still reducing DB load for 1000+ concurrent users.
+ * Default 5-minute TTL for high-traffic routes to reduce DB load.
+ * CDN/proxy gets double the TTL, stale-while-revalidate for seamless background refresh.
  */
-export const cachePublic = (maxAge = 60) => {
+export const cachePublic = (maxAge = 300) => {
   return (_req: Request, res: Response, next: NextFunction) => {
     res.set('Cache-Control', `public, max-age=${maxAge}, s-maxage=${maxAge * 2}, stale-while-revalidate=${maxAge * 4}`);
     next();

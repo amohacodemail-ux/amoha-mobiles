@@ -35,35 +35,43 @@ class CustomerManagementService {
     const { data, error, count } = await qb;
     if (error) throw error;
 
-    // Enrich with order stats
-    const customers = await Promise.all((data || []).map(async (user: any) => {
+    // Enrich with order stats in batch (avoid N+1)
+    const userIds = (data || []).map((u: any) => u.id);
+    const [ordersResult, flagsResult] = await Promise.all([
+      userIds.length > 0
+        ? supabase.from('orders').select('user_id, total, status, created_at').in('user_id', userIds)
+        : { data: [] },
+      userIds.length > 0
+        ? supabase.from('fraud_flags').select('user_id').eq('is_resolved', false).in('user_id', userIds)
+        : { data: [] },
+    ]);
+
+    // Group orders by user_id
+    const ordersByUser: Record<string, any[]> = {};
+    for (const o of ordersResult.data || []) {
+      (ordersByUser[o.user_id] ||= []).push(o);
+    }
+    // Count fraud flags by user_id
+    const flagsByUser: Record<string, number> = {};
+    for (const f of (flagsResult as any).data || []) {
+      flagsByUser[f.user_id] = (flagsByUser[f.user_id] || 0) + 1;
+    }
+
+    const customers = (data || []).map((user: any) => {
       const t = transformRow(user);
       t.segment = user.customer_segments?.[0]?.segment || 'regular';
 
-      // Fetch order stats
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('total, status, created_at')
-        .eq('user_id', user.id);
-
-      const orderList = orders || [];
+      const orderList = ordersByUser[user.id] || [];
       t.totalOrders = orderList.length;
       t.totalSpent = orderList.reduce((sum: number, o: any) => sum + parseFloat(o.total || '0'), 0);
       t.lastOrderAt = orderList.length > 0 ? orderList.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at : null;
-
-      // Fraud flag count
-      const { count: flagCount } = await supabase
-        .from('fraud_flags')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_resolved', false);
-      t.fraudFlagCount = flagCount || 0;
+      t.fraudFlagCount = flagsByUser[user.id] || 0;
 
       delete t.customerSegments;
       delete t.password;
       delete t.refreshToken;
       return t;
-    }));
+    });
 
     return {
       customers,
@@ -84,43 +92,25 @@ class CustomerManagementService {
 
     const customer = transformRow(user);
 
-    // Segment
-    const { data: segData } = await supabase.from('customer_segments').select('segment').eq('user_id', userId).maybeSingle();
-    customer.segment = segData?.segment || 'regular';
+    // Fetch all related data in parallel
+    const [segData, tagsData, notesData, flagsData, ordersData, addressesData] = await Promise.all([
+      supabase.from('customer_segments').select('segment').eq('user_id', userId).maybeSingle(),
+      supabase.from('customer_tags').select('*').eq('user_id', userId),
+      supabase.from('customer_notes').select('*, admin:admin_id(id, name)').eq('user_id', userId)
+        .order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
+      supabase.from('fraud_flags').select('*').eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase.from('orders').select('id, order_number, total, status, payment_status, created_at')
+        .eq('user_id', userId).order('created_at', { ascending: false }).limit(50),
+      supabase.from('addresses').select('*').eq('user_id', userId),
+    ]);
 
-    // Tags
-    const { data: tags } = await supabase.from('customer_tags').select('*').eq('user_id', userId);
-    customer.tags = (tags || []).map(transformRow);
-
-    // Notes
-    const { data: notes } = await supabase
-      .from('customer_notes')
-      .select('*, admin:admin_id(id, name)')
-      .eq('user_id', userId)
-      .order('is_pinned', { ascending: false })
-      .order('created_at', { ascending: false });
-    customer.notes = (notes || []).map(transformRow);
-
-    // Fraud flags
-    const { data: flags } = await supabase
-      .from('fraud_flags')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    customer.fraudFlags = (flags || []).map(transformRow);
-
-    // Order history
-    const { data: orders } = await supabase
-      .from('orders')
-      .select('id, order_number, total, status, payment_status, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-    customer.orders = (orders || []).map(transformRow);
-
-    // Addresses
-    const { data: addresses } = await supabase.from('addresses').select('*').eq('user_id', userId);
-    customer.addresses = (addresses || []).map(transformRow);
+    customer.segment = segData.data?.segment || 'regular';
+    customer.tags = (tagsData.data || []).map(transformRow);
+    customer.notes = (notesData.data || []).map(transformRow);
+    customer.fraudFlags = (flagsData.data || []).map(transformRow);
+    customer.orders = (ordersData.data || []).map(transformRow);
+    customer.addresses = (addressesData.data || []).map(transformRow);
 
     // Aggregate stats
     const orderList = customer.orders || [];
@@ -165,48 +155,82 @@ class CustomerManagementService {
       .select('id')
       .eq('role', 'user');
 
-    let updated = 0;
-    for (const user of (users || [])) {
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('total, created_at')
-        .eq('user_id', user.id)
-        .neq('status', 'cancelled');
+    const allUsers = users || [];
+    if (allUsers.length === 0) return { totalProcessed: 0, updated: 0 };
 
-      const orderList = orders || [];
-      const totalSpent = orderList.reduce((sum: number, o: any) => sum + parseFloat(o.total || '0'), 0);
-      const orderCount = orderList.length;
-      const lastOrder = orderList.length > 0
-        ? new Date(orderList.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at)
-        : null;
+    const userIds = allUsers.map(u => u.id);
+
+    // Batch fetch all non-cancelled orders for all users
+    const { data: allOrders } = await supabase
+      .from('orders')
+      .select('user_id, total, created_at')
+      .in('user_id', userIds)
+      .neq('status', 'cancelled');
+
+    // Aggregate per user
+    const ordersByUser: Record<string, { totalSpent: number; orderCount: number; lastOrder: Date | null }> = {};
+    for (const o of allOrders || []) {
+      if (!ordersByUser[o.user_id]) ordersByUser[o.user_id] = { totalSpent: 0, orderCount: 0, lastOrder: null };
+      const entry = ordersByUser[o.user_id];
+      entry.totalSpent += Number(o.total) || 0;
+      entry.orderCount++;
+      const oDate = new Date(o.created_at);
+      if (!entry.lastOrder || oDate > entry.lastOrder) entry.lastOrder = oDate;
+    }
+
+    // Batch fetch existing segments
+    const { data: existingSegments } = await supabase
+      .from('customer_segments')
+      .select('id, user_id, segment')
+      .in('user_id', userIds);
+
+    const segmentMap: Record<string, { id: string; segment: string }> = {};
+    for (const s of existingSegments || []) {
+      segmentMap[s.user_id] = { id: s.id, segment: s.segment };
+    }
+
+    let updated = 0;
+    const inserts: any[] = [];
+    const updates: { id: string; segment: string }[] = [];
+
+    for (const user of allUsers) {
+      const stats = ordersByUser[user.id] || { totalSpent: 0, orderCount: 0, lastOrder: null };
+      const daysSinceLastOrder = stats.lastOrder ? Math.floor((Date.now() - stats.lastOrder.getTime()) / (1000 * 60 * 60 * 24)) : 999;
 
       let segment = 'regular';
-      const daysSinceLastOrder = lastOrder ? Math.floor((Date.now() - lastOrder.getTime()) / (1000 * 60 * 60 * 24)) : 999;
-
-      if (totalSpent >= 50000 || orderCount >= 10) {
+      if (stats.totalSpent >= 50000 || stats.orderCount >= 10) {
         segment = 'vip';
-      } else if (orderCount >= 5) {
+      } else if (stats.orderCount >= 5) {
         segment = 'frequent';
-      } else if (daysSinceLastOrder > 90 && orderCount > 0) {
+      } else if (daysSinceLastOrder > 90 && stats.orderCount > 0) {
         segment = 'inactive';
-      } else if (orderCount === 0) {
+      } else if (stats.orderCount === 0) {
         segment = 'new';
       }
 
-      // Upsert
-      const { data: existing } = await supabase.from('customer_segments').select('id, segment').eq('user_id', user.id).maybeSingle();
+      const existing = segmentMap[user.id];
       if (existing) {
         if (existing.segment !== segment) {
-          await supabase.from('customer_segments').update({ segment, assigned_at: new Date().toISOString() }).eq('user_id', user.id);
+          updates.push({ id: existing.id, segment });
           updated++;
         }
       } else {
-        await supabase.from('customer_segments').insert({ user_id: user.id, segment });
+        inserts.push({ user_id: user.id, segment });
         updated++;
       }
     }
 
-    return { totalProcessed: (users || []).length, updated };
+    // Batch insert new segments
+    if (inserts.length > 0) {
+      await supabase.from('customer_segments').insert(inserts);
+    }
+
+    // Batch update changed segments
+    for (const u of updates) {
+      await supabase.from('customer_segments').update({ segment: u.segment, assigned_at: new Date().toISOString() }).eq('id', u.id);
+    }
+
+    return { totalProcessed: allUsers.length, updated };
   }
 
   // ==================== Tags ====================
@@ -304,36 +328,54 @@ class CustomerManagementService {
   }
 
   async runFraudDetection() {
-    // Rules-based fraud detection
+    // Rules-based fraud detection (batched)
     const flagsCreated: any[] = [];
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Rule 1: Users with high return rate
     const { data: users } = await supabase.from('users').select('id').eq('role', 'user');
-    for (const user of (users || [])) {
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('status')
-        .eq('user_id', user.id);
+    const allUsers = users || [];
+    if (allUsers.length === 0) return { flagsCreated: 0, flags: [] };
 
-      const totalOrders = (orders || []).length;
-      const returnedOrders = (orders || []).filter((o: any) => o.status === 'returned').length;
+    const userIds = allUsers.map(u => u.id);
 
-      if (totalOrders >= 3 && returnedOrders / totalOrders > 0.5) {
-        // Check if flag already exists
-        const { data: existing } = await supabase
-          .from('fraud_flags')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('flag_type', 'excessive_returns')
-          .eq('is_resolved', false)
-          .maybeSingle();
+    // Batch fetch ALL orders for all users
+    const { data: allOrders } = await supabase
+      .from('orders')
+      .select('user_id, status, created_at')
+      .in('user_id', userIds);
 
-        if (!existing) {
+    // Batch fetch existing unresolved fraud flags
+    const { data: existingFlags } = await supabase
+      .from('fraud_flags')
+      .select('user_id, flag_type')
+      .in('user_id', userIds)
+      .eq('is_resolved', false);
+
+    const existingFlagSet = new Set(
+      (existingFlags || []).map(f => `${f.user_id}:${f.flag_type}`)
+    );
+
+    // Aggregate orders per user
+    const ordersByUser: Record<string, { total: number; returned: number; recentCancelled: number }> = {};
+    for (const o of allOrders || []) {
+      if (!ordersByUser[o.user_id]) ordersByUser[o.user_id] = { total: 0, returned: 0, recentCancelled: 0 };
+      const entry = ordersByUser[o.user_id];
+      entry.total++;
+      if (o.status === 'returned') entry.returned++;
+      if (o.status === 'cancelled' && o.created_at >= thirtyDaysAgo) entry.recentCancelled++;
+    }
+
+    for (const user of allUsers) {
+      const stats = ordersByUser[user.id] || { total: 0, returned: 0, recentCancelled: 0 };
+
+      // Rule 1: High return rate
+      if (stats.total >= 3 && stats.returned / stats.total > 0.5) {
+        if (!existingFlagSet.has(`${user.id}:excessive_returns`)) {
           const flag = await this.createFraudFlag({
             userId: user.id,
             flagType: 'excessive_returns',
-            severity: returnedOrders / totalOrders > 0.7 ? 'high' : 'medium',
-            description: `Return rate: ${Math.round((returnedOrders / totalOrders) * 100)}% (${returnedOrders}/${totalOrders} orders)`,
+            severity: stats.returned / stats.total > 0.7 ? 'high' : 'medium',
+            description: `Return rate: ${Math.round((stats.returned / stats.total) * 100)}% (${stats.returned}/${stats.total} orders)`,
             autoDetected: true,
           });
           flagsCreated.push(flag);
@@ -341,28 +383,13 @@ class CustomerManagementService {
       }
 
       // Rule 2: Multiple cancelled orders recently
-      const { data: recentOrders } = await supabase
-        .from('orders')
-        .select('status, created_at')
-        .eq('user_id', user.id)
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
-
-      const recentCancelled = (recentOrders || []).filter((o: any) => o.status === 'cancelled').length;
-      if (recentCancelled >= 5) {
-        const { data: existing } = await supabase
-          .from('fraud_flags')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('flag_type', 'suspicious_activity')
-          .eq('is_resolved', false)
-          .maybeSingle();
-
-        if (!existing) {
+      if (stats.recentCancelled >= 5) {
+        if (!existingFlagSet.has(`${user.id}:suspicious_activity`)) {
           const flag = await this.createFraudFlag({
             userId: user.id,
             flagType: 'suspicious_activity',
-            severity: recentCancelled >= 8 ? 'critical' : 'high',
-            description: `${recentCancelled} cancelled orders in the last 30 days`,
+            severity: stats.recentCancelled >= 8 ? 'critical' : 'high',
+            description: `${stats.recentCancelled} cancelled orders in the last 30 days`,
             autoDetected: true,
           });
           flagsCreated.push(flag);

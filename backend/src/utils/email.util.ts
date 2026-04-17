@@ -8,8 +8,23 @@ interface EmailOptions {
   html: string;
 }
 
+// Cache SMTP settings for 5 minutes to avoid DB round-trip on every email
+let smtpCache: { settings: any; from: string; ts: number } | null = null;
+const SMTP_CACHE_TTL = 5 * 60 * 1000;
+
+async function getSmtpSettings() {
+  if (smtpCache && Date.now() - smtpCache.ts < SMTP_CACHE_TTL) return smtpCache;
+  const { data: settings } = await supabase
+    .from('site_settings')
+    .select('smtp_host, smtp_port, smtp_user, smtp_pass, smtp_from, contact_email')
+    .limit(1).maybeSingle();
+  const from = settings?.smtp_from || settings?.contact_email || 'noreply@amoha.com';
+  smtpCache = { settings, from, ts: Date.now() };
+  return smtpCache;
+}
+
 async function getTransporter() {
-  const { data: settings } = await supabase.from('site_settings').select('smtp_host, smtp_port, smtp_user, smtp_pass').limit(1).maybeSingle();
+  const { settings } = await getSmtpSettings();
   if (!settings?.smtp_host || !settings?.smtp_user || !settings?.smtp_pass) {
     return null;
   }
@@ -22,8 +37,8 @@ async function getTransporter() {
 }
 
 async function getFromAddress(): Promise<string> {
-  const { data: settings } = await supabase.from('site_settings').select('smtp_from, contact_email').limit(1).maybeSingle();
-  return settings?.smtp_from || settings?.contact_email || 'noreply@amoha.com';
+  const { from } = await getSmtpSettings();
+  return from;
 }
 
 function wrapHtml(body: string, siteName = 'AMOHA Mobiles'): string {

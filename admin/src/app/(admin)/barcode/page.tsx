@@ -1,5 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -83,10 +84,12 @@ export default function BarcodePage() {
     posService.getTodayStats().then(setTodayStats).catch(() => {});
   }, []);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const loadProducts = useCallback(async () => {
     setLoadingTable(true);
     try {
-      const res = await productService.getAll({ page, limit: LIMIT, search: search || undefined });
+      const res = await productService.getAll({ page, limit: LIMIT, search: debouncedSearch || undefined });
       setProducts(Array.isArray(res.products) ? res.products : []);
       setTotalPages(res.totalPages);
       setTotalItems(res.totalProducts);
@@ -96,10 +99,10 @@ export default function BarcodePage() {
     } finally {
       setLoadingTable(false);
     }
-  }, [page, search]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   const loadPosOrders = useCallback(async () => {
     setPosOrdersLoading(true);

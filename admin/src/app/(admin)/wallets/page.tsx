@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { Wallet, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -29,19 +30,21 @@ export default function WalletsPage() {
   const [creditDescription, setCreditDescription] = useState('');
   const [crediting, setCrediting] = useState(false);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await walletService.getAll({ page, limit: LIMIT, search });
+      const res = await walletService.getAll({ page, limit: LIMIT, search: debouncedSearch });
       setWallets(Array.isArray(res.items) ? res.items : []);
       setTotalPages(res.totalPages);
       setTotalItems(res.totalItems);
     } catch { toast.error('Failed to load wallets'); setWallets([]); }
     finally { setLoading(false); }
-  }, [page, search]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   const handleCredit = async () => {
     if (!creditUserId || !creditAmount || !creditDescription) {

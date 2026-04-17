@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import Link from 'next/link';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -29,19 +30,21 @@ export default function ProductsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await productService.getAll({ page, limit: LIMIT, search, sortBy, sortOrder });
+      const res = await productService.getAll({ page, limit: LIMIT, search: debouncedSearch, sortBy, sortOrder });
       setProducts(Array.isArray(res.products) ? res.products : []);
       setTotalPages(res.totalPages ?? 1);
       setTotalItems(res.totalProducts ?? 0);
     } catch { toast.error('Failed to load products'); setProducts([]); }
     finally { setLoading(false); }
-  }, [page, search, sortBy, sortOrder]);
+  }, [page, debouncedSearch, sortBy, sortOrder]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   const handleSort = (key: string) => {
     if (sortBy === key) setSortOrder((o) => o === 'asc' ? 'desc' : 'asc');

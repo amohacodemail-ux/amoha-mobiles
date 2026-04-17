@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { Eye, RotateCcw, Package, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -76,12 +77,14 @@ export default function ReturnsPage() {
   const [statusMessage, setStatusMessage] = useState('');
   const [updating, setUpdating] = useState(false);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [res, statsRes] = await Promise.all([
         returnService.getAll({
-          page, limit: LIMIT, search,
+          page, limit: LIMIT, search: debouncedSearch,
           ...(statusFilter !== 'all' && { status: statusFilter }),
         }),
         returnService.getStats(),
@@ -92,10 +95,10 @@ export default function ReturnsPage() {
       setStats(statsRes);
     } catch { toast.error('Failed to load returns'); setReturns([]); }
     finally { setLoading(false); }
-  }, [page, search, statusFilter]);
+  }, [page, debouncedSearch, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search, statusFilter]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
 
   const handleStatusUpdate = async () => {
     if (!selectedReturn || !newStatus) return;

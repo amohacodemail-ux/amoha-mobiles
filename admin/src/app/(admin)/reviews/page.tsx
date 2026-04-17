@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { Trash2, Star, CheckCircle, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -26,11 +27,13 @@ export default function ReviewsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await reviewService.getAll({
-        page, limit: LIMIT, search,
+        page, limit: LIMIT, search: debouncedSearch,
         ...(statusFilter && statusFilter !== 'all' && { status: statusFilter }),
       });
       setReviews(Array.isArray(res.reviews) ? res.reviews : []);
@@ -38,10 +41,10 @@ export default function ReviewsPage() {
       setTotalItems(res.totalReviews);
     } catch { toast.error('Failed to load reviews'); setReviews([]); }
     finally { setLoading(false); }
-  }, [page, search, statusFilter]);
+  }, [page, debouncedSearch, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search, statusFilter]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
 
   const handleApprove = async (id: string, approve: boolean) => {
     try {

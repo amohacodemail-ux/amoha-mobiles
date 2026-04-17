@@ -164,18 +164,18 @@ class InventoryService {
   }
 
   async bulkUpdateStock(items: any[], userId: string) {
-    const results = [];
-    for (const item of items) {
-      try {
+    // Run stock updates in parallel for better throughput
+    const results = await Promise.allSettled(
+      items.map(async (item) => {
         const result = await this.updateStock(
           item.productId, item.quantity, item.type || 'adjustment', userId, item.notes, item.warehouseId
         );
-        results.push({ ...result, success: true });
-      } catch (err: any) {
-        results.push({ productId: item.productId, success: false, error: err.message });
-      }
-    }
-    return results;
+        return { ...result, success: true };
+      }),
+    );
+    return results.map((r, i) =>
+      r.status === 'fulfilled' ? r.value : { productId: items[i].productId, success: false, error: (r.reason as Error).message },
+    );
   }
 
   // ==================== Movement Logs ====================
@@ -288,35 +288,50 @@ class InventoryService {
       .select('id, name, stock')
       .eq('is_active', true);
 
-    const forecasts = [];
+    const allProducts = products || [];
+    if (allProducts.length === 0) return { totalProducts: 0, reorderRecommended: 0, forecasts: [] };
+
     const today = new Date().toISOString().slice(0, 10);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    for (const product of (products || [])) {
-      // Get last 30 days of order items for this product
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: orderItems } = await supabase
-        .from('order_items')
-        .select('quantity, orders!inner(created_at, status)')
-        .eq('product_id', product.id)
-        .gte('orders.created_at', thirtyDaysAgo)
-        .neq('orders.status', 'cancelled');
+    // Batch fetch ALL order items from last 30 days (non-cancelled) in one query
+    const productIds = allProducts.map(p => p.id);
+    const { data: allOrderItems } = await supabase
+      .from('order_items')
+      .select('product_id, quantity, orders!inner(created_at, status)')
+      .in('product_id', productIds)
+      .gte('orders.created_at', thirtyDaysAgo)
+      .neq('orders.status', 'cancelled');
 
-      const totalSold = (orderItems || []).reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+    // Aggregate sold quantities per product
+    const soldByProduct: Record<string, number> = {};
+    for (const item of allOrderItems || []) {
+      soldByProduct[item.product_id] = (soldByProduct[item.product_id] || 0) + (item.quantity || 0);
+    }
+
+    // Batch fetch existing forecasts for today
+    const { data: existingForecasts } = await supabase
+      .from('inventory_forecasts')
+      .select('id, product_id')
+      .eq('forecast_date', today)
+      .in('product_id', productIds);
+    const existingMap: Record<string, string> = {};
+    for (const ef of existingForecasts || []) {
+      existingMap[ef.product_id] = ef.id;
+    }
+
+    const forecasts = [];
+    const upsertRows: any[] = [];
+
+    for (const product of allProducts) {
+      const totalSold = soldByProduct[product.id] || 0;
       const avgDailySales = Math.round((totalSold / 30) * 100) / 100;
       const daysOfStockRemaining = avgDailySales > 0 ? Math.floor(product.stock / avgDailySales) : 999;
       const reorderRecommended = daysOfStockRemaining <= 14;
       const recommendedQty = reorderRecommended ? Math.max(0, Math.ceil(avgDailySales * 30) - product.stock) : 0;
       const predictedDemand = Math.ceil(avgDailySales * 30);
 
-      // Upsert forecast
-      const { data: existing } = await supabase
-        .from('inventory_forecasts')
-        .select('id')
-        .eq('product_id', product.id)
-        .eq('forecast_date', today)
-        .maybeSingle();
-
-      const forecastData = {
+      const forecastData: any = {
         product_id: product.id,
         forecast_date: today,
         predicted_demand: predictedDemand,
@@ -326,19 +341,25 @@ class InventoryService {
         recommended_qty: recommendedQty,
       };
 
-      if (existing) {
-        await supabase.from('inventory_forecasts').update(forecastData).eq('id', existing.id);
-      } else {
-        await supabase.from('inventory_forecasts').insert(forecastData);
+      // If existing forecast, include its id for upsert
+      if (existingMap[product.id]) {
+        forecastData.id = existingMap[product.id];
       }
+
+      upsertRows.push(forecastData);
 
       if (reorderRecommended) {
         forecasts.push({ productId: product.id, name: product.name, ...forecastData });
       }
     }
 
+    // Batch upsert all forecasts at once
+    if (upsertRows.length > 0) {
+      await supabase.from('inventory_forecasts').upsert(upsertRows, { onConflict: 'id' });
+    }
+
     return {
-      totalProducts: (products || []).length,
+      totalProducts: allProducts.length,
       reorderRecommended: forecasts.length,
       forecasts,
     };
@@ -398,7 +419,11 @@ class InventoryService {
       .from('products')
       .select('stock, selling_price')
       .eq('is_active', true);
-    const totalStockValue = (valueData || []).reduce((sum: number, p: any) => sum + ((p.stock || 0) * parseFloat(p.selling_price || '0')), 0);
+    const totalStockValue = (valueData || []).reduce((sum: number, p: any) => {
+      const stock = Number(p.stock) || 0;
+      const price = Number(p.selling_price) || 0;
+      return sum + (stock * price);
+    }, 0);
 
     return {
       totalProducts,

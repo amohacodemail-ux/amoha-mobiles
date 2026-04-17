@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import {
   Users, UserCheck, UserX, AlertTriangle, Shield, Search,
@@ -93,15 +94,17 @@ export default function CustomersPage() {
     } catch { /* ignore */ }
   };
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const loadCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await customerMgmtService.getAll({ page, limit: LIMIT, search, segment: segmentFilter });
+      const result = await customerMgmtService.getAll({ page, limit: LIMIT, search: debouncedSearch, segment: segmentFilter });
       setCustomers(result.customers || []);
       setTotalPages(result.totalPages || 1);
     } catch { toast.error('Failed to load customers'); }
     finally { setLoading(false); }
-  }, [page, search, segmentFilter]);
+  }, [page, debouncedSearch, segmentFilter]);
 
   const loadFraudFlags = useCallback(async () => {
     setFraudLoading(true);

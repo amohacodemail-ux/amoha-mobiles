@@ -1,5 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Crown, Users, TrendingUp, UserCheck, UserPlus } from 'lucide-react';
@@ -32,13 +33,15 @@ export default function CrmPage() {
   const [segment, setSegment] = useState('all');
   const [segments, setSegments] = useState<SegmentSummary[]>([]);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await crmService.getCustomers({
         page,
         limit: LIMIT,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         segment: segment !== 'all' ? segment : undefined,
       });
       setCustomers(Array.isArray(res.customers) ? res.customers : []);
@@ -50,10 +53,10 @@ export default function CrmPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, segment]);
+  }, [page, debouncedSearch, segment]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search, segment]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, segment]);
 
   useEffect(() => {
     crmService.getSegmentSummary().then(setSegments).catch(() => {});

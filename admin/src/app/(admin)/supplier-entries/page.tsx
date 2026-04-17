@@ -123,6 +123,8 @@ export default function SupplierEntriesPage() {
     if (!convertEntry) return;
     if (!convertForm.name.trim()) return toast.error('Product name is required');
     if (!convertForm.sellingPrice) return toast.error('Selling price is required');
+    const parsedPrice = parseFloat(convertForm.sellingPrice);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) return toast.error('Selling price must be a valid positive number');
     setConverting(true);
     try {
       await supplierEntryService.convertEntry(convertEntry._id, {

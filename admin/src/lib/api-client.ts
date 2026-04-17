@@ -74,7 +74,19 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean; _retryCount?: number }) | undefined;
+
+    // Retry transient network/server errors once for safe methods
+    if (originalRequest && !originalRequest._retry) {
+      const retryCount = originalRequest._retryCount || 0;
+      const status = error.response?.status;
+      const isTransient = !status || status === 502 || status === 503 || status === 504;
+      if (isTransient && retryCount < 1 && originalRequest.method && ['get', 'head', 'options'].includes(originalRequest.method)) {
+        originalRequest._retryCount = retryCount + 1;
+        await new Promise((r) => setTimeout(r, 800));
+        return apiClient(originalRequest);
+      }
+    }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !shouldSkipRefresh(originalRequest.url)) {
       originalRequest._retry = true;

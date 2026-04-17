@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { Activity, Filter } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -53,11 +54,13 @@ export default function ActivityLogsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await activityLogService.getAll({
-        page, limit: LIMIT, search,
+        page, limit: LIMIT, search: debouncedSearch,
         ...(resourceFilter !== 'all' && { resource: resourceFilter }),
         ...(actionFilter !== 'all' && { action: actionFilter }),
       });
@@ -66,10 +69,10 @@ export default function ActivityLogsPage() {
       setTotalItems(res.totalItems);
     } catch { toast.error('Failed to load activity logs'); setLogs([]); }
     finally { setLoading(false); }
-  }, [page, search, resourceFilter, actionFilter]);
+  }, [page, debouncedSearch, resourceFilter, actionFilter]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search, resourceFilter, actionFilter]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, resourceFilter, actionFilter]);
 
   const columns: Column<ActivityLog>[] = [
     {

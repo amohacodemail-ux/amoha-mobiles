@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { Trash2, Eye, Clock, CheckCircle, Wrench, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -55,11 +56,13 @@ export default function ServiceRequestsPage() {
   const [adminNotes, setAdminNotes] = useState('');
   const [finalPrice, setFinalPrice] = useState('');
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [res, statsRes] = await Promise.all([
-        serviceRequestService.getAll({ page, limit: LIMIT, search, status: (statusFilter && statusFilter !== 'all') ? statusFilter : undefined }),
+        serviceRequestService.getAll({ page, limit: LIMIT, search: debouncedSearch, status: (statusFilter && statusFilter !== 'all') ? statusFilter : undefined }),
         serviceRequestService.getStats(),
       ]);
       setRequests(Array.isArray(res.requests) ? res.requests : []);
@@ -72,10 +75,10 @@ export default function ServiceRequestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, debouncedSearch, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search, statusFilter]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
 
   const handleDelete = async () => {
     if (!deleteId) return;

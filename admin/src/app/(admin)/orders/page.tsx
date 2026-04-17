@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Eye } from 'lucide-react';
@@ -41,11 +42,13 @@ export default function OrdersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await orderService.getAll({
-        page, limit: LIMIT, search,
+        page, limit: LIMIT, search: debouncedSearch,
         ...(statusFilter && statusFilter !== 'all' && { orderStatus: statusFilter }),
         ...(sourceFilter && sourceFilter !== 'all' && { source: sourceFilter }),
       });
@@ -54,10 +57,10 @@ export default function OrdersPage() {
       setTotalItems(res.totalOrders);
     } catch { toast.error('Failed to load orders'); setOrders([]); }
     finally { setLoading(false); }
-  }, [page, search, statusFilter, sourceFilter]);
+  }, [page, debouncedSearch, statusFilter, sourceFilter]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search, statusFilter, sourceFilter]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, sourceFilter]);
 
   const columns: Column<Order>[] = [
     {

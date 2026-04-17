@@ -399,9 +399,9 @@ class SupplierService {
             .from('products')
             .select('stock')
             .eq('id', item.productId)
-            .single();
+            .maybeSingle();
           if (product) {
-            const newStock = (product.stock || 0) + receivedQty;
+            const newStock = (Number(product.stock) || 0) + Number(receivedQty);
             await supabase.from('products').update({ stock: newStock }).eq('id', item.productId);
           }
         }

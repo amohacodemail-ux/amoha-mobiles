@@ -52,10 +52,13 @@ class ReviewService {
     const { data: review } = await supabase.from('reviews').select('product_id').eq('id', reviewId).maybeSingle();
     const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
     if (error) throw error;
-    // Recalculate product ratings
+    // Recalculate product ratings using SQL aggregate (avoids fetching all reviews)
     if (review) {
-      const { data: reviews } = await supabase.from('reviews').select('rating').eq('product_id', review.product_id);
-      const ratings = reviews || [];
+      const { data: agg } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('product_id', review.product_id);
+      const ratings = agg || [];
       const count = ratings.length;
       const avg = count > 0 ? ratings.reduce((s: number, r: any) => s + r.rating, 0) / count : 0;
       await supabase.from('products').update({ average_rating: Math.round(avg * 10) / 10, review_count: count }).eq('id', review.product_id);

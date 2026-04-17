@@ -21,25 +21,26 @@ class BarcodeService {
   }
 
   async bulkGenerateBarcodes(productIds: string[]) {
-    const results = [];
-    for (const id of productIds) {
-      const barcode = generateBarcode();
-      const { data, error } = await supabase
-        .from('products').update({ barcode }).eq('id', id).select('id, name, sku, barcode').single();
-      if (data) results.push(transformRow(data));
-    }
-    return results;
+    // Generate all barcodes in parallel
+    const results = await Promise.all(
+      productIds.map(async (id) => {
+        const barcode = generateBarcode();
+        const { data } = await supabase
+          .from('products').update({ barcode }).eq('id', id).select('id, name, sku, barcode').single();
+        return data ? transformRow(data) : null;
+      }),
+    );
+    return results.filter(Boolean);
   }
 
   // Controller aliases
   async lookupByBarcode(barcode: string) { return this.getProductByBarcode(barcode); }
   async regenerateBarcode(productId: string) { return this.generateBarcode(productId); }
   async bulkLookup(barcodes: string[]) {
-    const results = [];
-    for (const bc of barcodes) {
-      try { results.push(await this.getProductByBarcode(bc)); } catch { /* skip not found */ }
-    }
-    return results;
+    if (barcodes.length === 0) return [];
+    // Batch lookup in a single query
+    const { data } = await supabase.from('products').select('*').in('barcode', barcodes);
+    return (data || []).map(transformRow);
   }
   async getStockByBarcode(barcode: string) {
     const product = await this.getProductByBarcode(barcode);

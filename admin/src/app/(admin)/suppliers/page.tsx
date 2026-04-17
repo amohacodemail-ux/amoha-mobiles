@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import {
   Plus, Pencil, Trash2, Star, TrendingUp, Package, DollarSign,
@@ -74,15 +75,17 @@ export default function SuppliersPage() {
     } catch { /* ignore */ }
   };
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const loadSuppliers = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await supplierService.getAll({ page, limit: LIMIT, search, status: statusFilter });
+      const result = await supplierService.getAll({ page, limit: LIMIT, search: debouncedSearch, status: statusFilter });
       setSuppliers(result.suppliers || []);
       setTotalPages(result.totalPages || 1);
     } catch { toast.error('Failed to load suppliers'); }
     finally { setLoading(false); }
-  }, [page, search, statusFilter]);
+  }, [page, debouncedSearch, statusFilter]);
 
   const loadPurchaseOrders = useCallback(async () => {
     setPoLoading(true);

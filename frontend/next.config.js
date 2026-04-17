@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    optimizePackageImports: ['recharts', 'react-icons', 'lucide-react', 'date-fns', 'swiper'],
+  },
   webpack: (config, { dev }) => {
     if (dev) {
       config.cache = false;

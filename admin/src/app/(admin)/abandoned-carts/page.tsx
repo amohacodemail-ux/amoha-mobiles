@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { Download, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import Image from 'next/image';
@@ -22,19 +23,21 @@ export default function AbandonedCartsPage() {
   const [downloading, setDownloading] = useState(false);
   const [expandedCart, setExpandedCart] = useState<string | null>(null);
 
+  const debouncedSearch = useDebouncedValue(search, 350);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await cartAbandonmentService.getAll({ page, limit: LIMIT, search });
+      const res = await cartAbandonmentService.getAll({ page, limit: LIMIT, search: debouncedSearch });
       setCarts(Array.isArray(res.items) ? res.items : []);
       setTotalPages(res.totalPages);
       setTotalItems(res.totalItems);
     } catch { toast.error('Failed to load abandoned carts'); setCarts([]); }
     finally { setLoading(false); }
-  }, [page, search]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {

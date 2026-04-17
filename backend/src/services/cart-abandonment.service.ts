@@ -34,10 +34,17 @@ class CartAbandonmentService {
     const { data: carts, error, count } = await qb;
     if (error) throw error;
 
-    // Get user info for each cart
-    const result = [];
-    for (const cart of carts || []) {
-      const { data: user } = await supabase.from('users').select('id, name, email, phone').eq('id', cart.user_id).maybeSingle();
+    // Batch fetch user info for all carts (avoid N+1)
+    const cartUserIds = [...new Set((carts || []).map((c: any) => c.user_id).filter(Boolean))];
+    const userMap: Record<string, any> = {};
+    if (cartUserIds.length > 0) {
+      const { data: users } = await supabase.from('users').select('id, name, email, phone').in('id', cartUserIds);
+      for (const u of users || []) {
+        userMap[u.id] = transformRow(u);
+      }
+    }
+
+    const result = (carts || []).map((cart: any) => {
       const t = transformRow(cart);
       t.items = (cart.cart_items || []).map((i: any) => {
         const ti = transformRow(i);
@@ -46,12 +53,12 @@ class CartAbandonmentService {
         return ti;
       });
       delete t.cartItems;
-      t.user = user ? transformRow(user) : null;
+      t.user = userMap[cart.user_id] || null;
       // Normalize field names for admin panel compatibility
       t.itemCount = t.totalItems ?? (cart.cart_items || []).length;
       t.totalAmount = t.total ?? 0;
-      result.push(t);
-    }
+      return t;
+    });
 
     return {
       items: result,

@@ -8,6 +8,19 @@ function normalizeCartItems(items: CartItem[]): CartItem[] {
   return items.filter((item) => !!item.product && typeof item.product === 'object');
 }
 
+function applyCartResponse(cart: Cart) {
+  return {
+    items: normalizeCartItems(cart.items),
+    savedForLater: normalizeCartItems(cart.savedForLater || []),
+    totalItems: cart.totalItems,
+    subtotal: cart.subtotal,
+    discount: cart.discount,
+    deliveryCharge: cart.deliveryCharge,
+    totalAmount: cart.totalAmount,
+    coupon: cart.coupon || null,
+  };
+}
+
 interface CartState {
   items: CartItem[];
   savedForLater: CartItem[];
@@ -34,7 +47,7 @@ interface CartState {
 
 export const useCartStore = create<CartState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
       savedForLater: [],
       totalItems: 0,
@@ -47,53 +60,29 @@ export const useCartStore = create<CartState>()(
       error: null,
 
       setCartFromResponse: (cart: Cart) => {
-        set({
-          items: normalizeCartItems(cart.items),
-          savedForLater: normalizeCartItems(cart.savedForLater || []),
-          totalItems: cart.totalItems,
-          subtotal: cart.subtotal,
-          discount: cart.discount,
-          deliveryCharge: cart.deliveryCharge,
-          totalAmount: cart.totalAmount,
-          coupon: cart.coupon || null,
-        });
+        set(applyCartResponse(cart));
       },
 
       fetchCart: async () => {
         set({ isLoading: true, error: null });
         try {
           const cart = await cartService.get();
-          set({
-            items: normalizeCartItems(cart.items),
-            savedForLater: normalizeCartItems(cart.savedForLater || []),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
-            coupon: cart.coupon || null,
-            isLoading: false,
-          });
+          set({ ...applyCartResponse(cart), isLoading: false });
         } catch {
           set({ isLoading: false });
         }
       },
 
       addToCart: async (productId, quantity = 1, color) => {
-        set({ isLoading: true, error: null });
+        // Optimistic: bump count immediately
+        const prev = { totalItems: get().totalItems };
+        set({ totalItems: prev.totalItems + quantity, error: null });
         try {
           const cart = await cartService.addItem(productId, quantity, color);
-          set({
-            items: normalizeCartItems(cart.items),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
-            coupon: cart.coupon || null,
-            isLoading: false,
-          });
+          set({ ...applyCartResponse(cart), isLoading: false });
         } catch (err: unknown) {
+          // Rollback
+          set({ totalItems: prev.totalItems });
           const message =
             (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
             'Failed to add to cart.';
@@ -103,20 +92,18 @@ export const useCartStore = create<CartState>()(
       },
 
       updateQuantity: async (itemId, quantity) => {
-        set({ isLoading: true, error: null });
+        // Optimistic: update the item quantity in-place
+        const prevItems = get().items;
+        const optimisticItems = prevItems.map((item) =>
+          item._id === itemId ? { ...item, quantity } : item,
+        );
+        set({ items: optimisticItems, error: null });
         try {
           const cart = await cartService.updateQuantity(itemId, quantity);
-          set({
-            items: normalizeCartItems(cart.items),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
-            coupon: cart.coupon || null,
-            isLoading: false,
-          });
+          set({ ...applyCartResponse(cart), isLoading: false });
         } catch (err: unknown) {
+          // Rollback
+          set({ items: prevItems });
           const message =
             (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
             'Failed to update quantity.';
@@ -126,21 +113,21 @@ export const useCartStore = create<CartState>()(
       },
 
       removeFromCart: async (itemId) => {
-        set({ isLoading: true, error: null });
+        // Optimistic: remove item immediately
+        const prevItems = get().items;
+        const prevTotal = get().totalItems;
+        const removed = prevItems.find((i) => i._id === itemId);
+        set({
+          items: prevItems.filter((i) => i._id !== itemId),
+          totalItems: Math.max(0, prevTotal - (removed?.quantity || 1)),
+          error: null,
+        });
         try {
           const cart = await cartService.removeItem(itemId);
-          set({
-            items: normalizeCartItems(cart.items),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
-            coupon: cart.coupon || null,
-            isLoading: false,
-          });
+          set({ ...applyCartResponse(cart), isLoading: false });
         } catch {
-          set({ isLoading: false });
+          // Rollback
+          set({ items: prevItems, totalItems: prevTotal, isLoading: false });
         }
       },
 
@@ -168,16 +155,7 @@ export const useCartStore = create<CartState>()(
         try {
           await cartService.applyCoupon(code);
           const cart = await cartService.get();
-          set({
-            items: normalizeCartItems(cart.items),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
-            coupon: cart.coupon || null,
-            isLoading: false,
-          });
+          set({ ...applyCartResponse(cart), isLoading: false });
         } catch (err: unknown) {
           const message =
             (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -191,16 +169,7 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true });
         try {
           const cart = await cartService.removeCoupon();
-          set({
-            items: normalizeCartItems(cart.items),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
-            coupon: null,
-            isLoading: false,
-          });
+          set({ ...applyCartResponse(cart), isLoading: false });
         } catch {
           set({ isLoading: false });
         }
@@ -210,14 +179,7 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true });
         try {
           const cart = await cartService.saveForLater(itemId);
-          set({
-            items: normalizeCartItems(cart.items),
-            savedForLater: normalizeCartItems(cart.savedForLater || []),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
+          set({ ...applyCartResponse(cart),
             coupon: cart.coupon || null,
             isLoading: false,
           });
@@ -230,17 +192,7 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true });
         try {
           const cart = await cartService.moveToCart(itemId);
-          set({
-            items: normalizeCartItems(cart.items),
-            savedForLater: normalizeCartItems(cart.savedForLater || []),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
-            coupon: cart.coupon || null,
-            isLoading: false,
-          });
+          set({ ...applyCartResponse(cart), isLoading: false });
         } catch {
           set({ isLoading: false });
         }
@@ -250,17 +202,7 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true });
         try {
           const cart = await cartService.removeSavedItem(itemId);
-          set({
-            items: normalizeCartItems(cart.items),
-            savedForLater: normalizeCartItems(cart.savedForLater || []),
-            totalItems: cart.totalItems,
-            subtotal: cart.subtotal,
-            discount: cart.discount,
-            deliveryCharge: cart.deliveryCharge,
-            totalAmount: cart.totalAmount,
-            coupon: cart.coupon || null,
-            isLoading: false,
-          });
+          set({ ...applyCartResponse(cart), isLoading: false });
         } catch {
           set({ isLoading: false });
         }

@@ -126,8 +126,8 @@ class SupplierEntryService {
     const sku = `SKU-${Date.now().toString(36).toUpperCase()}`;
     const barcode = `BAR-${Date.now().toString(36).toUpperCase()}`;
 
-    const sellingPrice = productData.sellingPrice || productData.price || entry.price || 0;
-    const originalPrice = productData.originalPrice || sellingPrice;
+    const sellingPrice = Number(productData.sellingPrice || productData.price || entry.price) || 0;
+    const originalPrice = Number(productData.originalPrice) || sellingPrice;
     const thumbnail = productData.thumbnail || productData.images?.[0] || 'https://placehold.co/400x400?text=Product';
 
     const productInsert: any = {
@@ -155,14 +155,21 @@ class SupplierEntryService {
     }
 
     // 3. Auto-create inventory record via the ledger service
-    await inventoryLedger.createFromConversion(
-      product.id,
-      entry.supplier_id,
-      entryId,
-      entry.quantity,
-      entry.price || 0,
-      adminId,
-    );
+    try {
+      await inventoryLedger.createFromConversion(
+        product.id,
+        entry.supplier_id,
+        entryId,
+        entry.quantity,
+        entry.price || 0,
+        adminId,
+      );
+    } catch (invErr) {
+      // Rollback: delete the product that was just created
+      await supabase.from('products').delete().eq('id', product.id);
+      logger.error('Supplier entry conversion failed during inventory creation:', invErr);
+      throw invErr;
+    }
 
     // 4. Mark the entry as converted
     await supabase.from(SUPPLIER_ENTRIES_TABLE).update({
