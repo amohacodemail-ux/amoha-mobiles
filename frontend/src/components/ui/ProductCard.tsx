@@ -162,35 +162,35 @@ function ProductCard({ product }: ProductCardProps) {
             {product.brand}
           </p>
 
-          <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100 sm:text-[15px]">
+          <h3 className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100 sm:text-[15px]">
             {product.name}
           </h3>
 
-          {/* Specs */}
-          {(product.specifications?.ram || product.specifications?.storage) && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {product.specifications?.ram && (
-                <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">
-                  {product.specifications.ram}
-                </span>
-              )}
-              {product.specifications?.storage && (
-                <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">
-                  {product.specifications.storage}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Rating */}
-          {reviewCount > 0 && (
-            <div className="mt-2 flex items-center gap-1.5">
-              <span className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-bold text-white ${getRatingColor(ratingValue)}`}>
-                {ratingValue.toFixed(1)} <HiStar className="h-2.5 w-2.5" />
+          {/* Specs — always reserve one row of height */}
+          <div className="mt-2 flex min-h-[1.5rem] flex-wrap gap-1">
+            {product.specifications?.ram && (
+              <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">
+                {product.specifications.ram}
               </span>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">({reviewCount})</span>
-            </div>
-          )}
+            )}
+            {product.specifications?.storage && (
+              <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">
+                {product.specifications.storage}
+              </span>
+            )}
+          </div>
+
+          {/* Rating — always reserve one row of height */}
+          <div className="mt-2 flex min-h-[1.5rem] items-center gap-1.5">
+            {reviewCount > 0 && (
+              <>
+                <span className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-bold text-white ${getRatingColor(ratingValue)}`}>
+                  {ratingValue.toFixed(1)} <HiStar className="h-2.5 w-2.5" />
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">({reviewCount})</span>
+              </>
+            )}
+          </div>
 
           <div className="mt-auto pt-3">
             <div className="flex items-baseline gap-2">
