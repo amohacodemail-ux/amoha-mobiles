@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Script from 'next/script';
@@ -24,7 +24,17 @@ export default function CheckoutPage() {
 
   const [selectedPayment, setSelectedPayment] = useState('razorpay');
   const [isPlacing, setIsPlacing] = useState(false);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(
+    typeof window !== 'undefined' && typeof (window as any).Razorpay !== 'undefined',
+  );
+
+  // Sync razorpayLoaded if the script was already in the DOM on mount
+  // (happens when navigating back to checkout without a full page reload)
+  useEffect(() => {
+    if (typeof (window as any).Razorpay !== 'undefined') {
+      setRazorpayLoaded(true);
+    }
+  }, []);
   const [address, setAddress] = useState<Omit<Address, '_id' | 'isDefault'>>({
     fullName: user?.name || '',
     phone: user?.phone || '',
@@ -83,13 +93,52 @@ export default function CheckoutPage() {
     return true;
   };
 
-  const handleRazorpayPayment = async () => {
-    if (!razorpayLoaded || typeof window.Razorpay === 'undefined') {
-      toast.error('Payment gateway is loading. Please try again in a moment.');
-      return;
-    }
+  /** Load Razorpay checkout.js on-demand and resolve once window.Razorpay is available. */
+  const ensureRazorpayLoaded = (): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
+      if (typeof (window as any).Razorpay !== 'undefined') {
+        resolve();
+        return;
+      }
+      const TIMEOUT_MS = 12_000;
+      const timer = setTimeout(
+        () => reject(new Error('Payment gateway timed out. Check your internet connection and try again.')),
+        TIMEOUT_MS,
+      );
+      const onLoad = () => { clearTimeout(timer); setRazorpayLoaded(true); resolve(); };
+      const onError = () => { clearTimeout(timer); reject(new Error('Payment gateway failed to load. Please refresh the page.')); };
+      // If the <Script> tag is already in the DOM (strategy=afterInteractive added it), listen on it
+      const existing = document.querySelector<HTMLScriptElement>('script[src*="razorpay"]');
+      if (existing) {
+        existing.addEventListener('load', onLoad, { once: true });
+        existing.addEventListener('error', onError, { once: true });
+      } else {
+        // Fallback: inject the script ourselves
+        const s = document.createElement('script');
+        s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        s.async = true;
+        s.addEventListener('load', onLoad, { once: true });
+        s.addEventListener('error', onError, { once: true });
+        document.head.appendChild(s);
+      }
+    });
 
+  const handleRazorpayPayment = async () => {
     setIsPlacing(true);
+
+    // Ensure the SDK is ready — load it on-demand if needed instead of hard-failing
+    if (typeof (window as any).Razorpay === 'undefined') {
+      const loadingToast = toast.loading('Loading payment gateway…');
+      try {
+        await ensureRazorpayLoaded();
+        toast.dismiss(loadingToast);
+      } catch (loadErr: any) {
+        toast.dismiss(loadingToast);
+        toast.error(loadErr?.message || 'Payment gateway failed to load. Please refresh.');
+        setIsPlacing(false);
+        return;
+      }
+    }
     try {
       const rzpOrder = await orderService.createRazorpayOrder(coupon?.code);
 
@@ -190,11 +239,13 @@ export default function CheckoutPage() {
 
   return (
     <>
-      {/* Load Razorpay SDK */}
+      {/* Load Razorpay SDK — afterInteractive fires as soon as Next.js hydrates the page,
+           much faster than lazyOnload which waits for all assets to finish loading. */}
       <Script
         src="https://checkout.razorpay.com/v1/checkout.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         onLoad={() => setRazorpayLoaded(true)}
+        onError={() => toast.error('Payment gateway script failed to load. Please refresh.')}
       />
 
       <div className="page-container py-6 sm:py-10">
