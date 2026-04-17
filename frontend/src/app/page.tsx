@@ -283,7 +283,7 @@ export default function HomePage() {
             {/* Mobile/tablet: horizontal scroll | Desktop: responsive grid */}
             <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x-mandatory pb-1 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:overflow-visible lg:pb-0">
               {featuredProducts.slice(0, 8).map((product) => (
-                <div key={product._id} className="w-[42vw] min-w-[150px] max-w-[190px] flex-shrink-0 snap-start sm:w-[190px] lg:w-auto">
+                <div key={product._id} className="w-[42vw] min-w-[150px] max-w-[190px] flex-shrink-0 snap-start sm:w-[190px] lg:w-auto flex flex-col">
                   <ProductCard product={product} />
                 </div>
               ))}
@@ -324,7 +324,7 @@ export default function HomePage() {
             {/* Mobile/tablet: horizontal scroll | Desktop: responsive grid */}
             <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x-mandatory pb-1 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:overflow-visible lg:pb-0">
               {trendingProducts.slice(0, 8).map((product) => (
-                <div key={product._id} className="w-[42vw] min-w-[150px] max-w-[190px] flex-shrink-0 snap-start sm:w-[190px] lg:w-auto">
+                <div key={product._id} className="w-[42vw] min-w-[150px] max-w-[190px] flex-shrink-0 snap-start sm:w-[190px] lg:w-auto flex flex-col">
                   <ProductCard product={product} />
                 </div>
               ))}
