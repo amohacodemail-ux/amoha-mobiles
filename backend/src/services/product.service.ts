@@ -143,13 +143,35 @@ class ProductService {
     if (fetchError) throw fetchError;
     if (!product) throw new NotFoundError('Product');
 
-    for (const table of ['cart_items', 'wishlist_items', 'product_views'] as const) {
-      const { error: cleanupError } = await supabase.from(table).delete().eq('product_id', productId);
-      if (cleanupError) {
-        logger.warn(`Failed cleaning ${table} before deleting product ${productId}: ${cleanupError.message}`);
-      }
+    // ---------- clean up ALL FK references before hard-deleting ----------
+
+    // 1. Transient / non-historical tables → DELETE rows
+    for (const table of [
+      'cart_items',
+      'wishlist_items',
+      'product_views',
+    ] as const) {
+      const { error: e } = await supabase.from(table).delete().eq('product_id', productId);
+      if (e) logger.warn(`[delete-product] cleanup ${table}: ${e.message}`);
     }
 
+    // 2. Historical / audit tables → SET NULL to preserve records
+    //    (These columns are made nullable by supabase-migration-v4.sql.
+    //     If the migration hasn't been applied the update will silently
+    //     fail, and the final DELETE will surface the FK error below.)
+    for (const { table, column } of [
+      { table: 'order_items', column: 'product_id' },
+      { table: 'return_request_items', column: 'product_id' },
+      { table: 'purchase_order_items', column: 'product_id' },
+      { table: 'inventory_movements', column: 'product_id' },
+      { table: 'inventory_audit_log', column: 'product_id' },
+      { table: 'supplier_entries', column: 'converted_product_id' },
+    ] as const) {
+      const { error: e } = await supabase.from(table).update({ [column]: null }).eq(column, productId);
+      if (e) logger.warn(`[delete-product] nullify ${table}.${column}: ${e.message}`);
+    }
+
+    // ---------- hard-delete the product ----------
     const { error } = await supabase.from('products').delete().eq('id', productId);
 
     if (!error) {
@@ -159,14 +181,10 @@ class ProductService {
       };
     }
 
-    // FK violation — order_items still reference this product.
-    // This means supabase-migration-v4.sql has not been applied yet
-    // (makes order_items.product_id nullable ON DELETE SET NULL).
-    // Once the migration runs on server startup, this branch will never be hit.
     if ((error as any).code === '23503') {
       throw new BadRequestError(
-        'Cannot delete product: it is still referenced by past orders. ' +
-        'Apply supabase-migration-v4.sql in Supabase SQL Editor and restart the server to enable hard delete for products with order history.'
+        'Cannot delete product: a foreign key constraint is still blocking deletion. ' +
+        'Apply supabase-migration-v4.sql in Supabase SQL Editor to enable hard delete.'
       );
     }
 
