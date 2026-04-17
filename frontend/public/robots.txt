@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /profile/
+Disallow: /checkout/
+Disallow: /order-success/
+
+Sitemap: https://amohamobiles.com/sitemap.xml

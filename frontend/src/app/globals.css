@@ -1,0 +1,251 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ===== LIGHT MODE (default) ===== */
+  :root {
+    --background: #ffffff;
+    --foreground: #111827;
+    --surface: #f9fafb;
+    --surface-50: #f3f4f6;
+    --surface-100: #e5e7eb;
+    --surface-200: #d1d5db;
+    --surface-300: #9ca3af;
+    --surface-400: #6b7280;
+    --card-bg: #ffffff;
+    --card-border: rgba(0, 0, 0, 0.08);
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-hover-border: rgba(0, 0, 0, 0.15);
+    --glass-hover-bg: rgba(0, 0, 0, 0.04);
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
+    --text-faint: #9ca3af;
+    --header-bg: rgba(255, 255, 255, 0.95);
+    --scrollbar-track: #f3f4f6;
+    --scrollbar-thumb: rgba(99, 102, 241, 0.3);
+    --scrollbar-thumb-hover: rgba(99, 102, 241, 0.5);
+    --selection-bg: rgba(99, 102, 241, 0.2);
+    --selection-color: #111827;
+    --shadow-glass: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(0, 0, 0, 0.02);
+    --shadow-glass-sm: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.02);
+    color-scheme: light;
+  }
+
+  /* ===== DARK MODE ===== */
+  .dark {
+    --background: #0a0a0f;
+    --foreground: #e2e8f0;
+    --surface: #0d0d14;
+    --surface-50: #12121c;
+    --surface-100: #1a1a2e;
+    --surface-200: #232340;
+    --surface-300: #2d2d52;
+    --surface-400: #3d3d6b;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-hover-border: rgba(255, 255, 255, 0.2);
+    --glass-hover-bg: rgba(255, 255, 255, 0.1);
+    --text-primary: #ffffff;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-faint: #475569;
+    --header-bg: rgba(30, 27, 75, 0.95);
+    --scrollbar-track: #0d0d14;
+    --scrollbar-thumb: rgba(99, 102, 241, 0.4);
+    --scrollbar-thumb-hover: rgba(99, 102, 241, 0.6);
+    --selection-bg: rgba(99, 102, 241, 0.4);
+    --selection-color: #fff;
+    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    --shadow-glass-sm: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' 32;
+    letter-spacing: -0.011em;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: var(--selection-bg);
+    color: var(--selection-color);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .snap-x-mandatory {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .snap-start {
+    scroll-snap-align: start;
+  }
+  .scrollbar-thin-desktop {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  .scrollbar-thin-desktop::-webkit-scrollbar {
+    height: 4px;
+  }
+  .scrollbar-thin-desktop::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin-desktop::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .glass-card {
+    @apply relative overflow-hidden rounded-2xl backdrop-blur-xl;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-glass);
+  }
+
+  .glass-card-sm {
+    @apply relative overflow-hidden rounded-xl backdrop-blur-lg;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-glass-sm);
+  }
+
+  .glass-button {
+    @apply relative overflow-hidden rounded-xl px-6 py-3 font-medium backdrop-blur-lg transition-all duration-300;
+    color: var(--text-primary);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+  }
+  .glass-button:hover {
+    background: var(--glass-hover-bg);
+    border-color: var(--glass-hover-border);
+  }
+
+  .glass-input {
+    @apply w-full rounded-xl px-4 py-3 text-base backdrop-blur-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
+    color: var(--text-primary);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+  }
+  .glass-input::placeholder {
+    color: var(--text-muted);
+  }
+  .glass-input:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    background: var(--glass-hover-bg);
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-600 via-primary-500 to-accent-500 bg-clip-text text-transparent;
+  }
+  .dark .gradient-text {
+    @apply bg-gradient-to-r from-primary-400 via-primary-300 to-accent-400 bg-clip-text text-transparent;
+  }
+
+  .badge-discount {
+    @apply inline-flex items-center rounded-lg bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700;
+  }
+  .dark .badge-discount {
+    @apply bg-emerald-500/20 text-emerald-400;
+  }
+
+  .badge-stock {
+    @apply inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold;
+  }
+
+  /* Mobile bottom nav spacer */
+  .mobile-nav-spacer {
+    @apply h-16 sm:hidden;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-grid {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(0 0 0 / 0.04)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+  }
+  .dark .bg-grid {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255 255 255 / 0.03)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+  }
+
+  .bg-dot-pattern {
+    background-image: radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .dark .bg-dot-pattern {
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+/* Disable hover-scale animations on touch-only devices to prevent tap-zoom */
+@media (hover: none) {
+  .group:hover .group-hover\:scale-105,
+  .group:hover .group-hover\:scale-110,
+  .hover\:scale-105:hover {
+    transform: none !important;
+  }
+}
+
+/* Make hover-revealed product card actions always visible on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  /* Wishlist & compare buttons on product cards */
+  .group .group-hover\:opacity-100 {
+    opacity: 1 !important;
+  }
+  /* Add to cart slide-up button on product cards */
+  .group .group-hover\:translate-y-0 {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+  }
+}
