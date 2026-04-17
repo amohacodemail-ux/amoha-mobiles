@@ -413,6 +413,12 @@ test.describe.serial('Admin Panel CRUD', () => {
       const toastText = await toast.textContent();
       expect(toastText).not.toBe('Delete failed');
     }
+    // Close the modal (it stays open on error) so background content becomes accessible
+    const modalAfter = page.getByRole('dialog');
+    if (await modalAfter.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await modalAfter.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
     // Brand should still be in the list
     if (await searchInput.isVisible()) {
       await searchInput.fill(testBrandName);
