@@ -3,6 +3,14 @@ import { persist } from 'zustand/middleware';
 import type { CartItem, Cart, AppliedCoupon } from '@/types';
 import { cartService } from '@/services/cart.service';
 
+// Serialization queue: ensures only one cart mutation runs at a time
+let _cartMutationQueue: Promise<void> = Promise.resolve();
+function enqueueCartMutation<T>(fn: () => Promise<T>): Promise<T> {
+  const result = _cartMutationQueue.then(fn, fn); // run fn even if previous rejected
+  _cartMutationQueue = result.then(() => {}, () => {}); // swallow so chain never breaks
+  return result;
+}
+
 function normalizeCartItems(items: CartItem[]): CartItem[] {
   if (!Array.isArray(items)) return [];
   return items.filter((item) => !!item.product && typeof item.product === 'object');
@@ -74,61 +82,67 @@ export const useCartStore = create<CartState>()(
       },
 
       addToCart: async (productId, quantity = 1, color) => {
-        // Optimistic: bump count immediately
-        const prev = { totalItems: get().totalItems };
-        set({ totalItems: prev.totalItems + quantity, error: null });
-        try {
-          const cart = await cartService.addItem(productId, quantity, color);
-          set({ ...applyCartResponse(cart), isLoading: false });
-        } catch (err: unknown) {
-          // Rollback
-          set({ totalItems: prev.totalItems });
-          const message =
-            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-            'Failed to add to cart.';
-          set({ error: message, isLoading: false });
-          throw new Error(message);
-        }
+        return enqueueCartMutation(async () => {
+          // Optimistic: bump count immediately
+          const prev = { totalItems: get().totalItems };
+          set({ totalItems: prev.totalItems + quantity, error: null });
+          try {
+            const cart = await cartService.addItem(productId, quantity, color);
+            set({ ...applyCartResponse(cart), isLoading: false });
+          } catch (err: unknown) {
+            // Rollback
+            set({ totalItems: prev.totalItems });
+            const message =
+              (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+              'Failed to add to cart.';
+            set({ error: message, isLoading: false });
+            throw new Error(message);
+          }
+        });
       },
 
       updateQuantity: async (itemId, quantity) => {
-        // Optimistic: update the item quantity in-place
-        const prevItems = get().items;
-        const optimisticItems = prevItems.map((item) =>
-          item._id === itemId ? { ...item, quantity } : item,
-        );
-        set({ items: optimisticItems, error: null });
-        try {
-          const cart = await cartService.updateQuantity(itemId, quantity);
-          set({ ...applyCartResponse(cart), isLoading: false });
-        } catch (err: unknown) {
-          // Rollback
-          set({ items: prevItems });
-          const message =
-            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-            'Failed to update quantity.';
-          set({ error: message, isLoading: false });
-          throw new Error(message);
-        }
+        return enqueueCartMutation(async () => {
+          // Optimistic: update the item quantity in-place
+          const prevItems = get().items;
+          const optimisticItems = prevItems.map((item) =>
+            item._id === itemId ? { ...item, quantity } : item,
+          );
+          set({ items: optimisticItems, error: null });
+          try {
+            const cart = await cartService.updateQuantity(itemId, quantity);
+            set({ ...applyCartResponse(cart), isLoading: false });
+          } catch (err: unknown) {
+            // Rollback
+            set({ items: prevItems });
+            const message =
+              (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+              'Failed to update quantity.';
+            set({ error: message, isLoading: false });
+            throw new Error(message);
+          }
+        });
       },
 
       removeFromCart: async (itemId) => {
-        // Optimistic: remove item immediately
-        const prevItems = get().items;
-        const prevTotal = get().totalItems;
-        const removed = prevItems.find((i) => i._id === itemId);
-        set({
-          items: prevItems.filter((i) => i._id !== itemId),
-          totalItems: Math.max(0, prevTotal - (removed?.quantity || 1)),
-          error: null,
+        return enqueueCartMutation(async () => {
+          // Optimistic: remove item immediately
+          const prevItems = get().items;
+          const prevTotal = get().totalItems;
+          const removed = prevItems.find((i) => i._id === itemId);
+          set({
+            items: prevItems.filter((i) => i._id !== itemId),
+            totalItems: Math.max(0, prevTotal - (removed?.quantity || 1)),
+            error: null,
+          });
+          try {
+            const cart = await cartService.removeItem(itemId);
+            set({ ...applyCartResponse(cart), isLoading: false });
+          } catch {
+            // Rollback
+            set({ items: prevItems, totalItems: prevTotal, isLoading: false });
+          }
         });
-        try {
-          const cart = await cartService.removeItem(itemId);
-          set({ ...applyCartResponse(cart), isLoading: false });
-        } catch {
-          // Rollback
-          set({ items: prevItems, totalItems: prevTotal, isLoading: false });
-        }
       },
 
       clearCart: async () => {

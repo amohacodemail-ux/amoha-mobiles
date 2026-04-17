@@ -15,8 +15,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:3001,https://amohamobiles.com,https://www.amohamobiles.com,https://admin.amohamobiles.com'),
   BCRYPT_SALT_ROUNDS: z.string().default('12'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
-  RAZORPAY_KEY_ID: z.string().default(''),
-  RAZORPAY_KEY_SECRET: z.string().default(''),
+  RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required for payment processing'),
+  RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required for payment processing'),
 });
 
 const parsed = envSchema.safeParse(process.env);

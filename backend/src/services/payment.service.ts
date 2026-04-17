@@ -10,6 +10,9 @@ const razorpay = new Razorpay({ key_id: env.RAZORPAY_KEY_ID, key_secret: env.RAZ
 
 class PaymentService {
   async createRazorpayOrder(amount: number, currency: string = 'INR', receipt?: string) {
+    if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) {
+      throw new BadRequestError('Payment gateway is not configured. Please contact support.');
+    }
     const options = {
       amount: Math.round(amount * 100),
       currency,

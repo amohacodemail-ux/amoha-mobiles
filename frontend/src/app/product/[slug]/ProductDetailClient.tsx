@@ -214,8 +214,13 @@ export default function ProductDetailClient() {
       setReviewRating(5);
       const updated = await productService.getBySlug(slug);
       setProduct(updated);
-    } catch {
-      toast.error('Failed to submit review. You may have already reviewed this product.');
+    } catch (err: unknown) {
+      const errMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (errMsg && errMsg.toLowerCase().includes('already reviewed')) {
+        toast.error('You have already reviewed this product.');
+      } else {
+        toast.error(errMsg || 'Failed to submit review. Please try again.');
+      }
     } finally {
       setIsSubmittingReview(false);
     }

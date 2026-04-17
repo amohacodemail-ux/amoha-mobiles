@@ -201,7 +201,7 @@ export default function CheckoutPage() {
         <h1 className="mb-8 text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">Checkout</h1>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
+          <div className="min-w-0 space-y-6 lg:col-span-2">
             {/* Shipping Address */}
             <div className="glass-card p-4 sm:p-5 md:p-6">
               <div className="flex items-center gap-2 mb-4 sm:mb-5">
@@ -211,35 +211,35 @@ export default function CheckoutPage() {
               <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Full Name *</label>
-                  <input name="fullName" value={address.fullName} onChange={handleInputChange} className="glass-input py-2.5 text-sm" placeholder="John Doe" />
+                  <input name="fullName" value={address.fullName} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="John Doe" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Phone *</label>
-                  <input name="phone" value={address.phone} onChange={handleInputChange} className="glass-input py-2.5 text-sm" placeholder="+91 98765 43210" />
+                  <input name="phone" value={address.phone} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="+91 98765 43210" />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Address Line 1 *</label>
-                  <input name="addressLine1" value={address.addressLine1} onChange={handleInputChange} className="glass-input py-2.5 text-sm" placeholder="House/Flat No., Street" />
+                  <input name="addressLine1" value={address.addressLine1} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="House/Flat No., Street" />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Address Line 2</label>
-                  <input name="addressLine2" value={address.addressLine2} onChange={handleInputChange} className="glass-input py-2.5 text-sm" placeholder="Landmark (optional)" />
+                  <input name="addressLine2" value={address.addressLine2} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="Landmark (optional)" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">City *</label>
-                  <input name="city" value={address.city} onChange={handleInputChange} className="glass-input py-2.5 text-sm" placeholder="Mumbai" />
+                  <input name="city" value={address.city} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="Mumbai" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">State *</label>
-                  <input name="state" value={address.state} onChange={handleInputChange} className="glass-input py-2.5 text-sm" placeholder="Maharashtra" />
+                  <input name="state" value={address.state} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="Maharashtra" />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Pincode *</label>
-                  <input name="pincode" value={address.pincode} onChange={handleInputChange} className="glass-input py-2.5 text-sm" placeholder="400001" maxLength={6} />
+                  <input name="pincode" value={address.pincode} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="400001" maxLength={6} />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Address Type</label>
-                  <select name="type" value={address.type} onChange={handleInputChange} className="glass-input py-2.5 text-sm">
+                  <select name="type" value={address.type} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm">
                     <option value="home" className="bg-surface-100">Home</option>
                     <option value="work" className="bg-surface-100">Work</option>
                     <option value="other" className="bg-surface-100">Other</option>
@@ -294,7 +294,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
+          <div className="min-w-0 lg:col-span-1">
             <div className="glass-card sticky top-20 p-4 sm:top-24 sm:p-5">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Order Summary</h3>
 
