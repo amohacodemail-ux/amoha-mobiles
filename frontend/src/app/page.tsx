@@ -281,9 +281,9 @@ export default function HomePage() {
               </Link>
             </div>
             {/* Mobile/tablet: horizontal scroll | Desktop: responsive grid */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x-mandatory pb-1 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:overflow-visible lg:pb-0">
+            <div className="grid grid-flow-col auto-cols-[42vw] sm:auto-cols-[190px] gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1 lg:grid-flow-row lg:grid-cols-4 xl:grid-cols-5 lg:overflow-visible lg:pb-0">
               {featuredProducts.slice(0, 8).map((product) => (
-                <div key={product._id} className="w-[42vw] min-w-[150px] max-w-[190px] flex-shrink-0 snap-start sm:w-[190px] lg:w-auto flex flex-col">
+                <div key={product._id} className="snap-start">
                   <ProductCard product={product} />
                 </div>
               ))}
@@ -322,9 +322,9 @@ export default function HomePage() {
               </Link>
             </div>
             {/* Mobile/tablet: horizontal scroll | Desktop: responsive grid */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x-mandatory pb-1 lg:grid lg:grid-cols-4 xl:grid-cols-5 lg:overflow-visible lg:pb-0">
+            <div className="grid grid-flow-col auto-cols-[42vw] sm:auto-cols-[190px] gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-1 lg:grid-flow-row lg:grid-cols-4 xl:grid-cols-5 lg:overflow-visible lg:pb-0">
               {trendingProducts.slice(0, 8).map((product) => (
-                <div key={product._id} className="w-[42vw] min-w-[150px] max-w-[190px] flex-shrink-0 snap-start sm:w-[190px] lg:w-auto flex flex-col">
+                <div key={product._id} className="snap-start">
                   <ProductCard product={product} />
                 </div>
               ))}
