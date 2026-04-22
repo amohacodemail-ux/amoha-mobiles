@@ -20,7 +20,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     let qb = supabase
       .from('rfqs')
-      .select('*, suppliers:supplier_id(id, name, company_name, email)', { count: 'exact' });
+      .select('*, suppliers:supplier_id(id, name, email)', { count: 'exact' });
 
     if (status) qb = qb.eq('status', status);
     if (search) qb = qb.ilike('rfq_number', `%${search}%`);
@@ -47,7 +47,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { data, error } = await supabase
       .from('rfqs')
-      .select('*, suppliers:supplier_id(id, name, company_name, email, phone)')
+      .select('*, suppliers:supplier_id(id, name, email, phone)')
       .eq('id', req.params.id)
       .maybeSingle();
     if (error) throw error;
@@ -85,7 +85,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         delivery_address: deliveryAddress || null,
         status: 'sent',
       })
-      .select('*, suppliers:supplier_id(id, name, company_name, email)')
+      .select('*, suppliers:supplier_id(id, name, email)')
       .single();
 
     if (error) throw error;
@@ -113,7 +113,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       .from('rfqs')
       .update(updates)
       .eq('id', req.params.id)
-      .select('*, suppliers:supplier_id(id, name, company_name, email)')
+      .select('*, suppliers:supplier_id(id, name, email)')
       .single();
 
     if (error) throw error;
