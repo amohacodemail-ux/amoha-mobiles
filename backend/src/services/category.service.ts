@@ -4,7 +4,8 @@ import { NotFoundError, BadRequestError } from '../errors/app-error';
 
 class CategoryService {
   async getCategories(query: any = {}) {
-    let qb = supabase.from('categories').select('*', { count: 'exact' });
+    // Include product count via embedded relation
+    let qb = supabase.from('categories').select('*, products:products!category_id(count)', { count: 'exact' });
     if (query.search) qb = qb.ilike('name', `%${query.search}%`);
     if (query.isActive !== undefined) qb = qb.eq('is_active', query.isActive === 'true');
     if (query.parentId) qb = qb.eq('parent_id', query.parentId);
@@ -19,7 +20,16 @@ class CategoryService {
 
     const { data, error, count } = await qb;
     if (error) throw error;
-    return { categories: (data || []).map(transformRow), total: count || 0 };
+    const categories = (data || []).map((row: any) => {
+      const transformed = transformRow(row);
+      // Extract embedded product count
+      transformed.productCount = Array.isArray(row.products) && row.products.length > 0
+        ? (row.products[0].count ?? 0)
+        : 0;
+      delete transformed.products;
+      return transformed;
+    });
+    return { categories, total: count || 0 };
   }
 
   async getCategoryById(id: string) {
@@ -65,10 +75,20 @@ class CategoryService {
     return { message: 'Category deleted successfully' };
   }
 
+  async getCategoryBySlug(slug: string) {
+    // Support both UUID-based lookups and slug-based lookups
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const field = uuidRegex.test(slug) ? 'id' : 'slug';
+    const { data, error } = await supabase.from('categories').select('*').eq(field, slug).maybeSingle();
+    if (error) throw error;
+    if (!data) throw new NotFoundError('Category');
+    return transformRow(data);
+  }
+
   // Controller aliases
   async getAll(query?: any) { return this.getCategories(query); }
   async getAllAdmin(query?: any) { return this.getCategories(query); }
-  async getBySlug(slug: string) { return this.getCategoryById(slug); }
+  async getBySlug(slug: string) { return this.getCategoryBySlug(slug); }
   async create(data: any) { return this.createCategory(data); }
   async update(id: string, data: any) { return this.updateCategory(id, data); }
   async delete(id: string) { return this.deleteCategory(id); }

@@ -468,5 +468,116 @@ router.post('/crm/customers/:customerId/notes', crmController.addNote);
 router.delete('/crm/notes/:noteId', crmController.deleteNote);
 router.get('/crm/segments', crmController.getSegmentSummary);
 
+// ====== Sales & Order Reports ======
+router.get('/reports/orders', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+    const { startDate, endDate, source, status, page, limit: limitQ } = req.query as Record<string, string>;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limitQ) || 20;
+    const offset = (pageNum - 1) * limitNum;
+
+    let qb = supabase
+      .from('orders')
+      .select('id, order_number, created_at, status, payment_status, total, subtotal, discount, shipping_fee, is_walk_in, user_id, shipping_address, users:user_id(name, email, phone)', { count: 'exact' });
+
+    if (startDate) qb = qb.gte('created_at', new Date(startDate).toISOString());
+    if (endDate) qb = qb.lte('created_at', new Date(endDate + 'T23:59:59').toISOString());
+    if (source === 'online') qb = qb.eq('is_walk_in', false);
+    if (source === 'pos') qb = qb.eq('is_walk_in', true);
+    if (status) qb = qb.eq('status', status);
+
+    qb = qb.order('created_at', { ascending: false }).range(offset, offset + limitNum - 1);
+
+    const { data, error, count } = await qb;
+    if (error) throw error;
+
+    const orders = (data || []).map((o: any) => {
+      const t = transformRow(o);
+      t.customer = o.users || { name: t.shippingAddress?.name || 'Walk-in', email: '', phone: t.shippingAddress?.phone || '' };
+      t.source = o.is_walk_in ? 'POS' : 'Online';
+      delete t.users;
+      return t;
+    });
+
+    sendSuccess(res, {
+      orders,
+      total: count || 0,
+      totalPages: Math.ceil((count || 0) / limitNum),
+      currentPage: pageNum,
+    }, 'Orders report fetched');
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/reports/sales-summary', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { period, startDate, endDate } = req.query as Record<string, string>;
+
+    let start: Date;
+    let end: Date = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    if (startDate && endDate) {
+      start = new Date(startDate);
+      end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+    } else if (period === 'day') {
+      start = new Date(); start.setHours(0, 0, 0, 0);
+    } else if (period === 'week') {
+      start = new Date(); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+    } else {
+      // Default: current month
+      start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+    }
+
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('id, created_at, total, subtotal, discount, payment_status, status, is_walk_in')
+      .gte('created_at', start.toISOString())
+      .lte('created_at', end.toISOString())
+      .not('status', 'eq', 'cancelled');
+
+    if (error) throw error;
+
+    const all = orders || [];
+    const paid = all.filter((o: any) => o.payment_status === 'paid');
+    const totalRevenue = paid.reduce((s: number, o: any) => s + (o.total || 0), 0);
+    const totalOrders = all.length;
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / (paid.length || 1)) : 0;
+    const totalDiscount = all.reduce((s: number, o: any) => s + (o.discount || 0), 0);
+    const onlineOrders = all.filter((o: any) => !o.is_walk_in).length;
+    const posOrders = all.filter((o: any) => o.is_walk_in).length;
+
+    // Build day-by-day breakdown
+    const dayMap: Record<string, { date: string; orders: number; revenue: number }> = {};
+    all.forEach((o: any) => {
+      const d = new Date(o.created_at).toISOString().split('T')[0];
+      if (!dayMap[d]) dayMap[d] = { date: d, orders: 0, revenue: 0 };
+      dayMap[d].orders++;
+      if (o.payment_status === 'paid') dayMap[d].revenue += o.total || 0;
+    });
+    const dailyBreakdown = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
+
+    sendSuccess(res, {
+      totalRevenue,
+      totalOrders,
+      avgOrderValue,
+      totalDiscount,
+      onlineOrders,
+      posOrders,
+      dailyBreakdown,
+      period: period || 'month',
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+    }, 'Sales summary fetched');
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
 

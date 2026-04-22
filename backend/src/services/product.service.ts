@@ -42,23 +42,55 @@ class ProductService {
     const limit = parseInt(query.limit) || 20;
     const offset = (page - 1) * limit;
 
+    // Resolve category slug/name → UUID before building query
+    let resolvedCategoryId: string | null = null;
+    if (query.category) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(query.category)) {
+        resolvedCategoryId = query.category;
+      } else {
+        const { data: cat } = await supabase
+          .from('categories').select('id').eq('slug', query.category).maybeSingle();
+        resolvedCategoryId = cat?.id ?? null;
+      }
+    }
+
     let qb = supabase.from('products').select('*, reviews:reviews(count)', { count: 'exact' });
 
     if (query.search) {
       qb = qb.or(`name.ilike.%${query.search}%,description.ilike.%${query.search}%,sku.ilike.%${query.search}%`);
     }
-    if (query.category) qb = qb.eq('category_id', query.category);
+    if (resolvedCategoryId) qb = qb.eq('category_id', resolvedCategoryId);
     if (query.brand) qb = qb.eq('brand_id', query.brand);
-    if (query.minPrice) qb = qb.gte('selling_price', parseFloat(query.minPrice));
-    if (query.maxPrice) qb = qb.lte('selling_price', parseFloat(query.maxPrice));
-    if (query.inStock === 'true') qb = qb.gt('stock', 0);
+    // Support both minPrice/maxPrice and priceMin/priceMax from different callers
+    const priceMin = query.minPrice || query.priceMin;
+    const priceMax = query.maxPrice || query.priceMax;
+    if (priceMin) qb = qb.gte('selling_price', parseFloat(priceMin));
+    if (priceMax) qb = qb.lte('selling_price', parseFloat(priceMax));
+    if (query.inStock === 'true' || query.inStock === true) qb = qb.gt('stock', 0);
     if (query.isActive !== undefined) qb = qb.eq('is_active', query.isActive === 'true');
     if (query.isFeatured === 'true') qb = qb.eq('is_featured', true);
+    if (query.rating) qb = qb.gte('average_rating', parseFloat(query.rating));
 
-    // Convert camelCase sortBy to snake_case (frontend sends createdAt, DB has created_at)
+    // Map frontend 'sort' shorthand to sortBy/sortOrder, also support explicit sortBy/sortOrder
+    const sortMap: Record<string, { field: string; asc: boolean }> = {
+      newest: { field: 'created_at', asc: false },
+      oldest: { field: 'created_at', asc: true },
+      popular: { field: 'view_count', asc: false },
+      price_low: { field: 'selling_price', asc: true },
+      price_high: { field: 'selling_price', asc: false },
+      rating: { field: 'average_rating', asc: false },
+    };
     const camelToSnake = (s: string) => s.replace(/[A-Z]/g, (l) => `_${l.toLowerCase()}`);
-    const sortField = camelToSnake(query.sortBy || 'created_at');
-    const sortAsc = query.sortOrder === 'asc';
+    let sortField: string;
+    let sortAsc: boolean;
+    if (query.sort && sortMap[query.sort]) {
+      sortField = sortMap[query.sort].field;
+      sortAsc = sortMap[query.sort].asc;
+    } else {
+      sortField = camelToSnake(query.sortBy || 'created_at');
+      sortAsc = query.sortOrder === 'asc';
+    }
     qb = qb.order(sortField, { ascending: sortAsc }).range(offset, offset + limit - 1);
 
     const { data: products, error, count } = await qb;

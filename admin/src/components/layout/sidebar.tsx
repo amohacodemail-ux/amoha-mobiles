@@ -7,7 +7,7 @@ import {
   Users, Ticket, Image, Star, Settings, ChevronLeft,
   ChevronRight, Smartphone, LogOut, Menu, X, Wrench, Mail, Bell,
   Eye, AlertCircle, Users2, Barcode, FileText, RotateCcw, Wallet, Activity,
-  Truck, UserCheck, Warehouse, ClipboardList,
+  Truck, UserCheck, Warehouse, ClipboardList, BarChart3, FileQuestion, ShoppingBag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/brands', label: 'Brands', icon: Award },
   { href: '/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/users', label: 'Users', icon: Users },
   { href: '/coupons', label: 'Coupons', icon: Ticket },
   { href: '/banners', label: 'Banners', icon: Image },
@@ -35,6 +36,8 @@ const NAV_ITEMS = [
   { href: '/activity-logs', label: 'Activity Logs', icon: Activity },
   { href: '/suppliers', label: 'Suppliers', icon: Truck },
   { href: '/supplier-entries', label: 'Supplier Entries', icon: ClipboardList },
+  { href: '/rfq', label: 'RFQ', icon: FileQuestion },
+  { href: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingBag },
   { href: '/customers', label: 'Customer Mgmt', icon: UserCheck },
   { href: '/inventory', label: 'Inventory', icon: Warehouse },
   { href: '/policies', label: 'Policies', icon: FileText },

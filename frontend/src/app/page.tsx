@@ -106,30 +106,47 @@ export default function HomePage() {
     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
     .slice(0, 4);
 
-  const discoverItems = activeDiscoverBanners.length > 0
-    ? activeDiscoverBanners
-    : [
-        {
-          title: 'Latest Launches',
-          image: getSafeImage(banners[0]?.image || newArrivals[0]?.images?.[0], PLACEHOLDER_BANNER),
-          link: '/products?sort=newest',
-        },
-        {
-          title: 'Trending Deals',
-          image: getSafeImage(banners[1]?.image || trendingProducts[0]?.images?.[0], PLACEHOLDER_BANNER),
-          link: '/products?sort=popular',
-        },
-        {
-          title: 'Featured Picks',
-          image: getSafeImage(featuredProducts[0]?.images?.[0] || banners[2]?.image, PLACEHOLDER_PRODUCT),
-          link: '/products',
-        },
-        {
-          title: 'Accessories & More',
-          image: getSafeImage(categories[0]?.image || featuredProducts[1]?.images?.[0], PLACEHOLDER_CATEGORY),
-          link: '/products',
-        },
-      ];
+  // Build discover items: prefer admin-configured banners, then map to actual categories
+  // Each item must be independent (no image sharing between items)
+  const buildDiscoverItems = () => {
+    if (activeDiscoverBanners.length >= 4) return activeDiscoverBanners;
+
+    // Build from actual categories (each get their own image + link)
+    const catItems = categories.slice(0, 4).map((cat) => ({
+      title: cat.name,
+      image: getSafeImage(cat.image, PLACEHOLDER_CATEGORY),
+      link: `/products?category=${cat.slug}`,
+    }));
+
+    // Fallback fixed sections when not enough categories
+    const fallbackItems = [
+      {
+        title: 'Latest Launches',
+        image: getSafeImage(newArrivals[0]?.images?.[0] || banners[0]?.image, PLACEHOLDER_BANNER),
+        link: '/products?sort=newest',
+      },
+      {
+        title: 'Trending Deals',
+        image: getSafeImage(trendingProducts[0]?.images?.[0] || banners[1]?.image, PLACEHOLDER_BANNER),
+        link: '/products?sort=popular',
+      },
+      {
+        title: 'Featured Picks',
+        image: getSafeImage(featuredProducts[0]?.images?.[0] || banners[2]?.image, PLACEHOLDER_PRODUCT),
+        link: '/products?sort=popular',
+      },
+      {
+        title: 'Accessories & More',
+        image: getSafeImage(featuredProducts[1]?.images?.[0] || banners[3]?.image, PLACEHOLDER_CATEGORY),
+        link: '/products',
+      },
+    ];
+
+    // Merge: use category items where available, fall back to fixed items
+    return [0, 1, 2, 3].map((i) => catItems[i] || fallbackItems[i]);
+  };
+
+  const discoverItems = buildDiscoverItems();
 
   const [firstDiscover, secondDiscover, thirdDiscover, fourthDiscover] = discoverItems;
 
@@ -237,7 +254,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Shop by Category */}
       {categories.length > 0 && (
         <section className="py-6 sm:py-8">
           <div className="page-container">
@@ -250,17 +266,28 @@ export default function HomePage() {
                 <Link
                   key={cat._id}
                   href={`/products?category=${cat.slug}`}
-                  className="group flex flex-shrink-0 snap-start lg:flex-shrink items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 transition-all hover:border-primary-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:border-primary-500/30"
+                  className="group flex flex-shrink-0 snap-start lg:flex-shrink flex-col items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-3 transition-all hover:border-primary-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:border-primary-500/30"
                 >
-                  <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50 dark:bg-white/5">
-                    <Image src={getSafeImage(cat.image, PLACEHOLDER_CATEGORY)} alt={cat.name} fill className="object-cover" sizes="40px" onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_CATEGORY; }} />
+                  {/* Category image: 77×180 viewport-scaled container */}
+                  <div
+                    className="relative flex-shrink-0 overflow-hidden rounded-lg bg-gray-50 dark:bg-white/5"
+                    style={{ width: 77, height: 77 }}
+                  >
+                    <Image
+                      src={getSafeImage(cat.image, PLACEHOLDER_CATEGORY)}
+                      alt={cat.name}
+                      fill
+                      className="object-cover"
+                      sizes="77px"
+                      onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_CATEGORY; }}
+                    />
                   </div>
-                  <div className="min-w-0">
-                    <p className="whitespace-nowrap lg:whitespace-normal lg:truncate text-sm font-medium text-gray-700 group-hover:text-primary-600 dark:text-gray-300 dark:group-hover:text-primary-400">
+                  <div className="text-center min-w-0 w-full">
+                    <p className="truncate text-xs font-semibold text-gray-700 group-hover:text-primary-600 dark:text-gray-300 dark:group-hover:text-primary-400">
                       {cat.name}
                     </p>
-                    {cat.productCount > 0 && (
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{cat.productCount} products</p>
+                    {(cat.productCount ?? 0) > 0 && (
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500">{cat.productCount} items</p>
                     )}
                   </div>
                 </Link>
