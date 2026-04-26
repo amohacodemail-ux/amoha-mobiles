@@ -71,7 +71,13 @@ class ProductService {
     if (priceMin) qb = qb.gte('selling_price', parseFloat(priceMin));
     if (priceMax) qb = qb.lte('selling_price', parseFloat(priceMax));
     if (query.inStock === 'true' || query.inStock === true) qb = qb.gt('stock', 0);
-    if (query.isActive !== undefined) qb = qb.eq('is_active', query.isActive === 'true');
+    // Default to active-only for public queries; admin passes isActive=all to see everything
+    if (query.isActive === 'all') {
+      // no filter — return all products regardless of is_active
+    } else {
+      const isActiveFilter = query.isActive !== undefined ? query.isActive === 'true' : true;
+      qb = qb.eq('is_active', isActiveFilter);
+    }
     if (query.isFeatured === 'true') qb = qb.eq('is_featured', true);
     if (query.rating) qb = qb.gte('average_rating', parseFloat(query.rating));
 

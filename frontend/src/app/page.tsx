@@ -183,7 +183,10 @@ export default function HomePage() {
 
                 <div className="absolute inset-2 rounded-[22px] bg-gradient-to-br from-primary-500/15 via-transparent to-fuchsia-500/15 blur-2xl" />
 
-                <div className="relative h-full overflow-hidden rounded-[20px] border border-white/60 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] ring-1 ring-black/5 dark:border-white/10 dark:bg-white/[0.02] dark:ring-white/10">
+                <Link
+                  href={banners[activeBanner]?.link || '/products'}
+                  className="relative h-full overflow-hidden rounded-[20px] border border-white/60 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] ring-1 ring-black/5 dark:border-white/10 dark:bg-white/[0.02] dark:ring-white/10 block"
+                >
                   <Image
                     key={banners[activeBanner]?._id || activeBanner}
                     src={getSafeImage(banners[activeBanner]?.image, PLACEHOLDER_BANNER)}
@@ -196,7 +199,7 @@ export default function HomePage() {
                     onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/10 dark:from-black/20 dark:to-transparent" />
-                </div>
+                </Link>
               </div>
 
               {banners.length > 1 && (

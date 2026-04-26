@@ -7,7 +7,8 @@ import activityLogService from '../services/activity-log.service';
 class BannerController {
   async getAll(_req: Request, res: Response, next: NextFunction) {
     try {
-      const banners = await bannerService.getAll();
+      // Public endpoint: only expose active banners
+      const banners = await bannerService.getAll({ isActive: 'true' });
       sendSuccess(res, banners, 'Banners fetched');
     } catch (error) {
       next(error);

@@ -145,7 +145,11 @@ router.get('/reports/inventory', async (_req: Request, res: Response, next: Next
 });
 
 // ====== Products ======
-router.get('/products', productController.getAll);
+// Admin can see all products regardless of is_active; inject isActive=all to bypass the default filter
+router.get('/products', (req: Request, res: Response, next: NextFunction) => {
+  if (req.query.isActive === undefined) (req.query as any).isActive = 'all';
+  productController.getAll(req, res, next);
+});
 router.get('/products/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const product = await productService.getProductById(req.params.id);

@@ -16,11 +16,12 @@ router.get('/reviews/top', cachePublic(120), productController.getTopReviews);
 router.get('/search/suggestions', productController.searchSuggestions);
 router.get('/category/:categorySlug', cachePublic(30), productController.getByCategory);
 router.get('/:id/related', cachePublic(60), productController.getRelated);
+
+// Protected route must be before /:slug so Express doesn't swallow it as a slug match
+router.get('/recently-viewed', authenticate, productController.getRecentlyViewed);
+
 router.get('/:slug', cachePublic(30), productController.getBySlug);
 router.get('/', cachePublic(30), productController.getAll);
-
-// Protected routes
-router.get('/recently-viewed', authenticate, productController.getRecentlyViewed);
 router.post('/track-view', authenticate, productViewController.track);
 router.post('/:id/reviews', authenticate, validate(reviewSchema), productController.addReview);
 router.delete('/:id/reviews/:reviewId', authenticate, productController.deleteReview);
