@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { ArrowLeft, CheckCircle, Clock, Package, Truck, MapPin, CreditCard, ExternalLink } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, Package, Truck, MapPin, CreditCard, ExternalLink, Download, Printer } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +34,20 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const [logisticsPartner, setLogisticsPartner] = useState('');
   const [estimatedDelivery, setEstimatedDelivery] = useState('');
   const [updatingTracking, setUpdatingTracking] = useState(false);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+
+  const handleDownloadInvoice = async () => {
+    if (!order) return;
+    setDownloadingInvoice(true);
+    try {
+      await orderService.downloadInvoice(order._id, order.orderNumber);
+      toast.success('Invoice downloaded');
+    } catch {
+      toast.error('Failed to download invoice');
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  };
 
   useEffect(() => {
     orderService.getById(params.id)
@@ -93,7 +107,18 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   return (
     <div>
       <PageHeader title={`Order #${order.orderNumber}`} description={`${isWalkIn ? 'POS / Walk-in order' : 'Online order'} — ${formatDateTime(order.createdAt)}`}>
-        <Link href="/orders"><Button variant="outline"><ArrowLeft className="h-4 w-4" />Back to Orders</Button></Link>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleDownloadInvoice}
+            loading={downloadingInvoice}
+            title="Download PDF Invoice"
+          >
+            <Download className="h-4 w-4" />
+            Download Invoice
+          </Button>
+          <Link href="/orders"><Button variant="outline"><ArrowLeft className="h-4 w-4" />Back to Orders</Button></Link>
+        </div>
       </PageHeader>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -250,6 +275,18 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                     <span className="text-xs text-muted-foreground">Invoice: <span className="font-mono text-foreground">{(order as any).invoiceNumber}</span></span>
                   </div>
                 )}
+                <div className="pt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleDownloadInvoice}
+                    loading={downloadingInvoice}
+                  >
+                    <Download className="mr-2 h-3.5 w-3.5" />
+                    Download Invoice PDF
+                  </Button>
+                </div>
                 {order.razorpayPaymentId && (
                   <div className="flex items-start gap-2 pt-1">
                     <CreditCard className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />

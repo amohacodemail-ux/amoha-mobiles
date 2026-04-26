@@ -35,4 +35,17 @@ export const orderService = {
     const { data } = await apiClient.patch<ApiResponse<Order>>(`/admin/orders/${id}/tracking`, tracking);
     return data.data;
   },
+  downloadInvoice: async (id: string, orderNumber?: string): Promise<void> => {
+    const response = await apiClient.get(`/admin/orders/${id}/invoice`, {
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Invoice-${orderNumber || id}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };

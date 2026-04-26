@@ -209,6 +209,62 @@ router.get('/orders/:id', async (req: Request, res: Response, next: NextFunction
     next(error);
   }
 });
+router.get('/orders/:id/invoice', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { generateInvoicePDF } = await import('../utils/invoice.util');
+    const order: any = await (await import('../services/order.service')).default.getById(req.params.id);
+
+    // Get customer info from order's user, or walk-in fields for POS orders
+    let customerName = 'Customer';
+    let customerEmail = '';
+    let customerPhone = '';
+    if (order.isWalkIn) {
+      customerName = order.walkInCustomerName || 'Walk-in Customer';
+      customerEmail = order.walkInCustomerEmail || '';
+      customerPhone = order.walkInCustomerPhone || '';
+    } else if (order.userId) {
+      const { data: user } = await supabase.from('users').select('name, email, phone').eq('id', order.userId).maybeSingle();
+      customerName = user?.name || order.user?.name || 'Customer';
+      customerEmail = user?.email || order.user?.email || '';
+      customerPhone = user?.phone || order.user?.phone || '';
+    } else if (order.user) {
+      customerName = order.user.name || 'Customer';
+      customerEmail = order.user.email || '';
+      customerPhone = order.user.phone || '';
+    }
+
+    const shippingAddress = order.shippingAddress || {
+      fullName: customerName,
+      addressLine1: order.walkInCustomerAddress || 'In-store purchase',
+      city: '', state: '', pincode: '',
+      phone: customerPhone,
+    };
+
+    generateInvoicePDF(res, {
+      orderNumber: order.orderNumber || order.invoiceNumber || req.params.id.slice(0, 8).toUpperCase(),
+      orderDate: order.createdAt,
+      customerName,
+      customerEmail,
+      customerPhone,
+      shippingAddress,
+      items: (order.items || []).map((i: any) => ({
+        name: i.product?.name || i.productName || 'Product',
+        quantity: i.quantity,
+        price: i.price,
+      })),
+      subtotal: order.subtotal,
+      discount: order.discount || 0,
+      deliveryCharge: order.deliveryCharge ?? order.shippingFee ?? 0,
+      totalAmount: order.totalAmount ?? order.total ?? 0,
+      paymentMethod: order.isWalkIn ? (order.posPaymentMethod || 'cash') : (order.paymentMethod || 'cod'),
+      paymentStatus: order.paymentStatus || 'paid',
+      couponCode: order.couponCode,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 router.patch('/orders/:id/status', validate(updateOrderStatusSchema), orderController.updateOrderStatus);
 router.post('/orders/:id/refund', async (req: Request, res: Response, next: NextFunction) => {
   try {

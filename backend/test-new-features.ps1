@@ -28,7 +28,7 @@ $Token = ""
 if ($Email -and $Password) {
   try {
     $loginResp = Invoke-Api "/auth/login" "POST" @{ email = $Email; password = $Password }
-    $Token = $loginResp.data.token
+    $Token = $loginResp.token
     Write-Host "  Logged in as $Email" -ForegroundColor Green
   } catch { Write-Host "  Login failed: $_" -ForegroundColor Red }
 } else {

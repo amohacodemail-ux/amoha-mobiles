@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDebouncedValue } from '@/lib/hooks';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Eye } from 'lucide-react';
+import { Eye, Download } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Pagination } from '@/components/shared/pagination';
@@ -105,9 +105,19 @@ export default function OrdersPage() {
     {
       key: 'actions', header: 'Actions',
       render: (o) => (
-        <Link href={`/orders/${o._id}`}>
-          <Button variant="outline" size="icon-sm"><Eye className="h-3.5 w-3.5" /></Button>
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link href={`/orders/${o._id}`}>
+            <Button variant="outline" size="icon-sm" title="View order"><Eye className="h-3.5 w-3.5" /></Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            title="Download Invoice"
+            onClick={() => orderService.downloadInvoice(o._id, o.orderNumber).catch(() => toast.error('Failed to download invoice'))}
+          >
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       ),
     },
   ];
