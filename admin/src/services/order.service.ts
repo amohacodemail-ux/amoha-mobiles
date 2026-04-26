@@ -48,4 +48,7 @@ export const orderService = {
     link.remove();
     window.URL.revokeObjectURL(url);
   },
+  deleteOrder: async (id: string): Promise<void> => {
+    await apiClient.delete(`/admin/orders/${id}`);
+  },
 };

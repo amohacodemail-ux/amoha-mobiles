@@ -17,7 +17,13 @@ class BarcodeService {
     const { data, error } = await supabase.from('products').select('*').eq('barcode', barcode).maybeSingle();
     if (error) throw error;
     if (!data) throw new NotFoundError('Product');
-    return transformRow(data);
+    const p = transformRow(data);
+    // Normalise: frontend expects `price` to be the selling price
+    if (p.sellingPrice != null) {
+      p.originalPrice = p.originalPrice ?? p.price ?? p.sellingPrice;
+      p.price = p.sellingPrice;
+    }
+    return p;
   }
 
   async bulkGenerateBarcodes(productIds: string[]) {

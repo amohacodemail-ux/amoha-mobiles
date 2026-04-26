@@ -121,6 +121,27 @@ class OrderController {
     } catch (error) { next(error); }
   }
 
+  async deleteOrder(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      // Fetch the order to verify it is cancelled before deleting
+      const { data: order, error: fetchErr } = await supabase
+        .from('orders').select('id, status, order_number').eq('id', id).maybeSingle();
+      if (fetchErr) throw fetchErr;
+      if (!order) return sendMessage(res, 'Order not found', 404);
+      if (order.status !== 'cancelled') {
+        return sendMessage(res, 'Only cancelled orders can be deleted', 400);
+      }
+      // Delete child rows first to avoid FK constraint errors
+      await supabase.from('order_status_history').delete().eq('order_id', id);
+      await supabase.from('order_items').delete().eq('order_id', id);
+      const { error: delErr } = await supabase.from('orders').delete().eq('id', id);
+      if (delErr) throw delErr;
+      activityLogService.log({ adminId: req.user?.userId, action: 'delete', entity: 'order', entityId: id, details: `Deleted cancelled order ${order.order_number}`, ipAddress: req.ip }).catch(() => {});
+      sendSuccess(res, null, 'Order deleted successfully');
+    } catch (error) { next(error); }
+  }
+
   async publicTrackOrder(req: Request, res: Response, next: NextFunction) {
     try {
       const { orderNumber, phone } = req.query;

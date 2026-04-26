@@ -34,7 +34,7 @@ class PosController {
       }
 
       const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
-      const billing = settings?.billing_settings || {};
+      const billing = settings?.billing || {};
       const enableGst = billing?.enableGst ?? false;
       const gstRate = billing?.gstRate ?? 18;
       const afterDiscount = subtotal - discount;
@@ -152,7 +152,7 @@ class PosController {
     try {
       const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
       sendSuccess(res, {
-        billing: settings?.billing_settings || {},
+        billing: settings?.billing || {},
         siteName: settings?.site_name || 'AMOHA Mobiles',
         contactPhone: settings?.contact_phone || '',
         contactEmail: settings?.contact_email || '',
