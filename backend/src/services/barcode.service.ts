@@ -43,8 +43,7 @@ class BarcodeService {
     return (data || []).map(transformRow);
   }
   async getStockByBarcode(barcode: string) {
-    const product = await this.getProductByBarcode(barcode);
-    return { product, stock: product.stock };
+    return this.getProductByBarcode(barcode);
   }
 }
 

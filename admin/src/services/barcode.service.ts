@@ -23,10 +23,12 @@ export const barcodeService = {
   },
 
   stockCheck: async (code: string): Promise<BarcodeProduct> => {
-    const { data } = await apiClient.get<ApiResponse<BarcodeProduct>>(
+    const { data } = await apiClient.get<ApiResponse<any>>(
       `/admin/barcode/stock/${encodeURIComponent(code)}`,
     );
-    return data.data;
+    // Handle both old nested { product, stock } response and new flat product response
+    const result = data.data;
+    return (result?.product ?? result) as BarcodeProduct;
   },
 
   bulkLookup: async (codes: string[]): Promise<BarcodeProduct[]> => {
