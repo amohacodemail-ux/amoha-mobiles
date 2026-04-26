@@ -12,6 +12,9 @@ import ProductCard from '@/components/ui/ProductCard';
 import FilterSidebar from '@/components/ui/FilterSidebar';
 import Pagination from '@/components/ui/Pagination';
 import { ProductGridSkeleton } from '@/components/ui/Skeletons';
+import { safeImageSrc } from '@/lib/utils';
+
+const PLACEHOLDER_CATEGORY = '/images/no-category.svg';
 
 const sortLabels: Record<string, string> = {
   newest: 'Newest First',
@@ -258,7 +261,14 @@ export default function ProductsPage() {
                   }`}
                 >
                   <div className="relative h-5 w-5 overflow-hidden rounded-full ring-1 ring-white/10">
-                    <Image src={cat.image} alt={cat.name} fill className="object-cover" sizes="20px" />
+                    <Image
+                      src={safeImageSrc(cat.image, PLACEHOLDER_CATEGORY)}
+                      alt={cat.name}
+                      fill
+                      className="object-cover"
+                      sizes="20px"
+                      onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_CATEGORY; }}
+                    />
                   </div>
                   <span className="whitespace-nowrap">{cat.name}</span>
                   {cat.productCount > 0 && (

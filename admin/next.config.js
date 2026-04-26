@@ -33,10 +33,14 @@ const nextConfig = {
   generateEtags: true,
   poweredByHeader: false,
   async rewrites() {
+    const backendUrl =
+      process.env.NODE_ENV === 'production'
+        ? 'https://amoha-backend-v2.onrender.com'
+        : `http://localhost:${process.env.BACKEND_PORT || 10000}`;
     return [
       {
         source: '/api/:path*',
-        destination: 'https://amoha-backend-v2.onrender.com/api/:path*',
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },

@@ -3,18 +3,19 @@ import categoryService from '../services/category.service';
 import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 
 class CategoryController {
-  async getAll(_req: Request, res: Response, next: NextFunction) {
+  async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const categories = await categoryService.getAll();
+      // Only expose active categories to the public; pass remaining query params through
+      const categories = await categoryService.getAll({ ...req.query, isActive: 'true' });
       sendSuccess(res, categories, 'Categories fetched');
     } catch (error) {
       next(error);
     }
   }
 
-  async getAllAdmin(_req: Request, res: Response, next: NextFunction) {
+  async getAllAdmin(req: Request, res: Response, next: NextFunction) {
     try {
-      const categories = await categoryService.getAllAdmin();
+      const categories = await categoryService.getAllAdmin(req.query);
       sendSuccess(res, categories, 'All categories fetched');
     } catch (error) {
       next(error);

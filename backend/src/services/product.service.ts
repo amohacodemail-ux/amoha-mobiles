@@ -55,7 +55,10 @@ class ProductService {
       }
     }
 
-    let qb = supabase.from('products').select('*, reviews:reviews(count)', { count: 'exact' });
+    let qb = supabase.from('products').select(
+      '*, reviews:reviews(count), categories(id, name, slug), brands(id, name, slug)',
+      { count: 'exact' },
+    );
 
     if (query.search) {
       qb = qb.or(`name.ilike.%${query.search}%,description.ilike.%${query.search}%,sku.ilike.%${query.search}%`);
