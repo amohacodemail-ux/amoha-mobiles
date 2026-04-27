@@ -28,6 +28,12 @@ export interface PromoBanner {
   isActive: boolean;
 }
 
+export interface TaxSlab {
+  name: string;
+  rate: number;
+  isDefault?: boolean;
+}
+
 export interface BillingSettings {
   businessName: string;
   gstin: string;
@@ -41,6 +47,7 @@ export interface BillingSettings {
   billingEmail: string;
   enableGst: boolean;
   gstRate: number;
+  taxSlabs: TaxSlab[];
   sacCode: string;
   hsnCode: string;
   termsOnInvoice: string;

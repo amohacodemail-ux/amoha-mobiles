@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDebouncedValue } from '@/lib/hooks';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Eye, Download, Trash2 } from 'lucide-react';
+import { Eye, Download } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Pagination } from '@/components/shared/pagination';
@@ -117,26 +117,6 @@ export default function OrdersPage() {
           >
             <Download className="h-3.5 w-3.5" />
           </Button>
-          {o.orderStatus === 'cancelled' && (
-            <Button
-              variant="outline"
-              size="icon-sm"
-              title="Delete cancelled order"
-              className="text-destructive hover:bg-destructive/10"
-              onClick={async () => {
-                if (!confirm(`Delete order #${o.orderNumber}? This cannot be undone.`)) return;
-                try {
-                  await orderService.deleteOrder(o._id);
-                  toast.success('Order deleted');
-                  load();
-                } catch {
-                  toast.error('Failed to delete order');
-                }
-              }}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          )}
         </div>
       ),
     },

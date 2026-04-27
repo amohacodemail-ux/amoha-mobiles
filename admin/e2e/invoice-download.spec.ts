@@ -25,38 +25,17 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
-import path from 'path';
+import { fetchWithRetry, getToken, getTokens } from './shared-auth';
 
 // ─── Config ──────────────────────────────────────────────────────────
 
-const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.amohamobiles.com';
-const API_URL   = process.env.API_URL   || 'https://amoha-backend-v2.onrender.com/api';
+const ADMIN_URL = process.env.ADMIN_URL || 'http://localhost:3003';
+const API_URL   = process.env.API_URL   || 'http://localhost:5001/api';
 
-const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    || '';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-
-// ─── Cached auth ──────────────────────────────────────────────────────
-
-let _token: string | null = null;
-let _refreshToken: string | null = null;
-
-async function getApiToken(): Promise<{ token: string; refreshToken: string }> {
-  if (_token && _refreshToken) return { token: _token, refreshToken: _refreshToken };
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
-  });
-  if (!res.ok) throw new Error(`Login failed: ${res.status} ${await res.text()}`);
-  const body = await res.json();
-  _token = body.token || body.data?.token;
-  _refreshToken = body.refreshToken || body.data?.refreshToken;
-  if (!_token) throw new Error('No token in login response');
-  return { token: _token!, refreshToken: _refreshToken! };
-}
+// ─── Cached auth (reads from global-setup saved file) ─────────────────
 
 async function adminLogin(page: Page) {
-  const { token, refreshToken } = await getApiToken();
+  const { token, refreshToken } = getTokens();
   const domain = new URL(ADMIN_URL).hostname;
   await page.context().addCookies([
     { name: 'admin_token',         value: token,        domain, path: '/' },
@@ -70,8 +49,8 @@ async function adminLogin(page: Page) {
 
 /** Fetch the first real order ID via the admin API. */
 async function getFirstOrderId(): Promise<{ id: string; orderNumber: string; isWalkIn: boolean }> {
-  const { token } = await getApiToken();
-  const res = await fetch(`${API_URL}/admin/orders?limit=10`, {
+  const token = getToken();
+  const res = await fetchWithRetry(`${API_URL}/admin/orders?limit=10`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Orders API returned ${res.status}`);
@@ -83,8 +62,8 @@ async function getFirstOrderId(): Promise<{ id: string; orderNumber: string; isW
 
 /** Fetch a walk-in order if available, else return null. */
 async function getWalkInOrderId(): Promise<string | null> {
-  const { token } = await getApiToken();
-  const res = await fetch(`${API_URL}/admin/orders?limit=20`, {
+  const token = getToken();
+  const res = await fetchWithRetry(`${API_URL}/admin/orders?limit=20`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return null;
@@ -95,10 +74,7 @@ async function getWalkInOrderId(): Promise<string | null> {
 }
 
 // ─── Guard ───────────────────────────────────────────────────────────
-
-test.beforeEach(() => {
-  test.skip(!ADMIN_EMAIL || !ADMIN_PASSWORD, 'ADMIN_EMAIL and ADMIN_PASSWORD env vars required');
-});
+// (no guard needed — global-setup ensures a valid token is always available)
 
 // =====================================================================
 // TEST SUITE
@@ -109,10 +85,10 @@ test.describe.serial('Invoice Download', () => {
   // ── 1. API: invoice endpoint returns a valid PDF ──────────────────
 
   test('1. API — GET /admin/orders/:id/invoice returns 200 application/pdf', async () => {
-    const { token } = await getApiToken();
+    const token = getToken();
     const { id, orderNumber } = await getFirstOrderId();
 
-    const res = await fetch(`${API_URL}/admin/orders/${id}/invoice`, {
+    const res = await fetchWithRetry(`${API_URL}/admin/orders/${id}/invoice`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -132,7 +108,7 @@ test.describe.serial('Invoice Download', () => {
   test('2. API — unauthenticated request returns 401', async () => {
     const { id } = await getFirstOrderId();
 
-    const res = await fetch(`${API_URL}/admin/orders/${id}/invoice`);
+    const res = await fetchWithRetry(`${API_URL}/admin/orders/${id}/invoice`);
     // Should be 401 (unauthenticated)
     expect([401, 403], `Should require auth, got ${res.status}`).toContain(res.status);
   });
@@ -140,10 +116,10 @@ test.describe.serial('Invoice Download', () => {
   // ── 3. API: non-existent order returns 404 ────────────────────────
 
   test('3. API — non-existent order returns 404', async () => {
-    const { token } = await getApiToken();
+    const token = getToken();
     const fakeId = '00000000-0000-0000-0000-000000000000';
 
-    const res = await fetch(`${API_URL}/admin/orders/${fakeId}/invoice`, {
+    const res = await fetchWithRetry(`${API_URL}/admin/orders/${fakeId}/invoice`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -159,8 +135,8 @@ test.describe.serial('Invoice Download', () => {
       return;
     }
 
-    const { token } = await getApiToken();
-    const res = await fetch(`${API_URL}/admin/orders/${walkInId}/invoice`, {
+    const token = getToken();
+    const res = await fetchWithRetry(`${API_URL}/admin/orders/${walkInId}/invoice`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -266,10 +242,10 @@ test.describe.serial('Invoice Download', () => {
   // ── 10. API: PDF Content-Disposition has correct filename ──────────
 
   test('10. API — invoice Content-Disposition header has order number in filename', async () => {
-    const { token } = await getApiToken();
+    const token = getToken();
     const { id, orderNumber } = await getFirstOrderId();
 
-    const res = await fetch(`${API_URL}/admin/orders/${id}/invoice`, {
+    const res = await fetchWithRetry(`${API_URL}/admin/orders/${id}/invoice`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

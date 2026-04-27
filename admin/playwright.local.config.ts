@@ -20,6 +20,7 @@ if (fs.existsSync(envPath)) {
 
 export default defineConfig({
   testDir: './e2e',
+  globalSetup: './e2e/global-setup.ts',
   fullyParallel: false,
   forbidOnly: false,
   retries: 0,

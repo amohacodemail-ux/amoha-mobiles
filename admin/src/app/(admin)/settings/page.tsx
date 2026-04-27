@@ -4,7 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { User, Lock, Save, Globe, Image, Truck, Megaphone, Mail, Sparkles, MonitorPlay, Layers, Plus, Receipt } from 'lucide-react';
+import { User, Lock, Save, Globe, Image, Truck, Megaphone, Mail, Sparkles, MonitorPlay, Layers, Plus, Receipt, X } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { ImageUploader } from '@/components/shared/image-uploader';
 import { Button } from '@/components/ui/button';
@@ -76,6 +76,11 @@ const siteSchema = z.object({
   billingEmail: z.string(),
   billingEnableGst: z.boolean(),
   billingGstRate: z.coerce.number().min(0).max(100),
+  billingTaxSlabs: z.array(z.object({
+    name: z.string(),
+    rate: z.coerce.number().min(0).max(100),
+    isDefault: z.boolean().optional(),
+  })),
   billingSacCode: z.string(),
   billingHsnCode: z.string(),
   billingTermsOnInvoice: z.string(),
@@ -137,6 +142,13 @@ export default function SettingsPage() {
       billingBusinessName: '', billingGstin: '', billingPanNumber: '', billingStateCode: '',
       billingAddress: '', billingCity: '', billingState: '', billingPincode: '',
       billingPhone: '', billingEmail: '', billingEnableGst: false, billingGstRate: 18,
+      billingTaxSlabs: [
+        { name: 'No Tax (0%)', rate: 0 },
+        { name: 'GST 5%', rate: 5 },
+        { name: 'GST 12%', rate: 12 },
+        { name: 'GST 18%', rate: 18, isDefault: true },
+        { name: 'GST 28%', rate: 28 },
+      ],
       billingSacCode: '', billingHsnCode: '', billingTermsOnInvoice: '', billingInvoicePrefix: 'INV',
       billingFooterNote: 'Thank you for your purchase!',
       discoverBanners: [],
@@ -146,6 +158,11 @@ export default function SettingsPage() {
   const { fields: discoverFields, append: addDiscover, remove: removeDiscover } = useFieldArray({
     control: siteForm.control,
     name: 'discoverBanners',
+  });
+
+  const { fields: taxSlabFields, append: addTaxSlab, remove: removeTaxSlab } = useFieldArray({
+    control: siteForm.control,
+    name: 'billingTaxSlabs',
   });
 
   useEffect(() => {
@@ -194,6 +211,13 @@ export default function SettingsPage() {
         billingEmail: s.billing?.billingEmail || '',
         billingEnableGst: s.billing?.enableGst ?? false,
         billingGstRate: s.billing?.gstRate ?? 18,
+        billingTaxSlabs: s.billing?.taxSlabs?.length ? s.billing.taxSlabs : [
+          { name: 'No Tax (0%)', rate: 0 },
+          { name: 'GST 5%', rate: 5 },
+          { name: 'GST 12%', rate: 12 },
+          { name: 'GST 18%', rate: 18, isDefault: true },
+          { name: 'GST 28%', rate: 28 },
+        ],
         billingSacCode: s.billing?.sacCode || '',
         billingHsnCode: s.billing?.hsnCode || '',
         billingTermsOnInvoice: s.billing?.termsOnInvoice || '',
@@ -285,6 +309,7 @@ export default function SettingsPage() {
           billingEmail: data.billingEmail,
           enableGst: data.billingEnableGst,
           gstRate: data.billingGstRate,
+          taxSlabs: data.billingTaxSlabs,
           sacCode: data.billingSacCode,
           hsnCode: data.billingHsnCode,
           termsOnInvoice: data.billingTermsOnInvoice,
@@ -599,13 +624,64 @@ export default function SettingsPage() {
                   <CardContent className="space-y-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" className="rounded border-border" {...siteForm.register('billingEnableGst')} />
-                      <span className="text-sm font-medium text-foreground">Enable GST on invoices</span>
+                      <span className="text-sm font-medium text-foreground">Enable GST on invoices by default</span>
                     </label>
                     <div className="grid grid-cols-3 gap-3">
-                      <Input label="GST Rate (%)" type="number" placeholder="18" {...siteForm.register('billingGstRate')} />
+                      <Input label="Default GST Rate (%)" type="number" placeholder="18" {...siteForm.register('billingGstRate')} />
                       <Input label="SAC Code" placeholder="998314" {...siteForm.register('billingSacCode')} />
                       <Input label="HSN Code" placeholder="8517" {...siteForm.register('billingHsnCode')} />
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tax Slabs */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tax Slabs</CardTitle>
+                    <CardDescription>Define available GST rates for billing. You can select a different rate per product during counter billing (e.g., 0% for used phones, 18% for new).</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {taxSlabFields.map((field, index) => (
+                      <div key={field.id} className="flex items-center gap-2">
+                        <Input
+                          placeholder="e.g. GST 18%"
+                          className="flex-1"
+                          {...siteForm.register(`billingTaxSlabs.${index}.name`)}
+                        />
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            placeholder="18"
+                            className="w-20"
+                            {...siteForm.register(`billingTaxSlabs.${index}.rate`)}
+                          />
+                          <span className="text-sm text-muted-foreground">%</span>
+                        </div>
+                        <label className="flex items-center gap-1 cursor-pointer whitespace-nowrap text-xs text-muted-foreground">
+                          <input type="checkbox" className="rounded border-border" {...siteForm.register(`billingTaxSlabs.${index}.isDefault`)} />
+                          Default
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => removeTaxSlab(index)}
+                          className="text-destructive hover:text-destructive/80 text-xs px-1"
+                          title="Remove slab"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addTaxSlab({ name: '', rate: 0 })}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />Add Tax Slab
+                    </Button>
+                    <p className="text-xs text-muted-foreground">These slabs appear as a dropdown on each billing item during counter sale.</p>
                   </CardContent>
                 </Card>
 

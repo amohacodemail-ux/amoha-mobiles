@@ -9,34 +9,12 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { getTokens, gotoAndWaitFor } from './shared-auth';
 
-const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.amohamobiles.com';
-const API_URL   = process.env.API_URL   || 'https://amoha-backend-v2.onrender.com/api';
-const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    || '';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-
-let _cachedToken: string | null = null;
-let _cachedRefreshToken: string | null = null;
-
-async function getApiToken(): Promise<{ token: string; refreshToken: string }> {
-  if (_cachedToken && _cachedRefreshToken) {
-    return { token: _cachedToken, refreshToken: _cachedRefreshToken };
-  }
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
-  });
-  if (!res.ok) throw new Error(`Login API returned ${res.status}`);
-  const body = await res.json();
-  _cachedToken = body.token || body.data?.token;
-  _cachedRefreshToken = body.refreshToken || body.data?.refreshToken;
-  if (!_cachedToken) throw new Error('No token in login response');
-  return { token: _cachedToken!, refreshToken: _cachedRefreshToken! };
-}
+const ADMIN_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
 async function adminLogin(page: Page) {
-  const { token, refreshToken } = await getApiToken();
+  const { token, refreshToken } = getTokens();
   const domain = new URL(ADMIN_URL).hostname;
   await page.context().addCookies([
     { name: 'admin_token', value: token, domain, path: '/' },
@@ -63,14 +41,14 @@ test.describe('Inventory Forecast Page', () => {
     await adminLogin(page);
 
     // Navigate to inventory page
-    await page.goto(`${ADMIN_URL}/inventory`, { waitUntil: 'networkidle' });
+    await gotoAndWaitFor(page, `${ADMIN_URL}/inventory`, (p) => p.getByRole('heading', { name: /inventory/i }).first());
 
     // Page should NOT show the Next.js error overlay
     const errorOverlay = page.locator('text=Application error');
     await expect(errorOverlay).not.toBeVisible({ timeout: 10000 });
 
-    // Page header should be visible
-    await expect(page.locator('text=Inventory Management')).toBeVisible({ timeout: 15000 });
+    // Page heading should be visible
+    await expect(page.getByRole('heading', { name: /inventory/i }).first()).toBeVisible({ timeout: 15000 });
 
     // Take screenshot of stock tab (default)
     await page.screenshot({ path: 'test-results/inventory-stock-tab.png', fullPage: true });
@@ -122,8 +100,7 @@ test.describe('Inventory Forecast Page', () => {
     page.on('pageerror', (err) => consoleErrors.push(err.message));
 
     await adminLogin(page);
-    await page.goto(`${ADMIN_URL}/inventory`, { waitUntil: 'networkidle' });
-    await expect(page.locator('text=Inventory Management')).toBeVisible({ timeout: 15000 });
+    await gotoAndWaitFor(page, `${ADMIN_URL}/inventory`, (p) => p.getByRole('heading', { name: /inventory/i }).first());
 
     const tabs = ['Warehouses', 'Movements', 'Alerts', 'Audit Log', 'Forecast', 'Stock Overview'];
 

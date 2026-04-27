@@ -1,14 +1,10 @@
-/**
- * Diagnostic: try to delete a product with order history from the UI.
- * Takes screenshots at every step so we can see exactly what the admin sees.
- */
-
 import { test, expect, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getTokens } from './shared-auth';
 
-const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.amohamobiles.com';
-const API_URL   = process.env.API_URL   || 'https://amoha-backend-v2.onrender.com/api';
+const ADMIN_URL = process.env.ADMIN_URL || 'http://localhost:3003';
+const API_URL   = process.env.API_URL   || 'http://localhost:5001/api';
 const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    || '';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
@@ -26,17 +22,10 @@ async function shot(page: Page, name: string) {
 }
 
 async function getTokenAndLogin(page: Page) {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
-  });
-  const body = await res.json();
-  const token: string = body.token || body.data?.token;
-  const refreshToken: string = body.refreshToken || body.data?.refreshToken;
+  const { token, refreshToken } = getTokens();
   const domain = new URL(ADMIN_URL).hostname;
   await page.context().addCookies([
-    { name: 'admin_token', value: token, domain, path: '/' },
+    { name: 'admin_token',         value: token,        domain, path: '/' },
     { name: 'admin_refresh_token', value: refreshToken, domain, path: '/' },
   ]);
   return token;

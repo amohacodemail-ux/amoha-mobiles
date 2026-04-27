@@ -14,16 +14,19 @@ class BarcodeService {
   }
 
   async getProductByBarcode(barcode: string) {
-    const { data, error } = await supabase.from('products').select('*').eq('barcode', barcode).maybeSingle();
-    if (error) throw error;
-    if (!data) throw new NotFoundError('Product');
-    const p = transformRow(data);
-    // Normalise: frontend expects `price` to be the selling price
-    if (p.sellingPrice != null) {
-      p.originalPrice = p.originalPrice ?? p.price ?? p.sellingPrice;
-      p.price = p.sellingPrice;
-    }
-    return p;
+    // 1. Exact barcode match (EAN-13 / Code 128 numeric value stored in DB)
+    const { data: byBarcode, error: e1 } = await supabase
+      .from('products').select('*').eq('barcode', barcode).maybeSingle();
+    if (e1) throw e1;
+    if (byBarcode) return transformRow(byBarcode);
+
+    // 2. Fallback: SKU match — scanner may have scanned a SKU-based label
+    const { data: bySku, error: e2 } = await supabase
+      .from('products').select('*').eq('sku', barcode).maybeSingle();
+    if (e2) throw e2;
+    if (bySku) return transformRow(bySku);
+
+    throw new NotFoundError('Product');
   }
 
   async bulkGenerateBarcodes(productIds: string[]) {

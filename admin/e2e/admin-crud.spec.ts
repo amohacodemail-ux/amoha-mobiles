@@ -28,11 +28,12 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { getTokens, getToken, gotoAndWaitFor } from './shared-auth';
 
 // ─── Configuration ───────────────────────────────────────────────────
 
-const ADMIN_URL = process.env.ADMIN_URL || 'https://admin.amohamobiles.com';
-const API_URL   = process.env.API_URL   || 'https://amoha-backend-v2.onrender.com/api';
+const ADMIN_URL = process.env.ADMIN_URL || 'http://localhost:3003';
+const API_URL   = process.env.API_URL   || 'http://localhost:5001/api';
 
 const ADMIN_EMAIL    = process.env.ADMIN_EMAIL    || '';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
@@ -41,33 +42,9 @@ const TS = Date.now();
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
-// ─── Cached auth tokens (login once, reuse everywhere) ───────────────
-
-let _cachedToken: string | null = null;
-let _cachedRefreshToken: string | null = null;
-
-async function getApiToken(): Promise<{ token: string; refreshToken: string }> {
-  if (_cachedToken && _cachedRefreshToken) {
-    return { token: _cachedToken, refreshToken: _cachedRefreshToken };
-  }
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
-  });
-  if (!res.ok) {
-    throw new Error(`Login API returned ${res.status}: ${await res.text()}`);
-  }
-  const body = await res.json();
-  _cachedToken = body.token || body.data?.token;
-  _cachedRefreshToken = body.refreshToken || body.data?.refreshToken;
-  if (!_cachedToken) throw new Error('No token in login response');
-  return { token: _cachedToken!, refreshToken: _cachedRefreshToken! };
-}
-
 /** Set admin cookies on browser context and navigate to dashboard. */
 async function adminLogin(page: Page) {
-  const { token, refreshToken } = await getApiToken();
+  const { token, refreshToken } = getTokens();
   const domain = new URL(ADMIN_URL).hostname;
   await page.context().addCookies([
     { name: 'admin_token', value: token, domain, path: '/' },
@@ -120,20 +97,10 @@ test.beforeEach(async () => {
 test.describe.serial('Admin Panel CRUD', () => {
 
   test('1.1 — Login with valid admin credentials', async ({ page }) => {
-    // This test actually tests the UI login flow
-    await page.goto(`${ADMIN_URL}/login`);
-    await page.locator('input[type="email"]').fill(ADMIN_EMAIL);
-    await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await expect(page).toHaveURL(/dashboard/, { timeout: 30000 });
+    // Use cookie injection to verify auth works (avoids Supabase rate limiting).
+    // The token was obtained once by global-setup.ts.
+    await adminLogin(page);
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 10000 });
-
-    // Cache the token from cookies so subsequent tests don't need to call login again
-    const cookies = await page.context().cookies();
-    const tokenCookie = cookies.find(c => c.name === 'admin_token');
-    const refreshCookie = cookies.find(c => c.name === 'admin_refresh_token');
-    if (tokenCookie?.value) _cachedToken = tokenCookie.value;
-    if (refreshCookie?.value) _cachedRefreshToken = refreshCookie.value;
   });
 
   test('1.2 — Reject invalid credentials', async ({ page }) => {
@@ -201,7 +168,7 @@ test.describe.serial('Admin Panel CRUD', () => {
       await dialog.getByRole('button', { name: /cancel/i }).click();
       
       // Create via API
-      const { token } = await getApiToken();
+      const token = getToken();
 
       const createRes = await page.request.post(`${API_URL}/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -276,7 +243,7 @@ test.describe.serial('Admin Panel CRUD', () => {
     await adminLogin(page);
 
     // Create via API for reliability (image upload is hard to mock in E2E)
-    const { token } = await getApiToken();
+    const token = getToken();
 
     const createRes = await page.request.post(`${API_URL}/admin/brands`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -340,7 +307,7 @@ test.describe.serial('Admin Panel CRUD', () => {
 
   test('4.4 — Brand delete blocked when products are linked', async ({ page }) => {
     await adminLogin(page);
-    const { token } = await getApiToken();
+    const token = getToken();
 
     // Get the test brand id
     const brandsRes = await page.request.get(`${API_URL}/admin/brands`, {
@@ -448,7 +415,7 @@ test.describe.serial('Admin Panel CRUD', () => {
     await adminLogin(page);
 
     // First get brand and category IDs via API
-    const { token } = await getApiToken();
+    const token = getToken();
 
     // Get categories
     const catsRes = await page.request.get(`${API_URL}/admin/categories`, {
@@ -646,7 +613,7 @@ test.describe.serial('Admin Panel CRUD', () => {
     await expect(remaining).toHaveCount(0, { timeout: 10000 });
 
     // Also confirm via API that either it's deleted OR archived (is_active=false)
-    const { token } = await getApiToken();
+    const token = getToken();
     const prodsRes = await page.request.get(
       `${API_URL}/admin/products?search=${encodeURIComponent(testProductName)}`,
       { headers: { Authorization: `Bearer ${token}` } }
@@ -667,7 +634,7 @@ test.describe.serial('Admin Panel CRUD', () => {
 
   test('5.7 — Category delete blocked when products are linked', async ({ page }) => {
     await adminLogin(page);
-    const { token } = await getApiToken();
+    const token = getToken();
 
     // Get test category id
     const catsRes = await page.request.get(`${API_URL}/admin/categories`, {
@@ -734,7 +701,7 @@ test.describe.serial('Admin Panel CRUD', () => {
   test('6.1 — Create a coupon', async ({ page }) => {
     await adminLogin(page);
 
-    const { token } = await getApiToken();
+    const token = getToken();
 
     const createRes = await page.request.post(`${API_URL}/admin/coupons`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -778,7 +745,7 @@ test.describe.serial('Admin Panel CRUD', () => {
   test('7.1 — Create a banner via API and verify in UI', async ({ page }) => {
     await adminLogin(page);
 
-    const { token } = await getApiToken();
+    const token = getToken();
 
     const createRes = await page.request.post(`${API_URL}/admin/banners`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -834,8 +801,7 @@ test.describe.serial('Admin Panel CRUD', () => {
     ];
 
     for (const p of pages) {
-      await page.goto(`${ADMIN_URL}${p.path}`);
-      await page.waitForTimeout(2000);
+      await gotoAndWaitFor(page, `${ADMIN_URL}${p.path}`, (pg) => pg.getByRole('heading', { name: p.heading }).first());
       // Should not be redirected to login
       expect(page.url()).not.toMatch(/login/);
       // Page heading should be visible
@@ -851,7 +817,7 @@ test.describe.serial('Admin Panel CRUD', () => {
   test('10.1 — Cleanup: delete test product', async ({ page }) => {
     await adminLogin(page);
 
-    const { token } = await getApiToken();
+    const token = getToken();
 
     // Find the test product
     const prodsRes = await page.request.get(`${API_URL}/admin/products?search=${encodeURIComponent(testProductName)}`, {
@@ -883,7 +849,7 @@ test.describe.serial('Admin Panel CRUD', () => {
 
   test('10.2 — Cleanup: delete test coupon', async ({ page }) => {
     await adminLogin(page);
-    const { token } = await getApiToken();
+    const token = getToken();
 
     // Find and delete coupon
     const couponsRes = await page.request.get(`${API_URL}/admin/coupons`, {
@@ -902,7 +868,7 @@ test.describe.serial('Admin Panel CRUD', () => {
 
   test('10.3 — Cleanup: delete test brand', async ({ page }) => {
     await adminLogin(page);
-    const { token } = await getApiToken();
+    const token = getToken();
 
     const brandsRes = await page.request.get(`${API_URL}/admin/brands`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -920,7 +886,7 @@ test.describe.serial('Admin Panel CRUD', () => {
 
   test('10.4 — Cleanup: delete test category', async ({ page }) => {
     await adminLogin(page);
-    const { token } = await getApiToken();
+    const token = getToken();
 
     const catsRes = await page.request.get(`${API_URL}/admin/categories`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -938,7 +904,7 @@ test.describe.serial('Admin Panel CRUD', () => {
 
   test('10.5 — Cleanup: delete test banner', async ({ page }) => {
     await adminLogin(page);
-    const { token } = await getApiToken();
+    const token = getToken();
 
     const bannersRes = await page.request.get(`${API_URL}/admin/banners`, {
       headers: { Authorization: `Bearer ${token}` },

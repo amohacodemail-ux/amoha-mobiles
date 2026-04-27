@@ -5,6 +5,7 @@
 
 # testing
 /coverage
+/.auth/
 
 # next.js
 /.next/

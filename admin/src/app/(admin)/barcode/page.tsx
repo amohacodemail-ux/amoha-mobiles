@@ -18,13 +18,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { barcodeService, BarcodeProduct } from '@/services/barcode.service';
+import { BarcodeVisual } from '@/components/shared/barcode-visual';
 import { posService, type PosBillingInfo, type PosTodayStats, type PosOrderResult } from '@/services/pos.service';
 import { productService } from '@/services/product.service';
 import { formatCurrency, getInitials } from '@/lib/utils';
 import type { Product } from '@/types';
 
 const LIMIT = 15;
-type BillingItem = BarcodeProduct & { quantity: number };
+type BillingItem = BarcodeProduct & { quantity: number; itemGstRate: number };
 type PaymentMethod = 'cash' | 'card' | 'upi' | 'other';
 type ActiveView = 'billing' | 'history' | 'products';
 
@@ -62,6 +63,8 @@ export default function BarcodePage() {
   const [posDiscountType, setPosDiscountType] = useState<'fixed' | 'percentage'>('fixed');
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [lastOrder, setLastOrder] = useState<PosOrderResult | null>(null);
+  // Local GST toggle: null = use settings default
+  const [localGstEnabled, setLocalGstEnabled] = useState<boolean | null>(null);
 
   // Billing info and stats
   const [billingInfo, setBillingInfo] = useState<PosBillingInfo | null>(null);
@@ -77,6 +80,14 @@ export default function BarcodePage() {
 
   // View toggle
   const [activeView, setActiveView] = useState<ActiveView>('billing');
+
+  // Print label sheet settings
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printCols, setPrintCols] = useState(3);
+  const [printRows, setPrintRows] = useState(8);
+  const [labelUnit, setLabelUnit] = useState<'mm' | 'cm'>('mm');
+  const [labelW, setLabelW] = useState(62);   // mm
+  const [labelH, setLabelH] = useState(34);   // mm
 
   // Load billing info + today stats on mount
   useEffect(() => {
@@ -189,7 +200,7 @@ export default function BarcodePage() {
         return;
       }
       const detector = new BarcodeDetectorClass({
-        formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e', 'qr_code'],
+        formats: ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e', 'code_39', 'code_93', 'codabar', 'itf', 'qr_code'],
       });
       const scan = async () => {
         if (!videoRef.current || !streamRef.current) return;
@@ -231,6 +242,7 @@ export default function BarcodePage() {
   // Billing helpers
 
   const addToBilling = (product: BarcodeProduct) => {
+    const defaultRate = billingInfo?.billing?.gstRate ?? 18;
     setBillingItems((prev) => {
       const existing = prev.find((item) => item._id === product._id);
       if (existing) {
@@ -246,8 +258,14 @@ export default function BarcodePage() {
         toast.error(`"${product.name}" is out of stock`);
         return prev;
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity: 1, itemGstRate: defaultRate }];
     });
+  };
+
+  const updateItemGstRate = (productId: string, rate: number) => {
+    setBillingItems((prev) =>
+      prev.map((item) => item._id === productId ? { ...item, itemGstRate: rate } : item),
+    );
   };
 
   const updateBillingQty = (productId: string, delta: number) => {
@@ -276,7 +294,21 @@ export default function BarcodePage() {
     setCustomerEmail('');
     setPaymentMethod('cash');
     setLastOrder(null);
+    setLocalGstEnabled(null);
   };
+
+  // Derived values
+  const enableGst = localGstEnabled ?? (billingInfo?.billing?.enableGst ?? false);
+  const defaultGstRate = billingInfo?.billing?.gstRate ?? 18;
+  const taxSlabs = billingInfo?.billing?.taxSlabs?.length
+    ? billingInfo.billing.taxSlabs
+    : [
+        { name: 'No Tax (0%)', rate: 0 },
+        { name: 'GST 5%', rate: 5 },
+        { name: 'GST 12%', rate: 12 },
+        { name: 'GST 18%', rate: 18 },
+        { name: 'GST 28%', rate: 28 },
+      ];
 
   // Calculations
   const subtotal = billingItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -287,12 +319,21 @@ export default function BarcodePage() {
     if (discountAmount > subtotal) discountAmount = subtotal;
   }
   const afterDiscount = subtotal - discountAmount;
-  const enableGst = billingInfo?.billing?.enableGst ?? false;
-  const gstRate = billingInfo?.billing?.gstRate ?? 18;
-  let gstAmount = 0;
-  if (enableGst && gstRate > 0) {
-    gstAmount = Math.round(afterDiscount - (afterDiscount * 100) / (100 + gstRate));
+  const discountRatio = subtotal > 0 ? afterDiscount / subtotal : 1;
+
+  // Per-item GST grouped by rate
+  const gstBreakdown = new Map<number, number>(); // rate -> gstAmount
+  if (enableGst) {
+    for (const item of billingItems) {
+      const rate = item.itemGstRate;
+      if (rate > 0) {
+        const itemAfterDiscount = item.price * item.quantity * discountRatio;
+        const gstAmt = Math.round(itemAfterDiscount - (itemAfterDiscount * 100) / (100 + rate));
+        gstBreakdown.set(rate, (gstBreakdown.get(rate) ?? 0) + gstAmt);
+      }
+    }
   }
+  const totalGstAmount = Array.from(gstBreakdown.values()).reduce((s, v) => s + v, 0);
   const grandTotal = afterDiscount;
 
   // Create POS Order
@@ -305,6 +346,7 @@ export default function BarcodePage() {
           productId: item._id,
           quantity: item.quantity,
           price: item.price,
+          gstRate: item.itemGstRate,
         })),
         customerName: customerName || undefined,
         customerPhone: customerPhone || undefined,
@@ -312,6 +354,7 @@ export default function BarcodePage() {
         paymentMethod,
         posDiscount: posDiscount || undefined,
         posDiscountType: posDiscount > 0 ? posDiscountType : undefined,
+        gstEnabled: enableGst,
       });
       setLastOrder(result);
       toast.success(`Order ${result.invoiceNumber} created! Stock updated.`);
@@ -414,29 +457,80 @@ export default function BarcodePage() {
   };
 
   const printBarcodeLabel = (product: { name: string; sku?: string; barcode?: string; price?: number }) => {
-    const printWindow = window.open('', '_blank', 'width=420,height=560');
+    const printWindow = window.open('', '_blank', 'width=460,height=600');
     if (!printWindow) return;
-    const code = escapeHtml(product.barcode || product.sku || 'NO-CODE');
+    const rawCode = product.barcode || product.sku || 'NO-CODE';
     const name = escapeHtml(product.name || 'Product');
-    const sku = escapeHtml(product.sku || '—');
-    const price = typeof product.price === 'number' ? formatCurrency(product.price) : '—';
-    printWindow.document.write(`<html><head><title>Barcode Label</title>
-      <style>body{font-family:Arial,sans-serif;padding:16px;background:#fff;color:#000;}.label{width:320px;border:1px solid #111;border-radius:12px;padding:16px;margin:0 auto;}.title{font-size:18px;font-weight:700;margin-bottom:8px;}.meta{font-size:12px;color:#444;margin-bottom:10px;}.barcode{height:72px;border-radius:6px;border:1px solid #222;background:repeating-linear-gradient(to right,#111 0px,#111 2px,transparent 2px,transparent 4px,#111 4px,#111 5px,transparent 5px,transparent 8px);-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.code{text-align:center;font-family:monospace;letter-spacing:.35em;font-size:14px;margin-top:8px;}.price{margin-top:12px;font-weight:700;}@media print{body{padding:0;}.label{border:1px solid #000;box-shadow:none;}}</style>
-    </head><body onload="window.print(); window.close();">
-      <div class="label"><div class="title">${name}</div><div class="meta">SKU: ${sku}</div><div class="barcode"></div><div class="code">${code}</div><div class="price">Price: ${price}</div></div>
-    </body></html>`);
+    const sku = escapeHtml(product.sku || '\u2014');
+    const priceStr = typeof product.price === 'number' ? `\u20B9${product.price.toLocaleString('en-IN')}` : '\u2014';
+    const codeJson = JSON.stringify(rawCode);
+    const fmt = /^\d{13}$/.test(rawCode) ? 'EAN13' : /^\d{8}$/.test(rawCode) ? 'EAN8' : 'CODE128';
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Barcode Label</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;padding:16px;background:#fff;color:#000}.label{width:340px;border:2px solid #111;border-radius:10px;padding:16px;margin:0 auto}.title{font-size:16px;font-weight:700;margin-bottom:6px}.meta{font-size:11px;color:#555;margin-bottom:10px}.bc{width:100%;overflow:hidden;text-align:center}.bc svg{width:100%!important;max-height:90px!important}.price{margin-top:10px;font-size:16px;font-weight:700}@media print{body{padding:4px}.label{border:2px solid #000}}</style></head><body><div class="label"><div class="title">${name}</div><div class="meta">SKU: ${sku}</div><div class="bc"><svg id="bc"></svg></div><div class="price">Price: ${priceStr}</div></div><script>window.onload=function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';s.onload=function(){try{JsBarcode('#bc',${codeJson},{format:'${fmt}',lineColor:'#000',width:2.2,height:80,displayValue:true,fontSize:14,margin:8,background:'#fff'});}catch(e){try{JsBarcode('#bc',${codeJson},{format:'CODE128',lineColor:'#000',width:2,height:80,displayValue:true,fontSize:14,margin:8,background:'#fff'});}catch(e2){}}window.print();setTimeout(function(){window.close();},800);};document.head.appendChild(s);};<\/script></body></html>`);
+    printWindow.document.close();
+  };
+
+  /**
+   * Convert label dimension to mm regardless of unit selected by user.
+   */
+  const toMm = (val: number, unit: 'mm' | 'cm') => unit === 'cm' ? val * 10 : val;
+
+  const printLabelSheet = (
+    prods: Product[],
+    opts?: { cols: number; rows: number; wMm: number; hMm: number }
+  ) => {
+    if (!prods.length) return;
+    const cols = opts?.cols ?? 3;
+    const rows = opts?.rows ?? 8;
+    const wMm = opts?.wMm ?? 62;
+    const hMm = opts?.hMm ?? 34;
+    // Page gutter = 8 mm; gap between labels = 2 mm
+    const gap = 2;
+    const bcH = Math.max(10, hMm - 16); // height for barcode SVG inside label
+    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    if (!printWindow) return;
+    const entries: Array<{ id: string; code: string; fmt: string }> = [];
+    let labelsHtml = '';
+    prods.forEach((p, idx) => {
+      const rawCode = (p as any).barcode || (p as any).sku || 'NO-CODE';
+      const fmt = /^\d{13}$/.test(rawCode) ? 'EAN13' : /^\d{8}$/.test(rawCode) ? 'EAN8' : 'CODE128';
+      const id = `bc${idx}`;
+      entries.push({ id, code: rawCode, fmt });
+      const safeName = escapeHtml((p.name || 'Product').slice(0, 42));
+      const safeSku = escapeHtml((p as any).sku || '\u2014');
+      const priceLabel = typeof p.price === 'number' ? `&#8377;${p.price.toLocaleString('en-IN')}` : '\u2014';
+      labelsHtml += `<div class="lbl"><div class="lname">${safeName}</div><div class="lsku">SKU: ${safeSku}</div><svg id="${id}" class="lbc"></svg><div class="lprice">${priceLabel}</div></div>`;
+    });
+    const entriesJson = JSON.stringify(entries);
+    const colsStyle = `repeat(${cols},${wMm}mm)`;
+    const labelMinH = `${hMm}mm`;
+    const bcMaxH = `${bcH}mm`;
+    // Build page-break hint: after every `rows*cols` labels insert a page-break
+    const perPage = rows * cols;
+    let pagedHtml = '';
+    prods.forEach((_p, idx) => {
+      if (idx > 0 && idx % perPage === 0) {
+        pagedHtml += '</div><div class="sheet">';
+      }
+      pagedHtml += labelsHtml.split('</div>').slice(
+        idx * 4, idx * 4 + 4
+      ).join('</div>') + '</div>';
+    });
+    // Simpler: rebuild with page groups
+    const chunks: string[] = [];
+    let chunk = '';
+    prods.forEach((_p, idx) => {
+      const lbl = labelsHtml.match(/<div class="lbl">[\s\S]*?<\/div><\/div>/g)?.[idx] || '';
+      chunk += lbl;
+      if ((idx + 1) % perPage === 0) { chunks.push(chunk); chunk = ''; }
+    });
+    if (chunk) chunks.push(chunk);
+    const sheetsHtml = chunks.map((c, i) => `<div class="sheet${i > 0 ? ' page-break' : ''}">${c}</div>`).join('');
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Barcode Label Sheet</title><meta charset="utf-8"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:8mm;background:#fff;color:#000}.sheet{display:grid;grid-template-columns:${colsStyle};gap:${gap}mm}.page-break{page-break-before:always;margin-top:8mm}.lbl{border:1px dashed #bbb;padding:1.5mm 2mm;display:flex;flex-direction:column;align-items:center;min-height:${labelMinH};overflow:hidden}.lname{font-size:6.5pt;font-weight:700;text-align:center;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.5mm}.lsku{font-size:5.5pt;color:#666;margin-bottom:0.5mm}.lbc{width:100%!important;max-height:${bcMaxH};display:block}.lprice{font-size:7pt;font-weight:700;margin-top:0.5mm}@media print{body{padding:5mm}.page-break{margin-top:0}.lbl{border:1px dashed #ccc}}</style></head><body>${sheetsHtml}<script>var E=${entriesJson};window.onload=function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';s.onload=function(){E.forEach(function(e){var el=document.getElementById(e.id);if(!el)return;try{JsBarcode(el,e.code,{format:e.fmt,lineColor:'#000',width:1,height:${Math.round(bcH * 2.83)},displayValue:true,fontSize:6,margin:1,background:'#fff'});}catch(ex){try{JsBarcode(el,e.code,{format:'CODE128',lineColor:'#000',width:1,height:${Math.round(bcH * 2.83)},displayValue:true,fontSize:6,margin:1,background:'#fff'});}catch(ex2){}}});window.print();setTimeout(function(){window.close();},800);};document.head.appendChild(s);};<\/script></body></html>`);
     printWindow.document.close();
   };
 
   const renderBarcodeVisual = (code?: string, compact = false) => {
-    if (!code) return <span className="text-xs text-muted-foreground">—</span>;
-    return (
-      <div className={compact ? 'min-w-[112px]' : 'w-full'}>
-        <div className={`${compact ? 'h-8' : 'h-12'} w-full rounded-md border border-border/70 bg-background`}
-          style={{ backgroundImage: 'repeating-linear-gradient(to right, #111827 0px, #111827 2px, transparent 2px, transparent 4px, #111827 4px, #111827 5px, transparent 5px, transparent 8px)', opacity: 0.9 }} />
-        <p className={`${compact ? 'mt-1 text-[10px]' : 'mt-2 text-xs'} font-mono tracking-[0.28em] text-foreground`}>{code}</p>
-      </div>
-    );
+    return <BarcodeVisual code={code} compact={compact} />;
   };
 
   const productColumns: Column<Product>[] = [
@@ -616,6 +710,18 @@ export default function BarcodePage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground line-clamp-1">{item.name}</p>
                           <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} each</p>
+                          {enableGst && (
+                            <select
+                              className="mt-1 h-6 rounded border border-input bg-background px-1 text-xs text-muted-foreground"
+                              value={item.itemGstRate}
+                              onChange={(e) => updateItemGstRate(item._id, Number(e.target.value))}
+                              title="GST rate for this item"
+                            >
+                              {taxSlabs.map((slab) => (
+                                <option key={slab.rate} value={slab.rate}>{slab.name || `${slab.rate}%`}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Button variant="outline" size="icon-sm" onClick={() => updateBillingQty(item._id, -1)}><Minus className="h-3 w-3" /></Button>
@@ -657,6 +763,25 @@ export default function BarcodePage() {
                 </CardContent>
               </Card>
 
+              {/* GST Toggle */}
+              <Card>
+                <CardContent className="pt-4 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">GST (Tax)</p>
+                      <p className="text-xs text-muted-foreground">{enableGst ? 'Inclusive GST active — select rate per item' : 'No tax applied'}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLocalGstEnabled(!enableGst)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${enableGst ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enableGst ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Payment method */}
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Payment Method</CardTitle></CardHeader>
@@ -683,12 +808,18 @@ export default function BarcodePage() {
                 <CardContent className="pt-4 space-y-2">
                   <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
                   {discountAmount > 0 && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Discount</span><span className="text-green-600">-{formatCurrency(discountAmount)}</span></div>}
-                  {enableGst && gstAmount > 0 && (
-                    <>
-                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">CGST ({gstRate / 2}%)</span><span>{formatCurrency(Math.round(gstAmount / 2))}</span></div>
-                      <div className="flex justify-between text-xs"><span className="text-muted-foreground">SGST ({gstRate / 2}%)</span><span>{formatCurrency(Math.round(gstAmount / 2))}</span></div>
-                      <div className="flex justify-between text-xs text-muted-foreground"><span>GST (inclusive)</span><span>{formatCurrency(gstAmount)}</span></div>
-                    </>
+                  {enableGst && Array.from(gstBreakdown.entries()).map(([rate, amt]) => {
+                    const cgst = Math.floor(amt / 2);
+                    const sgst = amt - cgst;
+                    return (
+                      <React.Fragment key={rate}>
+                        <div className="flex justify-between text-xs"><span className="text-muted-foreground">CGST ({rate / 2}%)</span><span>{formatCurrency(cgst)}</span></div>
+                        <div className="flex justify-between text-xs"><span className="text-muted-foreground">SGST ({rate / 2}%)</span><span>{formatCurrency(sgst)}</span></div>
+                      </React.Fragment>
+                    );
+                  })}
+                  {enableGst && totalGstAmount > 0 && (
+                    <div className="flex justify-between text-xs text-muted-foreground"><span>GST (inclusive)</span><span>{formatCurrency(totalGstAmount)}</span></div>
                   )}
                   <div className="flex justify-between text-base font-bold border-t pt-2"><span>Grand Total</span><span>{formatCurrency(grandTotal)}</span></div>
                 </CardContent>
@@ -713,9 +844,9 @@ export default function BarcodePage() {
                 </Button>
               )}
 
-              {!billingInfo?.billing?.enableGst && (
+              {!enableGst && (
                 <p className="text-xs text-muted-foreground text-center">
-                  GST is disabled. Go to Settings to enable Billing & GST.
+                  GST is off. Toggle above to enable tax on this sale.
                 </p>
               )}
             </div>
@@ -779,6 +910,104 @@ export default function BarcodePage() {
       {/* ==================== PRODUCTS VIEW ==================== */}
       {activeView === 'products' && (
         <>
+          <div className="flex justify-end mb-3">
+            <Button variant="outline" onClick={() => setPrintDialogOpen(true)} disabled={products.length === 0}>
+              <Printer className="mr-2 h-4 w-4" />Print Label Sheet
+            </Button>
+          </div>
+
+          {/* ── Print Settings Dialog ── */}
+          {printDialogOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPrintDialogOpen(false)}>
+              <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-base font-semibold">Print Label Sheet Settings</h2>
+                  <button className="text-muted-foreground hover:text-foreground" onClick={() => setPrintDialogOpen(false)}><X className="h-4 w-4" /></button>
+                </div>
+
+                {/* Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Columns</label>
+                    <input
+                      type="number" min={1} max={10} value={printCols}
+                      onChange={(e) => setPrintCols(Math.max(1, Math.min(10, Number(e.target.value))))}
+                      className="w-full h-9 rounded-md border border-input bg-secondary/30 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Rows per Page</label>
+                    <input
+                      type="number" min={1} max={30} value={printRows}
+                      onChange={(e) => setPrintRows(Math.max(1, Math.min(30, Number(e.target.value))))}
+                      className="w-full h-9 rounded-md border border-input bg-secondary/30 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                </div>
+
+                {/* Unit toggle */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs font-medium text-muted-foreground">Label size unit:</span>
+                  <button
+                    onClick={() => {
+                      if (labelUnit === 'cm') {
+                        setLabelW(Math.round(labelW * 10));
+                        setLabelH(Math.round(labelH * 10));
+                        setLabelUnit('mm');
+                      } else {
+                        setLabelW(parseFloat((labelW / 10).toFixed(1)));
+                        setLabelH(parseFloat((labelH / 10).toFixed(1)));
+                        setLabelUnit('cm');
+                      }
+                    }}
+                    className="px-3 py-1 rounded-full border border-input text-xs font-semibold transition-colors hover:bg-secondary"
+                  >{labelUnit === 'mm' ? 'mm → cm' : 'cm → mm'}</button>
+                </div>
+
+                {/* Label dimensions */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Label Width ({labelUnit})</label>
+                    <input
+                      type="number" min={10} max={200} step={labelUnit === 'mm' ? 1 : 0.1} value={labelW}
+                      onChange={(e) => setLabelW(parseFloat(e.target.value) || 0)}
+                      className="w-full h-9 rounded-md border border-input bg-secondary/30 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Label Height ({labelUnit})</label>
+                    <input
+                      type="number" min={10} max={200} step={labelUnit === 'mm' ? 1 : 0.1} value={labelH}
+                      onChange={(e) => setLabelH(parseFloat(e.target.value) || 0)}
+                      className="w-full h-9 rounded-md border border-input bg-secondary/30 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                </div>
+
+                {/* Summary */}
+                <p className="text-xs text-muted-foreground mb-5">
+                  {printCols} columns × {printRows} rows = {printCols * printRows} labels/page &nbsp;·&nbsp;
+                  Label {labelUnit === 'mm' ? `${labelW}×${labelH} mm` : `${labelW}×${labelH} cm`}
+                  &nbsp;({Math.ceil(products.length / (printCols * printRows))} page{Math.ceil(products.length / (printCols * printRows)) !== 1 ? 's' : ''} for {products.length} products)
+                </p>
+
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setPrintDialogOpen(false)}>Cancel</Button>
+                  <Button className="flex-1" onClick={() => {
+                    setPrintDialogOpen(false);
+                    printLabelSheet(products, {
+                      cols: printCols,
+                      rows: printRows,
+                      wMm: toMm(labelW, labelUnit),
+                      hMm: toMm(labelH, labelUnit),
+                    });
+                  }}>
+                    <Printer className="mr-2 h-4 w-4" />Print
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
           <DataTable columns={productColumns} data={products} loading={loadingTable} searchValue={search} onSearchChange={setSearch} searchPlaceholder="Search products, SKU, or barcode..." rowKey={(p) => p._id} />
           <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={totalItems} pageSize={LIMIT} />
         </>

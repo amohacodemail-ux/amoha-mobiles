@@ -1,10 +1,12 @@
 import apiClient from '@/lib/api-client';
 import type { ApiResponse } from '@/types';
+import type { TaxSlab } from './settings.service';
 
 export interface PosItem {
   productId: string;
   quantity: number;
   price: number;
+  gstRate?: number;
 }
 
 export interface PosOrderPayload {
@@ -15,6 +17,7 @@ export interface PosOrderPayload {
   paymentMethod: 'cash' | 'card' | 'upi' | 'other';
   posDiscount?: number;
   posDiscountType?: 'percentage' | 'fixed';
+  gstEnabled?: boolean;
   notes?: string;
 }
 
@@ -53,6 +56,7 @@ export interface PosBillingInfo {
     billingEmail: string;
     enableGst: boolean;
     gstRate: number;
+    taxSlabs: TaxSlab[];
     sacCode: string;
     hsnCode: string;
     termsOnInvoice: string;
