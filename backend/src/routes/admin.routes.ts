@@ -266,6 +266,7 @@ router.get('/orders/:id/invoice', async (req: Request, res: Response, next: Next
   }
 });
 router.patch('/orders/:id/status', validate(updateOrderStatusSchema), orderController.updateOrderStatus);
+router.delete('/orders/:id', orderController.deleteOrder);
 router.post('/orders/:id/refund', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;

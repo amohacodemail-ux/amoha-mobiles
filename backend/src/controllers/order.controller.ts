@@ -121,6 +121,35 @@ class OrderController {
     } catch (error) { next(error); }
   }
 
+  async deleteOrder(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { data: order } = await supabase.from('orders').select('id, status, order_number').eq('id', req.params.id).maybeSingle();
+      if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+      
+      // Only allow deleting cancelled orders
+      if (order.status !== 'cancelled') {
+        return res.status(400).json({ success: false, message: 'Only cancelled orders can be deleted' });
+      }
+
+      // Delete order items and status history first
+      await supabase.from('order_items').delete().eq('order_id', order.id);
+      await supabase.from('order_status_history').delete().eq('order_id', order.id);
+      
+      // Delete the order
+      await supabase.from('orders').delete().eq('id', order.id);
+      
+      sendSuccess(res, { orderId: order.id }, 'Order deleted successfully');
+      activityLogService.log({ 
+        adminId: req.user?.userId, 
+        action: 'delete', 
+        entity: 'order', 
+        entityId: req.params.id, 
+        details: `Deleted cancelled order ${order.order_number}`, 
+        ipAddress: req.ip 
+      }).catch(() => {});
+    } catch (error) { next(error); }
+  }
+
   async publicTrackOrder(req: Request, res: Response, next: NextFunction) {
     try {
       const { orderNumber, phone } = req.query;
