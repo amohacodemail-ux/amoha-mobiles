@@ -1,34 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker, HiOutlineClock } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { contactService, type ContactFormData } from '@/services/service.service';
-
-const STORES = [
-  {
-    name: 'AMOHA Mobiles - Store 1',
-    address: 'Shop No. 5, Ground Floor, MG Road, Mumbai, Maharashtra 400001',
-    phone: '+91 98765 43210',
-    email: 'store1@amoha.com',
-    hours: 'Mon - Sat: 10:00 AM – 8:00 PM',
-    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.85!2d72.83!3d19.07!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTnCsDA0JzEyLjAiTiA3MsKwNDknNDguMCJF!5e0!3m2!1sen!2sin!4v1',
-  },
-  {
-    name: 'AMOHA Mobiles - Store 2',
-    address: 'Shop No. 12, 1st Floor, Linking Road, Bandra West, Mumbai, Maharashtra 400050',
-    phone: '+91 98765 43211',
-    email: 'store2@amoha.com',
-    hours: 'Mon - Sat: 10:00 AM – 8:00 PM',
-    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.26!2d72.83!3d19.06!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTnCsDAzJzM2LjAiTiA3MsKwNDknNDguMCJF!5e0!3m2!1sen!2sin!4v1',
-  },
-];
+import { useSettingsStore } from '@/store/settings.store';
 
 const emptyForm: ContactFormData = { name: '', email: '', phone: '', subject: '', message: '' };
 
 export default function ContactPage() {
   const [form, setForm] = useState<ContactFormData>(emptyForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { settings, fetchSettings } = useSettingsStore();
+
+  useEffect(() => { fetchSettings(); }, [fetchSettings]);
+
+  const siteName = settings?.siteName || 'AMOHA Mobiles';
+  const contactEmail = settings?.contactEmail || 'support@amoha.in';
+  const contactPhone = settings?.contactPhone || '+91 98765 43210';
+  const storeAddress = settings?.address || 'Tamil Nadu, India';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -108,57 +98,42 @@ export default function ContactPage() {
 
           {/* Store Locations */}
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">Our Stores</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">Our Store</h2>
             <div className="space-y-5">
-              {STORES.map((store) => (
-                <div key={store.name} className="glass-card p-5">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">{store.name}</h3>
-                  <div className="mt-3 space-y-2.5">
-                    <div className="flex items-start gap-2.5 text-sm text-gray-500 dark:text-gray-400">
-                      <HiOutlineLocationMarker className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-400" />
-                      <span>{store.address}</span>
-                    </div>
-                    <a href={`tel:${store.phone.replace(/\s/g, '')}`} className="flex items-center gap-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">
-                      <HiOutlinePhone className="h-4 w-4 flex-shrink-0 text-primary-400" />
-                      <span>{store.phone}</span>
-                    </a>
-                    <a href={`mailto:${store.email}`} className="flex items-center gap-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">
-                      <HiOutlineMail className="h-4 w-4 flex-shrink-0 text-primary-400" />
-                      <span>{store.email}</span>
-                    </a>
-                    <div className="flex items-center gap-2.5 text-sm text-gray-500 dark:text-gray-400">
-                      <HiOutlineClock className="h-4 w-4 flex-shrink-0 text-primary-400" />
-                      <span>{store.hours}</span>
-                    </div>
+              <div className="glass-card p-5">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">{siteName}</h3>
+                <div className="mt-3 space-y-2.5">
+                  <div className="flex items-start gap-2.5 text-sm text-gray-500 dark:text-gray-400">
+                    <HiOutlineLocationMarker className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-400" />
+                    <span>{storeAddress}</span>
                   </div>
-                  {/* Map */}
-                  <div className="mt-4 rounded-lg overflow-hidden border border-gray-200 dark:border-white/5 h-40">
-                    <iframe
-                      src={store.mapUrl}
-                      width="100%"
-                      height="100%"
-                      style={{ border: 0 }}
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      title={store.name}
-                    />
+                  <a href={`tel:${contactPhone.replace(/\s/g, '')}`} className="flex items-center gap-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">
+                    <HiOutlinePhone className="h-4 w-4 flex-shrink-0 text-primary-400" />
+                    <span>{contactPhone}</span>
+                  </a>
+                  <a href={`mailto:${contactEmail}`} className="flex items-center gap-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">
+                    <HiOutlineMail className="h-4 w-4 flex-shrink-0 text-primary-400" />
+                    <span>{contactEmail}</span>
+                  </a>
+                  <div className="flex items-center gap-2.5 text-sm text-gray-500 dark:text-gray-400">
+                    <HiOutlineClock className="h-4 w-4 flex-shrink-0 text-primary-400" />
+                    <span>Mon - Sat: 10:00 AM – 8:00 PM</span>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
 
             {/* General Contact */}
             <div className="glass-card-sm p-5 mt-5">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">General Inquiries</h3>
               <div className="space-y-2">
-                <a href="mailto:support@amoha.com" className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">
+                <a href={`mailto:${contactEmail}`} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">
                   <HiOutlineMail className="h-4 w-4 text-primary-400" />
-                  support@amoha.com
+                  {contactEmail}
                 </a>
-                <a href="tel:+919876543210" className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">
+                <a href={`tel:${contactPhone.replace(/\s/g, '')}`} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">
                   <HiOutlinePhone className="h-4 w-4 text-primary-400" />
-                  +91 98765 43210
+                  {contactPhone}
                 </a>
               </div>
             </div>

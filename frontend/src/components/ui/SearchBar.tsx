@@ -24,8 +24,9 @@ export default function SearchBar({ onSelect }: SearchBarProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    const trimmed = query.trim().replace(/\s+/g, ' ');
+    if (trimmed) {
+      router.push(`/products?search=${encodeURIComponent(trimmed)}`);
       setShowSuggestions(false);
       onSelect?.();
     }

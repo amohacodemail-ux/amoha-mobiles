@@ -3,9 +3,10 @@ import Cookies from 'js-cookie';
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-const normalizeApiUrl = (_value?: string) => {
-  // Always use the local /api proxy so browser requests stay same-origin in development.
-  return '/api';
+const normalizeApiUrl = (value?: string) => {
+  // Use the backend URL directly in development
+  if (!value) return 'http://localhost:5001/api';
+  return value.endsWith('/') ? value.slice(0, -1) : value;
 };
 
 const API_URL = normalizeApiUrl(rawApiUrl);

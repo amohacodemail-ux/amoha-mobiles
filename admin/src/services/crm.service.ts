@@ -70,18 +70,69 @@ export const crmService = {
   },
 
   getCustomerProfile: async (customerId: string): Promise<CrmCustomerProfile> => {
-    const { data } = await apiClient.get<ApiResponse<CrmCustomerProfile>>(
+    const { data } = await apiClient.get<ApiResponse<any>>(
       `/admin/crm/customers/${customerId}`,
     );
-    return data.data;
+    const raw = data.data;
+
+    // Normalise both old shape { customer, orders:{data,total}, notes, totalSpent }
+    // and new shape { customer, stats, recentOrders, notes }
+    const customer = raw?.customer ?? {};
+    const ordersData: any[] = raw?.recentOrders ?? raw?.orders?.data ?? [];
+    const notesData: any[] = Array.isArray(raw?.notes) ? raw.notes : [];
+    const totalOrders = raw?.stats?.totalOrders ?? ordersData.length;
+    const totalSpent  = raw?.stats?.totalSpent  ?? raw?.totalSpent ?? 0;
+    const avgOrderValue = raw?.stats?.avgOrderValue ?? (totalOrders > 0 ? Math.round(totalSpent / totalOrders) : 0);
+
+    const recentOrders = ordersData.map((o: any) => ({
+      _id:         o._id ?? o.id,
+      orderNumber: o.orderNumber ?? o.order_number ?? o._id ?? '',
+      totalAmount: o.totalAmount ?? o.total ?? 0,
+      status:      o.status ?? o.orderStatus ?? '',
+      createdAt:   o.createdAt ?? o.created_at ?? '',
+    }));
+
+    const notes: CrmNote[] = notesData.map((n: any) => ({
+      _id:     n._id ?? n.id,
+      type:    n.type ?? 'note',
+      content: n.content ?? n.note ?? '',
+      author:  n.author ?? (n.authorId ? { _id: n.authorId, name: 'Admin' } : { _id: '', name: 'Admin' }),
+      createdAt: n.createdAt ?? n.created_at ?? '',
+    }));
+
+    return {
+      customer: {
+        _id:       customer._id ?? customer.id ?? '',
+        name:      customer.name ?? '',
+        email:     customer.email ?? '',
+        phone:     customer.phone,
+        createdAt: customer.createdAt ?? customer.created_at ?? '',
+        avatar:    customer.avatar,
+      },
+      stats: {
+        totalOrders,
+        totalSpent,
+        avgOrderValue,
+        segment: raw?.stats?.segment ?? 'new',
+      },
+      recentOrders,
+      notes,
+    };
   },
 
   addNote: async (customerId: string, payload: { type: string; content: string }): Promise<CrmNote> => {
-    const { data } = await apiClient.post<ApiResponse<CrmNote>>(
+    const { data } = await apiClient.post<ApiResponse<any>>(
       `/admin/crm/customers/${customerId}/notes`,
       payload,
     );
-    return data.data;
+    const n = data.data;
+    return {
+      _id:     n._id ?? n.id,
+      type:    n.type ?? 'note',
+      content: n.content ?? n.note ?? '',
+      author:  n.author ?? (n.authorId ? { _id: n.authorId, name: 'Admin' } : { _id: '', name: 'Admin' }),
+      createdAt: n.createdAt ?? n.created_at ?? '',
+    };
   },
 
   deleteNote: async (noteId: string): Promise<void> => {

@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useEffect, useCallback, useTransition } from 'react';
+import { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -65,6 +65,12 @@ export default function ProductsPage() {
     if (rating) filters.rating = Number(rating);
     if (page) filters.page = Number(page);
     if (search) filters.search = search;
+    const inStock = searchParams.get('inStock');
+    const condition = searchParams.get('condition');
+    const discount = searchParams.get('discount');
+    if (inStock === 'true') filters.inStock = true;
+    if (condition) filters.condition = condition;
+    if (discount) filters.discount = Number(discount);
 
     return filters;
   }, [searchParams]);
@@ -94,8 +100,15 @@ export default function ProductsPage() {
     }
   }, [filters]);
 
-  // Initial load
+  // Ref to suppress re-fetch when the page itself updates the URL via syncFiltersToURL
+  const isSelfUpdate = useRef(false);
+
+  // Initial load + react to external URL param changes (e.g. SearchBar navigation)
   useEffect(() => {
+    if (isSelfUpdate.current) {
+      isSelfUpdate.current = false;
+      return;
+    }
     const initialFilters = buildFiltersFromParams();
     setFilters(initialFilters);
     setActiveCategory(initialFilters.category || null);
@@ -107,10 +120,11 @@ export default function ProductsPage() {
       setCurrentPage(data.currentPage);
     }).catch(() => {}).finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
-  // Sync filters to URL
+  // Sync filters to URL — mark as self-update so the searchParams effect ignores it
   const syncFiltersToURL = useCallback((newFilters: ProductFilters) => {
+    isSelfUpdate.current = true;
     const params = new URLSearchParams();
     if (newFilters.category) params.set('category', newFilters.category);
     if (newFilters.sort) params.set('sort', newFilters.sort);
@@ -123,6 +137,9 @@ export default function ProductsPage() {
     if (newFilters.rating) params.set('rating', String(newFilters.rating));
     if (newFilters.page && newFilters.page > 1) params.set('page', String(newFilters.page));
     if (newFilters.search) params.set('search', newFilters.search);
+    if (newFilters.inStock) params.set('inStock', 'true');
+    if (newFilters.condition) params.set('condition', newFilters.condition);
+    if (newFilters.discount) params.set('discount', String(newFilters.discount));
 
     const qs = params.toString();
     router.replace(qs ? `/products?${qs}` : '/products', { scroll: false });
@@ -225,12 +242,16 @@ export default function ProductsPage() {
           <HiOutlineChevronRight className="h-3 w-3 text-gray-700" />
           {activeCategoryName ? (
             <>
-              <Link href="/products" className="text-gray-500 transition-colors hover:text-primary-400">Products</Link>
+              <Link href="/products" className="text-gray-500 transition-colors hover:text-primary-400">All Mobiles</Link>
               <HiOutlineChevronRight className="h-3 w-3 text-gray-700" />
               <span className="font-medium text-gray-600 dark:text-gray-300">{activeCategoryName}</span>
             </>
+          ) : filters.sort === 'popular' ? (
+            <span className="font-medium text-gray-600 dark:text-gray-300">Featured</span>
+          ) : filters.sort === 'newest' ? (
+            <span className="font-medium text-gray-600 dark:text-gray-300">New Arrivals</span>
           ) : (
-            <span className="font-medium text-gray-600 dark:text-gray-300">All Products</span>
+            <span className="font-medium text-gray-600 dark:text-gray-300">All Mobiles</span>
           )}
         </div>
       </div>
@@ -292,8 +313,12 @@ export default function ProductsPage() {
                 <>{activeCategoryName}</>
               ) : filters.search ? (
                 <>Results for &quot;<span className="gradient-text">{filters.search}</span>&quot;</>
+              ) : filters.sort === 'popular' ? (
+                <>Featured <span className="gradient-text">Mobiles</span></>
+              ) : filters.sort === 'newest' ? (
+                <>New <span className="gradient-text">Arrivals</span></>
               ) : (
-                <>All <span className="gradient-text">Products</span></>
+                <>All <span className="gradient-text">Mobiles</span></>
               )}
             </h1>
             <p className="mt-1.5 text-sm text-gray-500">

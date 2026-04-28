@@ -12,14 +12,15 @@ export function useSearch() {
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const searchProducts = useCallback(async (searchQuery: string) => {
-    if (searchQuery.trim().length < 1) {
+    const trimmed = searchQuery.trim().replace(/\s+/g, ' ');
+    if (trimmed.length < 1) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
     setIsSearching(true);
     try {
-      const results = await productService.search(searchQuery);
+      const results = await productService.search(trimmed);
       setSuggestions(results);
       setShowSuggestions(true);
     } catch {

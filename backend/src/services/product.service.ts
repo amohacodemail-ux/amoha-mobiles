@@ -60,16 +60,73 @@ class ProductService {
       { count: 'exact' },
     );
 
-    if (query.search) {
-      qb = qb.or(`name.ilike.%${query.search}%,description.ilike.%${query.search}%,sku.ilike.%${query.search}%`);
+    // Trim and normalise search string
+    const searchTerm = typeof query.search === 'string'
+      ? query.search.trim().replace(/\s+/g, ' ')
+      : '';
+    if (searchTerm) {
+      qb = qb.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
     }
     if (resolvedCategoryId) qb = qb.eq('category_id', resolvedCategoryId);
-    if (query.brand) qb = qb.eq('brand_id', query.brand);
+
+    // Brand filter: frontend sends brand NAMES (comma-separated); resolve to UUIDs
+    if (query.brand) {
+      const brandNames = String(query.brand).split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (brandNames.length > 0) {
+        const { data: brandRows } = await supabase
+          .from('brands').select('id').in('name', brandNames);
+        const brandIds = (brandRows || []).map((b: any) => b.id).filter(Boolean);
+        if (brandIds.length > 0) {
+          qb = qb.in('brand_id', brandIds);
+        } else {
+          // No matching brands found — return empty result
+          return { products: [], totalProducts: 0, totalPages: 0, currentPage: page, hasMore: false, pagination: { total: 0, page, limit, pages: 0 } };
+        }
+      }
+    }
+
     // Support both minPrice/maxPrice and priceMin/priceMax from different callers
     const priceMin = query.minPrice || query.priceMin;
     const priceMax = query.maxPrice || query.priceMax;
     if (priceMin) qb = qb.gte('selling_price', parseFloat(priceMin));
     if (priceMax) qb = qb.lte('selling_price', parseFloat(priceMax));
+
+    // Specifications JSONB filters (RAM, storage, battery)
+    if (query.ram) {
+      const rams = String(query.ram).split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (rams.length === 1) {
+        qb = qb.filter('specifications->>ram', 'eq', rams[0]);
+      } else if (rams.length > 1) {
+        qb = qb.filter('specifications->>ram', 'in', `(${rams.map((r: string) => `"${r}"`).join(',')})`);
+      }
+    }
+    if (query.storage) {
+      const storages = String(query.storage).split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (storages.length === 1) {
+        qb = qb.filter('specifications->>storage', 'eq', storages[0]);
+      } else if (storages.length > 1) {
+        qb = qb.filter('specifications->>storage', 'in', `(${storages.map((s: string) => `"${s}"`).join(',')})`);
+      }
+    }
+    if (query.battery) {
+      const batteries = String(query.battery).split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (batteries.length === 1) {
+        qb = qb.filter('specifications->>battery', 'eq', batteries[0]);
+      } else if (batteries.length > 1) {
+        qb = qb.filter('specifications->>battery', 'in', `(${batteries.map((b: string) => `"${b}"`).join(',')})`);
+      }
+    }
+
+    // Condition filter (new / used / refurbished)
+    if (query.condition) {
+      qb = qb.eq('condition', String(query.condition));
+    }
+
+    // Discount filter: minimum discount percentage
+    if (query.discount) {
+      qb = qb.gte('discount', parseFloat(query.discount));
+    }
+
     if (query.inStock === 'true' || query.inStock === true) qb = qb.gt('stock', 0);
     // Default to active-only for public queries; admin passes isActive=all to see everything
     if (query.isActive === 'all') {
@@ -390,7 +447,9 @@ class ProductService {
     return (data || []).map((p: any) => normalizeProduct(transformRow(p)));
   }
   async searchSuggestions(query: string) {
-    const { data, error } = await supabase.from('products').select('id, name, slug, images, thumbnail, selling_price, brands(name)').eq('is_active', true).ilike('name', `%${query}%`).limit(10);
+    const term = (query || '').trim().replace(/\s+/g, ' ');
+    if (!term) return [];
+    const { data, error } = await supabase.from('products').select('id, name, slug, images, thumbnail, selling_price, brands(name)').eq('is_active', true).ilike('name', `%${term}%`).limit(10);
     if (error) throw error;
     return (data || []).map((p: any) => {
       const t = transformRow(p);

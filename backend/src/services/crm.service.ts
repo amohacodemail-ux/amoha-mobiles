@@ -1,5 +1,5 @@
 ﻿import supabase from '../config/supabase';
-import { transformRow, transformUser } from '../utils/transform.util';
+import { transformRow } from '../utils/transform.util';
 import { NotFoundError } from '../errors/app-error';
 import logger from '../utils/logger.util';
 
@@ -32,23 +32,28 @@ class CrmService {
 
     const allUsers = users || [];
 
-    // Batch fetch order stats for all fetched users in one query
+    // Batch fetch order stats and note counts for all fetched users
     const userIds = allUsers.map((u: any) => u.id);
     const orderStats: Record<string, { totalOrders: number; totalSpent: number; lastOrderDate: string | null }> = {};
+    const noteCounts: Record<string, number> = {};
 
     if (userIds.length > 0) {
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('user_id, total, status, created_at')
-        .in('user_id', userIds);
+      const [ordersResult, notesResult] = await Promise.all([
+        supabase.from('orders').select('user_id, total, status, created_at').in('user_id', userIds),
+        supabase.from('crm_notes').select('customer_id').in('customer_id', userIds),
+      ]);
 
-      for (const o of orders || []) {
+      for (const o of ordersResult.data || []) {
         if (!orderStats[o.user_id]) orderStats[o.user_id] = { totalOrders: 0, totalSpent: 0, lastOrderDate: null };
         orderStats[o.user_id].totalOrders++;
         if (o.status !== 'cancelled') orderStats[o.user_id].totalSpent += (o.total || 0);
         if (!orderStats[o.user_id].lastOrderDate || o.created_at > orderStats[o.user_id].lastOrderDate!) {
           orderStats[o.user_id].lastOrderDate = o.created_at;
         }
+      }
+
+      for (const n of notesResult.data || []) {
+        noteCounts[n.customer_id] = (noteCounts[n.customer_id] || 0) + 1;
       }
     }
 
@@ -67,7 +72,7 @@ class CrmService {
         totalSpent: stats.totalSpent,
         lastOrderDate: stats.lastOrderDate,
         segment: seg,
-        notesCount: 0,
+        notesCount: noteCounts[u.id] || 0,
       };
     });
 
@@ -91,20 +96,53 @@ class CrmService {
     const { data: user } = await supabase.from('users').select('*').eq('id', customerId).maybeSingle();
     if (!user) throw new NotFoundError('Customer');
 
-    const [ordersRes, notesRes, walletRes] = await Promise.all([
-      supabase.from('orders').select('*', { count: 'exact' }).eq('user_id', customerId).order('created_at', { ascending: false }).limit(10),
-      supabase.from('crm_notes').select('*').eq('customer_id', customerId).order('created_at', { ascending: false }),
-      supabase.from('wallets').select('balance').eq('user_id', customerId).maybeSingle(),
+    const [ordersRes, notesRes] = await Promise.all([
+      supabase
+        .from('orders')
+        .select('id, order_number, total, status, created_at', { count: 'exact' })
+        .eq('user_id', customerId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('crm_notes')
+        .select('id, type, content, created_at, author:author_id(id, name)')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false }),
     ]);
 
+    const totalOrders = ordersRes.count || (ordersRes.data?.length ?? 0);
     const totalSpent = ordersRes.data?.reduce((sum: number, o: any) => sum + (o.total || 0), 0) || 0;
+    const avgOrderValue = totalOrders > 0 ? Math.round(totalSpent / totalOrders) : 0;
+    const segment = computeSegment(totalSpent, totalOrders);
+
+    const recentOrders = (ordersRes.data || []).map((o: any) => ({
+      _id: o.id,
+      orderNumber: o.order_number || o.id,
+      totalAmount: o.total || 0,
+      status: o.status,
+      createdAt: o.created_at,
+    }));
+
+    const notes = (notesRes.data || []).map((n: any) => ({
+      _id: n.id,
+      type: n.type || 'note',
+      content: n.content || '',
+      author: n.author ? { _id: n.author.id, name: n.author.name } : { _id: '', name: 'Admin' },
+      createdAt: n.created_at,
+    }));
 
     return {
-      customer: transformUser(user),
-      orders: { data: (ordersRes.data || []).map(transformRow), total: ordersRes.count || 0 },
-      notes: (notesRes.data || []).map(transformRow),
-      totalSpent,
-      walletBalance: walletRes.data?.balance || 0,
+      customer: {
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || null,
+        createdAt: user.created_at,
+        avatar: user.avatar || null,
+      },
+      stats: { totalOrders, totalSpent, avgOrderValue, segment },
+      recentOrders,
+      notes,
     };
   }
 
@@ -112,11 +150,22 @@ class CrmService {
     const { data: user } = await supabase.from('users').select('id').eq('id', customerId).maybeSingle();
     if (!user) throw new NotFoundError('Customer');
 
+    const content = noteData.content || noteData.note || '';
     const { data: note, error } = await supabase
-      .from('crm_notes').insert({ customer_id: customerId, author_id: adminId, content: noteData.note, type: noteData.type || 'note' })
-      .select('*').single();
+      .from('crm_notes')
+      .insert({ customer_id: customerId, author_id: adminId, content, type: noteData.type || 'note' })
+      .select('id, type, content, created_at, author:author_id(id, name)')
+      .single();
     if (error) throw error;
-    return transformRow(note);
+    return {
+      _id: note.id,
+      type: note.type || 'note',
+      content: note.content || '',
+      author: (note as any).author
+        ? { _id: (note as any).author.id, name: (note as any).author.name }
+        : { _id: adminId, name: 'Admin' },
+      createdAt: note.created_at,
+    };
   }
 
   async updateNote(noteId: string, updates: any) {

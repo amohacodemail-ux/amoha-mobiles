@@ -38,7 +38,7 @@ export default function CategoryPage() {
         <div className="page-container flex items-center gap-2 py-3 text-xs text-gray-500">
           <Link href="/" className="hover:text-primary-400">Home</Link>
           <HiOutlineChevronRight className="h-3 w-3" />
-          <Link href="/products" className="hover:text-primary-400">Products</Link>
+          <Link href="/products" className="hover:text-primary-400">All Mobiles</Link>
           <HiOutlineChevronRight className="h-3 w-3" />
           <span className="text-gray-500 dark:text-gray-400">{category?.name || slug}</span>
         </div>

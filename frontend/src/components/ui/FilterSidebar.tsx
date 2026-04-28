@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { HiOutlineX, HiOutlineAdjustments, HiStar, HiChevronDown, HiChevronUp } from 'react-icons/hi';
 import type { ProductFilters } from '@/types';
 import { formatPrice } from '@/lib/utils';
+import apiClient from '@/lib/api-client';
 
 interface FilterSidebarProps {
   filters: ProductFilters;
@@ -11,7 +12,7 @@ interface FilterSidebarProps {
   onClear: () => void;
 }
 
-const brands = ['Samsung', 'Apple', 'OnePlus', 'Xiaomi', 'Realme', 'Vivo', 'OPPO', 'Google', 'Nothing', 'Motorola'];
+const FALLBACK_BRANDS = ['Samsung', 'Apple', 'OnePlus', 'Xiaomi', 'Realme', 'Vivo', 'OPPO', 'Google', 'Nothing', 'Motorola'];
 const ramOptions = ['4 GB', '6 GB', '8 GB', '12 GB', '16 GB'];
 const storageOptions = ['64 GB', '128 GB', '256 GB', '512 GB', '1 TB'];
 const batteryOptions = ['4000 mAh', '5000 mAh', '5500 mAh', '6000 mAh'];
@@ -134,6 +135,22 @@ function PriceRangeSlider({
 export default function FilterSidebar({ filters, onFilterChange, onClear }: FilterSidebarProps) {
   const [openFilter, setOpenFilter] = useState<string | null>(null);
   const [brandSearch, setBrandSearch] = useState('');
+  const [brands, setBrands] = useState<string[]>(FALLBACK_BRANDS);
+
+  // Load brands from API on mount
+  useEffect(() => {
+    apiClient.get('/brands')
+      .then((res: any) => {
+        const data = res.data?.data;
+        const list: string[] = Array.isArray(data?.brands)
+          ? data.brands.map((b: any) => b.name).filter(Boolean)
+          : Array.isArray(data)
+          ? data.map((b: any) => b.name).filter(Boolean)
+          : [];
+        if (list.length > 0) setBrands(list);
+      })
+      .catch(() => {/* keep fallback */});
+  }, []);
 
   const [localPriceMin, setLocalPriceMin] = useState(filters.priceMin ?? PRICE_MIN);
   const [localPriceMax, setLocalPriceMax] = useState(filters.priceMax ?? PRICE_MAX);

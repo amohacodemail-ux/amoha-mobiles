@@ -73,8 +73,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Don't render anything until hydrated and auth check is complete — BUT ONLY for protected pages
   if (!hydrated || isCheckingAuth) {
-    // For protected paths, always block until auth resolves (need to know if logged in)
-    if (isProtectedPath(pathname) || isAuthPath(pathname)) {
+    // Auth pages (login/register) — full-screen spinner, no layout
+    if (isAuthPath(pathname)) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-surface">
           <div className="flex flex-col items-center gap-4">
@@ -84,6 +84,23 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
           </div>
         </div>
+      );
+    }
+    // Protected pages — show full layout (header + footer) with spinner in content area
+    // so the logo and navigation remain visible while auth resolves
+    if (isProtectedPath(pathname)) {
+      return (
+        <>
+          <SafeComponent><Header /></SafeComponent>
+          <main className="flex flex-1 items-center justify-center" style={{ minHeight: '60vh' }}>
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+            </div>
+          </main>
+          <SafeComponent><Footer /></SafeComponent>
+          <div className="mobile-nav-spacer" />
+          <SafeComponent><MobileBottomNav /></SafeComponent>
+        </>
       );
     }
     // Public pages: render immediately, auth resolves in background
@@ -107,18 +124,18 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Protected pages - if not authenticated, show loading while redirecting to login
+  // Protected pages - if not authenticated, show layout with redirect message
   if (isProtectedPath(pathname) && !isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 text-lg font-bold text-white shadow-glow">
-            A
+      <>
+        <SafeComponent><Header /></SafeComponent>
+        <main className="flex flex-1 items-center justify-center" style={{ minHeight: '60vh' }}>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Redirecting to login...</p>
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Redirecting to login...</p>
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-        </div>
-      </div>
+        </main>
+      </>
     );
   }
 

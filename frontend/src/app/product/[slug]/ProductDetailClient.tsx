@@ -271,7 +271,7 @@ export default function ProductDetailClient() {
         <div className="page-container flex items-center gap-2 py-3 text-xs text-gray-500">
           <Link href="/" className="transition-colors hover:text-primary-400">Home</Link>
           <HiOutlineChevronRight className="h-3 w-3 flex-shrink-0" />
-          <Link href="/products" className="transition-colors hover:text-primary-400">Products</Link>
+          <Link href="/products" className="transition-colors hover:text-primary-400">All Mobiles</Link>
           <HiOutlineChevronRight className="h-3 w-3 flex-shrink-0" />
           <span className="truncate text-gray-500 dark:text-gray-400">{product.name}</span>
         </div>
