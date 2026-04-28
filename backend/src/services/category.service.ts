@@ -10,6 +10,10 @@ class CategoryService {
     if (query.isActive !== undefined) qb = qb.eq('is_active', query.isActive === 'true');
     if (query.parentId) qb = qb.eq('parent_id', query.parentId);
     if (query.topLevel === 'true') qb = qb.is('parent_id', null);
+    // Exclude auto-generated QA/test categories from public listing
+    if (!query.includeTest) {
+      qb = qb.not('name', 'ilike', 'PW-Cat-%').not('slug', 'ilike', 'pw-cat-%');
+    }
     qb = qb.order('sort_order', { ascending: true });
 
     if (query.page) {
@@ -87,7 +91,7 @@ class CategoryService {
 
   // Controller aliases
   async getAll(query?: any) { return this.getCategories(query); }
-  async getAllAdmin(query?: any) { return this.getCategories(query); }
+  async getAllAdmin(query?: any) { return this.getCategories({ ...query, includeTest: true }); }
   async getBySlug(slug: string) { return this.getCategoryBySlug(slug); }
   async create(data: any) { return this.createCategory(data); }
   async update(id: string, data: any) { return this.updateCategory(id, data); }

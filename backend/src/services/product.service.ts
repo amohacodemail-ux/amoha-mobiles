@@ -347,16 +347,80 @@ class ProductService {
     const limit = parseInt(query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    const { data: products, error, count } = await supabase
-      .from('products').select('*', { count: 'exact' })
-      .eq('category_id', categoryId).eq('is_active', true)
-      .order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+    let qb = supabase
+      .from('products')
+      .select('*, reviews:reviews(count), categories(id, name, slug), brands(id, name, slug)', { count: 'exact' })
+      .eq('category_id', categoryId)
+      .eq('is_active', true);
+
+    // Support the same filter params as getProducts for consistency
+    const sortMap: Record<string, { field: string; asc: boolean }> = {
+      newest: { field: 'created_at', asc: false },
+      oldest: { field: 'created_at', asc: true },
+      popular: { field: 'view_count', asc: false },
+      price_low: { field: 'selling_price', asc: true },
+      price_high: { field: 'selling_price', asc: false },
+      rating: { field: 'average_rating', asc: false },
+    };
+    const camelToSnake = (s: string) => s.replace(/[A-Z]/g, (l) => `_${l.toLowerCase()}`);
+    let sortField: string;
+    let sortAsc: boolean;
+    if (query.sort && sortMap[query.sort]) {
+      sortField = sortMap[query.sort].field;
+      sortAsc = sortMap[query.sort].asc;
+    } else {
+      sortField = camelToSnake(query.sortBy || 'created_at');
+      sortAsc = query.sortOrder === 'asc';
+    }
+
+    // Brand filter
+    if (query.brand) {
+      const brandNames = String(query.brand).split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (brandNames.length > 0) {
+        const { data: brandRows } = await supabase.from('brands').select('id').in('name', brandNames);
+        const brandIds = (brandRows || []).map((b: any) => b.id).filter(Boolean);
+        if (brandIds.length > 0) {
+          qb = qb.in('brand_id', brandIds);
+        } else {
+          return { products: [], totalProducts: 0, totalPages: 0, currentPage: page, hasMore: false };
+        }
+      }
+    }
+
+    // Price filters
+    const priceMin = query.minPrice || query.priceMin;
+    const priceMax = query.maxPrice || query.priceMax;
+    if (priceMin) qb = qb.gte('selling_price', parseFloat(priceMin));
+    if (priceMax) qb = qb.lte('selling_price', parseFloat(priceMax));
+
+    // Spec filters
+    if (query.ram) {
+      const rams = String(query.ram).split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (rams.length === 1) qb = qb.filter('specifications->>ram', 'eq', rams[0]);
+      else if (rams.length > 1) qb = qb.filter('specifications->>ram', 'in', `(${rams.map((r: string) => `"${r}"`).join(',')})`);
+    }
+    if (query.storage) {
+      const storages = String(query.storage).split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (storages.length === 1) qb = qb.filter('specifications->>storage', 'eq', storages[0]);
+      else if (storages.length > 1) qb = qb.filter('specifications->>storage', 'in', `(${storages.map((s: string) => `"${s}"`).join(',')})`);
+    }
+    if (query.inStock === 'true' || query.inStock === true) qb = qb.gt('stock', 0);
+    if (query.rating) qb = qb.gte('average_rating', parseFloat(query.rating));
+
+    qb = qb.order(sortField, { ascending: sortAsc }).range(offset, offset + limit - 1);
+
+    const { data: products, error, count } = await qb;
     if (error) throw error;
 
     const totalProducts = count || 0;
     const totalPages = Math.ceil(totalProducts / limit);
     return {
-      products: (products || []).map((p: any) => normalizeProduct(transformRow(p))),
+      products: (products || []).map((p: any) => {
+        const t = transformRow(p);
+        t.reviewCount = p.reviews?.[0]?.count || 0;
+        delete t.reviews;
+        return normalizeProduct(t);
+      }),
       totalProducts,
       totalPages,
       currentPage: page,
