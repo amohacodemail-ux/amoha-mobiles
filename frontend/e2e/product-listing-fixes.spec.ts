@@ -198,10 +198,11 @@ test.describe('Product Card Data Consistency', () => {
 test.describe('Pagination', () => {
   test('pagination loads different products on page 2', async ({ page }) => {
     await page.goto(`${PRODUCTS_URL}?category=used-phones`);
-    await waitForProductsLoaded(page);
+    await waitForProducts(page);
 
-    // Check if pagination exists (only if > 1 page)
+    // Actively wait for pagination to appear (Render cold-starts can be slow under parallel load)
     const nextBtn = page.locator('button:has-text("Next"), button[aria-label*="next"]').first();
+    await nextBtn.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
     const paginationVisible = await nextBtn.isVisible().catch(() => false);
 
     if (!paginationVisible) {
@@ -236,9 +237,11 @@ test.describe('Pagination', () => {
   test('page number buttons are clickable and update results', async ({ page }) => {
     // Used phones has 26 products — with limit=12 that's 3 pages
     await page.goto(`${BASE_URL}/category/used-phones`);
-    await waitForProductsLoaded(page);
+    await waitForProducts(page);
 
+    // Actively wait for page-2 button to appear (Render cold-starts can be slow under parallel load)
     const page2Btn = page.locator('button').filter({ hasText: /^2$/ }).first();
+    await page2Btn.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
     const hasPage2 = await page2Btn.isVisible().catch(() => false);
 
     if (!hasPage2) {
