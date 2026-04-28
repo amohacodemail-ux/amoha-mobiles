@@ -98,6 +98,18 @@ class OrderService {
     }
     // --- END PRE-CHECK ---
 
+    // --- COD BUSINESS RULES ---
+    const COD_FEE = 49;
+    if (orderData.paymentMethod === 'cod') {
+      const orderValueForCheck = (subtotal || 0) - (discount || 0) + (shippingFee || 0);
+      if (orderValueForCheck > 50000) {
+        throw new BadRequestError('Cash on Delivery is not available for orders above ₹50,000. Please choose an online payment method.');
+      }
+      // Add COD handling fee to total
+      total = (total || orderValueForCheck) + COD_FEE;
+    }
+    // --- END COD BUSINESS RULES ---
+
     const orderInsert: any = {
       user_id: userId,
       order_number: orderData.orderNumber || this.generateOrderNumber(),

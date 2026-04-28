@@ -99,7 +99,12 @@ class PaymentController {
             name: i.productName || 'Product', quantity: i.quantity, price: i.price,
           }));
           sendOrderConfirmationEmail(user.email, user.name, {
-            orderNumber: order.orderNumber, totalAmount: order.total, items,
+            orderNumber: order.orderNumber,
+            totalAmount: order.total,
+            items,
+            paymentMethod: 'razorpay',
+            codFee: 0,
+            shippingAddress: orderData.shippingAddress,
           }).catch((err: any) => console.error('Failed to send order confirmation email:', err?.message));
         }
       }

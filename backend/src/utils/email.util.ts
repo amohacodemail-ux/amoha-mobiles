@@ -104,21 +104,47 @@ export async function sendLoginEmail(email: string, name: string) {
   return sendEmail({ to: email, subject: 'Login Alert - AMOHA Mobiles', html });
 }
 
-export async function sendOrderConfirmationEmail(email: string, name: string, order: { orderNumber: string; totalAmount: number; items: { name: string; quantity: number; price: number }[] }) {
+export async function sendOrderConfirmationEmail(email: string, name: string, order: { orderNumber: string; totalAmount: number; items: { name: string; quantity: number; price: number }[]; paymentMethod?: string; codFee?: number; shippingAddress?: { fullName?: string; addressLine1?: string; city?: string; state?: string; pincode?: string } }) {
   const itemsHtml = order.items.map(i => `<tr><td>${i.name}</td><td style="text-align:center">${i.quantity}</td><td style="text-align:right">Rs.${i.price.toLocaleString('en-IN')}</td></tr>`).join('');
+  const isCod = order.paymentMethod === 'cod';
+  const paymentLabel = isCod ? 'Cash on Delivery (COD)' : 'Online Payment (Razorpay)';
+  const paymentNote = isCod
+    ? `<p style="margin:8px 0 0;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;padding:8px 12px;border-radius:6px;">💵 Please keep <strong>Rs.${order.totalAmount.toLocaleString('en-IN')}</strong> (including ₹49 COD fee) ready at delivery.</p>`
+    : '<p style="margin:8px 0 0;font-size:12px;color:#065f46;background:#ecfdf5;border:1px solid #a7f3d0;padding:8px 12px;border-radius:6px;">✅ Payment received. Your order is confirmed.</p>';
+
+  const addressHtml = order.shippingAddress
+    ? `<div style="margin-top:20px;padding:12px 16px;background:#f8fafc;border-radius:8px;border-left:3px solid #6366f1">
+        <p style="margin:0;font-size:12px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em">Delivery Address</p>
+        <p style="margin:6px 0 0;font-size:13px;color:#4b5563">${order.shippingAddress.fullName || name}</p>
+        <p style="margin:2px 0 0;font-size:13px;color:#6b7280">${order.shippingAddress.addressLine1 || ''}</p>
+        <p style="margin:2px 0 0;font-size:13px;color:#6b7280">${[order.shippingAddress.city, order.shippingAddress.state, order.shippingAddress.pincode].filter(Boolean).join(', ')}</p>
+      </div>`
+    : '';
+
+  const codFeeRow = (isCod && (order.codFee || 0) > 0)
+    ? `<tr><td style="color:#92400e;font-weight:500">Cash on Delivery Fee</td><td style="text-align:right;color:#92400e;font-weight:500">Rs.${(order.codFee!).toLocaleString('en-IN')}</td></tr>`
+    : '';
+
   const html = wrapHtml(`
-    <h2>Order Confirmed!</h2>
+    <h2>Order Confirmed! 🎉</h2>
     <p>Hi ${name}, your order <strong>#${order.orderNumber}</strong> has been placed successfully.</p>
     <table>
       <tr style="border-bottom:2px solid #e5e7eb"><td style="font-weight:600;color:#1f2937">Item</td><td style="font-weight:600;color:#1f2937;text-align:center">Qty</td><td style="font-weight:600;color:#1f2937;text-align:right">Price</td></tr>
       ${itemsHtml}
     </table>
+    ${codFeeRow ? `<table style="margin-top:8px">${codFeeRow}</table>` : ''}
     <div style="margin-top:16px;padding:16px;background:#f0fdf4;border-radius:8px;text-align:right">
       <span style="font-size:16px;font-weight:700;color:#059669">Total: Rs.${order.totalAmount.toLocaleString('en-IN')}</span>
     </div>
-    <p style="margin-top:16px">We'll notify you when your order ships.</p>
+    <div style="margin-top:16px;padding:12px 16px;background:#f8fafc;border-radius:8px;border-left:3px solid #6366f1">
+      <p style="margin:0;font-size:12px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.05em">Payment Method</p>
+      <p style="margin:6px 0 0;font-size:13px;color:#4b5563">${paymentLabel}</p>
+      ${paymentNote}
+    </div>
+    ${addressHtml}
+    <p style="margin-top:16px">We'll notify you when your order ships. Estimated delivery: <strong>3–5 business days</strong>.</p>
   `);
-  return sendEmail({ to: email, subject: `Order #${order.orderNumber} Confirmed - AMOHA Mobiles`, html });
+  return sendEmail({ to: email, subject: `Order #${order.orderNumber} Confirmed — AMOHA Mobiles`, html });
 }
 
 export async function sendOrderStatusEmail(email: string, name: string, orderNumber: string, status: string, message?: string) {

@@ -21,7 +21,12 @@ class OrderController {
             name: i.productName || 'Product', quantity: i.quantity, price: i.price,
           }));
           sendOrderConfirmationEmail(user.email, user.name, {
-            orderNumber: order.orderNumber, totalAmount: order.total, items,
+            orderNumber: order.orderNumber,
+            totalAmount: order.total,
+            items,
+            paymentMethod: order.paymentMethod,
+            codFee: order.paymentMethod === 'cod' ? 49 : 0,
+            shippingAddress: order.shippingAddress,
           }).catch((err: any) => console.error('Failed to send order confirmation email:', err?.message));
         }
       }
@@ -80,6 +85,7 @@ class OrderController {
         subtotal: order.subtotal,
         discount: order.discount,
         deliveryCharge: order.shippingFee,
+        codFee: order.paymentMethod === 'cod' ? 49 : 0,
         totalAmount: order.total,
         paymentMethod: order.paymentMethod,
         paymentStatus: order.paymentStatus,

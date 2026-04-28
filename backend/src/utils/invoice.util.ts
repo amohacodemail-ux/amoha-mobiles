@@ -26,6 +26,7 @@ interface InvoiceData {
   subtotal: number;
   discount: number;
   deliveryCharge: number;
+  codFee?: number;
   totalAmount: number;
   paymentMethod: string;
   paymentStatus: string;
@@ -109,9 +110,15 @@ export function generateInvoicePDF(res: Response, data: InvoiceData) {
     rowY += 16;
   }
 
-  doc.text('Delivery:', 400, rowY, { align: 'left' });
+  doc.text('Delivery Charge:', 400, rowY, { align: 'left' });
   doc.text(data.deliveryCharge === 0 ? 'FREE' : formatINR(data.deliveryCharge), 475, rowY, { width: 70, align: 'right' });
   rowY += 16;
+
+  if (data.codFee && data.codFee > 0) {
+    doc.text('Cash on Delivery Fee:', 400, rowY, { align: 'left' });
+    doc.text(formatINR(data.codFee), 475, rowY, { width: 70, align: 'right' });
+    rowY += 16;
+  }
 
   doc.moveTo(400, rowY).lineTo(545, rowY).stroke('#374151');
   rowY += 8;

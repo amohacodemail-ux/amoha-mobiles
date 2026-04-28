@@ -12,9 +12,14 @@ import { useAuthStore } from '@/store/auth.store';
 import { orderService } from '@/services/order.service';
 import { formatPrice } from '@/lib/utils';
 
+/** COD handling fee — always ₹49 for Cash on Delivery orders. Keep in sync with backend COD_FEE constant. */
+const COD_FEE = 49;
+/** Orders above this value are ineligible for Cash on Delivery. */
+const COD_MAX_ORDER_VALUE = 50_000;
+
 const paymentMethods = [
   { id: 'razorpay', label: 'Pay Online (Razorpay)', icon: '💳', description: 'UPI · Cards · Net Banking · Wallets · EMI' },
-  { id: 'cod', label: 'Cash on Delivery', icon: '💵', description: 'Pay in cash at delivery' },
+  { id: 'cod', label: 'Cash on Delivery', icon: '💵', description: 'Pay in cash when your order is delivered' },
 ];
 
 export default function CheckoutPage() {
@@ -28,6 +33,19 @@ export default function CheckoutPage() {
   const [razorpayLoaded, setRazorpayLoaded] = useState(
     typeof window !== 'undefined' && typeof (window as any).Razorpay !== 'undefined',
   );
+
+  // COD is only available for orders at or below ₹50,000
+  const isCodAvailable = totalAmount <= COD_MAX_ORDER_VALUE;
+
+  // Auto-deselect COD when cart value goes above the limit
+  useEffect(() => {
+    if (!isCodAvailable && selectedPayment === 'cod') {
+      setSelectedPayment('razorpay');
+    }
+  }, [isCodAvailable, selectedPayment]);
+
+  // The total the customer will actually pay (includes COD fee when applicable)
+  const checkoutTotal = selectedPayment === 'cod' ? totalAmount + COD_FEE : totalAmount;
 
   // Sync razorpayLoaded if the script was already in the DOM on mount
   // (happens when navigating back to checkout without a full page reload)
@@ -199,7 +217,7 @@ export default function CheckoutPage() {
               couponCode: coupon?.code,
             });
             await clearCart();
-            router.push(`/order-success?id=${order._id}`);
+            router.push(`/order-success?id=${order._id}&num=${order.orderNumber}`);
           } catch {
             toast.error('Payment verification failed. Please contact support.');
             setIsPlacing(false);
@@ -237,9 +255,10 @@ export default function CheckoutPage() {
         couponCode: coupon?.code,
       });
       await clearCart();
-      router.push(`/order-success?id=${order._id}`);
-    } catch {
-      toast.error('Failed to place order. Please try again.');
+      router.push(`/order-success?id=${order._id}&num=${order.orderNumber}`);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to place order. Please try again.';
+      toast.error(msg);
       setIsPlacing(false);
     }
   };
@@ -264,8 +283,8 @@ export default function CheckoutPage() {
       ? 'Opening Payment...'
       : 'Placing Order...'
     : selectedPayment === 'razorpay'
-    ? `Pay Now · ${formatPrice(totalAmount)}`
-    : `Place Order · ${formatPrice(totalAmount)}`;
+    ? `Pay Now · ${formatPrice(checkoutTotal)}`
+    : `Place Order · ${formatPrice(checkoutTotal)}`;
 
   return (
     <>
@@ -341,26 +360,45 @@ export default function CheckoutPage() {
                 <HiOutlineShieldCheck className="h-5 w-5 text-primary-400" />
                 <h2 className="text-base font-bold text-gray-900 dark:text-white sm:text-lg">Payment Method</h2>
               </div>
+              {/* COD unavailable banner — shown when cart value exceeds ₹50,000 */}
+              {!isCodAvailable && (
+                <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                  <p className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                    <HiOutlineShieldCheck className="h-4 w-4 flex-shrink-0" />
+                    Cash on Delivery is not available for orders above ₹50,000. Please pay online.
+                  </p>
+                </div>
+              )}
+
               <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
-                {paymentMethods.map((method) => (
-                  <button
-                    key={method.id}
-                    onClick={() => setSelectedPayment(method.id)}
-                    className={`flex items-center gap-2.5 rounded-xl border p-3 text-left transition-all sm:gap-3 sm:p-4 ${
-                      selectedPayment === method.id
-                        ? 'border-primary-500 bg-primary-500/10 shadow-glow'
-                        : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 hover:border-gray-300 dark:hover:border-white/20'
-                    }`}
-                  >
-                    <span className="text-xl sm:text-2xl flex-shrink-0">{method.icon}</span>
-                    <div className="min-w-0">
-                      <span className={`block text-sm font-medium ${selectedPayment === method.id ? 'text-primary-400' : 'text-gray-900 dark:text-white'}`}>
-                        {method.label}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{method.description}</span>
-                    </div>
-                  </button>
-                ))}
+                {paymentMethods.map((method) => {
+                  const isCodOption = method.id === 'cod';
+                  const isDisabled = isCodOption && !isCodAvailable;
+                  return (
+                    <button
+                      key={method.id}
+                      onClick={() => !isDisabled && setSelectedPayment(method.id)}
+                      disabled={isDisabled}
+                      aria-disabled={isDisabled}
+                      className={`flex items-center gap-2.5 rounded-xl border p-3 text-left transition-all sm:gap-3 sm:p-4 ${
+                        isDisabled
+                          ? 'cursor-not-allowed opacity-40 border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5'
+                          : selectedPayment === method.id
+                          ? 'border-primary-500 bg-primary-500/10 shadow-glow'
+                          : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 hover:border-gray-300 dark:hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-xl sm:text-2xl flex-shrink-0">{method.icon}</span>
+                      <div className="min-w-0">
+                        <span className={`block text-sm font-medium ${isDisabled ? 'text-gray-400 dark:text-gray-500' : selectedPayment === method.id ? 'text-primary-400' : 'text-gray-900 dark:text-white'}`}>
+                          {method.label}
+                          {isCodOption && !isCodAvailable && <span className="ml-2 text-[10px] font-semibold text-amber-500 uppercase">Not available</span>}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{method.description}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
               {selectedPayment === 'razorpay' && (
                 <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
@@ -371,11 +409,16 @@ export default function CheckoutPage() {
                   <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">Accepts: UPI (GPay, PhonePe, Paytm) · Debit/Credit Cards · Net Banking (50+ banks) · Wallets · EMI</p>
                 </div>
               )}
-              {selectedPayment === 'cod' && (
-                <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <HiOutlineShieldCheck className="h-4 w-4 text-amber-400" />
-                  Cash on Delivery available up to ₹50,000 · COD fee of ₹49 may apply on orders below ₹999
-                </p>
+              {selectedPayment === 'cod' && isCodAvailable && (
+                <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-1">
+                  <p className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 font-medium">
+                    <HiOutlineShieldCheck className="h-4 w-4 flex-shrink-0" />
+                    Cash on Delivery — Important
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">· A <strong className="text-gray-800 dark:text-gray-200">Cash on Delivery fee of ₹49</strong> is charged on all COD orders.</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">· COD is not available for orders above ₹50,000.</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">· Please keep the exact amount ready at delivery.</p>
+                </div>
               )}
             </div>
           </div>
@@ -403,8 +446,14 @@ export default function CheckoutPage() {
               <div className="mt-4 space-y-2 border-t border-gray-200 dark:border-white/5 pt-4">
                 <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Subtotal</span><span className="text-gray-900 dark:text-white">{formatPrice(subtotal)}</span></div>
                 {discount > 0 && <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Discount</span><span className="text-emerald-400">−{formatPrice(discount)}</span></div>}
-                <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Delivery</span><span className={deliveryCharge === 0 ? 'text-emerald-400' : 'text-gray-900 dark:text-white'}>{deliveryCharge === 0 ? 'FREE' : formatPrice(deliveryCharge)}</span></div>
-                <div className="flex justify-between border-t border-gray-200 dark:border-white/10 pt-3 text-base font-bold"><span className="text-gray-900 dark:text-white">Total</span><span className="gradient-text">{formatPrice(totalAmount)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Delivery Charge</span><span className={deliveryCharge === 0 ? 'text-emerald-400' : 'text-gray-900 dark:text-white'}>{deliveryCharge === 0 ? 'FREE' : formatPrice(deliveryCharge)}</span></div>
+                {selectedPayment === 'cod' && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">Cash on Delivery Fee</span>
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">{formatPrice(COD_FEE)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-gray-200 dark:border-white/10 pt-3 text-base font-bold"><span className="text-gray-900 dark:text-white">Total</span><span className="gradient-text">{formatPrice(checkoutTotal)}</span></div>
               </div>
 
               <button

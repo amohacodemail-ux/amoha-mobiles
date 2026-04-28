@@ -8,6 +8,8 @@ import { HiOutlineCheckCircle, HiOutlineShoppingBag, HiOutlineClipboardList } fr
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get('id');
+  // orderNumber is the human-readable order number (e.g. ORD-12345). Falls back to orderId if not present.
+  const orderNumber = searchParams.get('num') || orderId;
 
   return (
     <div className="page-container flex flex-col items-center justify-center py-20 text-center sm:py-32">
@@ -21,10 +23,10 @@ function OrderSuccessContent() {
         Thank you for your purchase. Your order has been confirmed and will be shipped soon.
       </p>
 
-      {orderId && (
+      {orderNumber && (
         <div className="mt-6 glass-card-sm inline-flex items-center gap-2 px-5 py-3">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Order ID:</span>
-          <span className="text-sm font-mono font-semibold text-primary-400">{orderId}</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">Order Number:</span>
+          <span className="text-sm font-mono font-semibold text-primary-400">#{orderNumber}</span>
         </div>
       )}
 
