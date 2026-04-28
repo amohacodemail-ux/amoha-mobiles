@@ -83,19 +83,18 @@ export const useCartStore = create<CartState>()(
 
       addToCart: async (productId, quantity = 1, color) => {
         return enqueueCartMutation(async () => {
-          // Optimistic: bump count immediately
+          // Optimistic: bump count and disable button during API call
           const prev = { totalItems: get().totalItems };
-          set({ totalItems: prev.totalItems + quantity, error: null });
+          set({ totalItems: prev.totalItems + quantity, isLoading: true, error: null });
           try {
             const cart = await cartService.addItem(productId, quantity, color);
-            set({ ...applyCartResponse(cart), isLoading: false });
+            set({ ...applyCartResponse(cart), isLoading: false, error: null });
           } catch (err: unknown) {
             // Rollback
-            set({ totalItems: prev.totalItems });
             const message =
               (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
               'Failed to add to cart.';
-            set({ error: message, isLoading: false });
+            set({ totalItems: prev.totalItems, error: message, isLoading: false });
             throw new Error(message);
           }
         });

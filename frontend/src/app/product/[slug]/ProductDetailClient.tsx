@@ -104,6 +104,22 @@ export default function ProductDetailClient() {
     }
   }, [product?._id, isAuthenticated]);
 
+  // Pre-warm Next.js image optimisation cache for all product images so
+  // thumbnail clicks are instant (no 3-4 s first-load delay after initial render).
+  useEffect(() => {
+    if (!product?.images || product.images.length <= 1 || typeof window === 'undefined') return;
+    // Skip the first image – it is already loaded with priority by the main Image component.
+    product.images.slice(1, 6).forEach((src) => {
+      if (!src || src.includes('no-product.svg')) return;
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      // Request the Next.js-optimised version at the largest common display size.
+      link.href = `/_next/image?url=${encodeURIComponent(src)}&w=640&q=90`;
+      document.head.appendChild(link);
+    });
+  }, [product?._id]); // only re-run when a different product is loaded
+
   // Sticky cart bar: show when main CTA scrolls out of view on mobile
   useEffect(() => {
     const el = ctaRef.current;
@@ -374,7 +390,8 @@ export default function ProductDetailClient() {
                       src={img || PLACEHOLDER_IMG}
                       alt={`${product.name} thumbnail ${idx + 1}`}
                       fill
-                      priority={idx < 4}
+                      priority={idx < 6}
+                      quality={85}
                       className="object-contain p-1"
                       sizes="80px"
                       onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
@@ -437,11 +454,11 @@ export default function ProductDetailClient() {
             </p>
 
             {/* Key Highlights */}
-            {specEntries.length > 0 && (
+            {displaySpecEntries.length > 0 && (
               <div className="mt-4">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">Key Highlights</p>
                 <ul className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                  {specEntries.slice(0, 6).map(([key, value]) => (
+                  {displaySpecEntries.slice(0, 6).map(([key, value]) => (
                     <li key={key} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <HiOutlineCheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" />
                       <span>
