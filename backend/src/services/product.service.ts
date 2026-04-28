@@ -53,6 +53,11 @@ class ProductService {
           .from('categories').select('id').eq('slug', query.category).maybeSingle();
         resolvedCategoryId = cat?.id ?? null;
       }
+      // If a category was requested but not found, return empty result — do NOT
+      // silently drop the filter (which would return all products).
+      if (!resolvedCategoryId) {
+        return { products: [], totalProducts: 0, totalPages: 0, currentPage: page, hasMore: false, pagination: { total: 0, page, limit, pages: 0 } };
+      }
     }
 
     let qb = supabase.from('products').select(

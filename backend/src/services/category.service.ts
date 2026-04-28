@@ -4,8 +4,8 @@ import { NotFoundError, BadRequestError } from '../errors/app-error';
 
 class CategoryService {
   async getCategories(query: any = {}) {
-    // Include product count via embedded relation
-    let qb = supabase.from('categories').select('*, products:products!category_id(count)', { count: 'exact' });
+    // Fetch categories without embedded product count first
+    let qb = supabase.from('categories').select('*', { count: 'exact' });
     if (query.search) qb = qb.ilike('name', `%${query.search}%`);
     if (query.isActive !== undefined) qb = qb.eq('is_active', query.isActive === 'true');
     if (query.parentId) qb = qb.eq('parent_id', query.parentId);
@@ -24,13 +24,25 @@ class CategoryService {
 
     const { data, error, count } = await qb;
     if (error) throw error;
+
+    // Fetch active product counts per category in a single query so the
+    // chip badges reflect only purchasable (is_active=true) products.
+    const { data: activeProdRows } = await supabase
+      .from('products')
+      .select('category_id')
+      .eq('is_active', true)
+      .not('category_id', 'is', null);
+
+    const activeCountMap: Record<string, number> = {};
+    (activeProdRows || []).forEach((p: any) => {
+      if (p.category_id) {
+        activeCountMap[p.category_id] = (activeCountMap[p.category_id] || 0) + 1;
+      }
+    });
+
     const categories = (data || []).map((row: any) => {
       const transformed = transformRow(row);
-      // Extract embedded product count
-      transformed.productCount = Array.isArray(row.products) && row.products.length > 0
-        ? (row.products[0].count ?? 0)
-        : 0;
-      delete transformed.products;
+      transformed.productCount = activeCountMap[transformed._id] || 0;
       return transformed;
     });
     return { categories, total: count || 0 };
