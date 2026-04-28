@@ -74,10 +74,11 @@ function ProductCard({ product }: ProductCardProps) {
       return;
     }
     try {
-      toast.success('Added to cart');
       await addToCart(product._id);
-    } catch {
-      toast.error('Failed to add to cart');
+      toast.success('Added to cart');
+    } catch (err: unknown) {
+      const errMsg = (err as Error)?.message || 'Failed to add to cart';
+      toast.error(errMsg);
     }
   }, [isAuthenticated, product._id, product.slug, addToCart, router]);
 

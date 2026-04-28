@@ -137,10 +137,11 @@ export default function ProductDetailClient() {
       return;
     }
     try {
-      toast.success('Added to cart!');
       await addToCart(product._id, quantity, selectedColor);
-    } catch {
-      toast.error('Failed to add to cart');
+      toast.success('Added to cart!');
+    } catch (err: unknown) {
+      const errMsg = (err as Error)?.message || 'Failed to add to cart';
+      toast.error(errMsg);
     }
   }, [product, isAuthenticated, slug, addToCart, quantity, selectedColor, router]);
 
@@ -257,6 +258,17 @@ export default function ProductDetailClient() {
   const specEntries = product.specifications
     ? Object.entries(product.specifications).filter(([, v]) => v && v !== '')
     : [];
+  // Fallback: build spec rows from product-level fields when detailed specs are absent
+  const fallbackSpecEntries: Array<[string, string | boolean]> = [];
+  if (specEntries.length === 0) {
+    if (product.brand) fallbackSpecEntries.push(['Brand', product.brand]);
+    if (product.category) fallbackSpecEntries.push(['Category', product.category]);
+    if (product.condition) fallbackSpecEntries.push(['Condition', product.condition.charAt(0).toUpperCase() + product.condition.slice(1)]);
+    if (product.warranty) fallbackSpecEntries.push(['Warranty', product.warranty]);
+    if (product.colors?.length) fallbackSpecEntries.push(['Available Colors', product.colors.join(', ')]);
+    fallbackSpecEntries.push(['Availability', product.stock > 0 ? `In Stock (${product.stock} units)` : 'Out of Stock']);
+  }
+  const displaySpecEntries: Array<[string, string | boolean]> = specEntries.length > 0 ? specEntries : fallbackSpecEntries;
   const safeReviews = Array.isArray(product.reviews)
     ? product.reviews.filter((review) => review && review.user && review.user.name)
     : [];
@@ -295,6 +307,7 @@ export default function ProductDetailClient() {
                   alt={`${product.name} – image ${selectedImage + 1}`}
                   fill
                   priority
+                  quality={90}
                   className="object-contain p-4 sm:p-6 lg:p-8"
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 45vw"
                   onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
@@ -361,7 +374,8 @@ export default function ProductDetailClient() {
                       src={img || PLACEHOLDER_IMG}
                       alt={`${product.name} thumbnail ${idx + 1}`}
                       fill
-                      className="object-cover"
+                      priority={idx < 4}
+                      className="object-contain p-1"
                       sizes="80px"
                       onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
                     />
@@ -590,27 +604,33 @@ export default function ProductDetailClient() {
             {activeTab === 'specs' ? (
               /* ── Specifications Table ── */
               <div className="glass-card overflow-hidden">
-                <div className="overflow-x-auto scrollbar-hide">
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {specEntries.map(([key, value], idx) => (
-                        <tr
-                          key={key}
-                          className={`border-b border-gray-100 dark:border-white/[0.04] last:border-0 ${
-                            idx % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.015]' : ''
-                          }`}
-                        >
-                          <td className="whitespace-normal px-3 py-3 font-semibold capitalize text-gray-600 dark:text-gray-300 w-[35%] sm:w-2/5 sm:px-5 sm:py-3.5">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}
-                          </td>
-                          <td className="px-3 py-3 text-gray-900 dark:text-white sm:px-5 sm:py-3.5">
-                            {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {displaySpecEntries.length > 0 ? (
+                  <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {displaySpecEntries.map(([key, value], idx) => (
+                          <tr
+                            key={key}
+                            className={`border-b border-gray-100 dark:border-white/[0.04] last:border-0 ${
+                              idx % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.015]' : ''
+                            }`}
+                          >
+                            <td className="whitespace-normal px-3 py-3 font-semibold capitalize text-gray-600 dark:text-gray-300 w-[35%] sm:w-2/5 sm:px-5 sm:py-3.5">
+                              {key.replace(/([A-Z])/g, ' $1').trim()}
+                            </td>
+                            <td className="px-3 py-3 text-gray-900 dark:text-white sm:px-5 sm:py-3.5">
+                              {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center py-12 text-center">
+                    <p className="text-sm text-gray-500">No specifications available for this product.</p>
+                  </div>
+                )}
               </div>
             ) : (
               /* ── Reviews ── */
