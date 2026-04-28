@@ -174,6 +174,9 @@ test.describe('Sorting - Price', () => {
 
     // URL should now have sort=price_low
     await page.waitForURL(/sort=price_low/, { timeout: 10000 });
+    // Wait for products to render after sort change
+    await waitForLoadingDone(page);
+    await page.waitForSelector('a[href*="/product/"]', { timeout: 10000 }).catch(() => {});
     const count = await page.locator('a[href*="/product/"]').count();
     expect(count).toBeGreaterThan(0);
   });
