@@ -1,26 +1,46 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Product, ProductsResponse, ProductFilters } from '@/types';
 import { productService } from '@/services/product.service';
+
+/** Deduplicate a product array by _id, preserving order. */
+function dedupeProducts(products: Product[]): Product[] {
+  const seen = new Set<string>();
+  return products.filter((p) => {
+    if (seen.has(p._id)) return false;
+    seen.add(p._id);
+    return true;
+  });
+}
 
 export function useProducts(initialFilters?: ProductFilters) {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<ProductFilters>(initialFilters || {});
+  // Store filters in a ref so callbacks always read the latest value without
+  // needing to be recreated (avoids stale-closure bugs on category pages).
+  const filtersRef = useRef<ProductFilters>(initialFilters || {});
+  const [filters, setFiltersState] = useState<ProductFilters>(initialFilters || {});
   const [totalPages, setTotalPages] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
+  // Keep ref in sync with state
+  const setFilters = useCallback((f: ProductFilters) => {
+    filtersRef.current = f;
+    setFiltersState(f);
+  }, []);
+
   const fetchProducts = useCallback(async (newFilters?: ProductFilters) => {
     setIsLoading(true);
     setError(null);
     try {
-      const appliedFilters = newFilters || filters;
+      // Always use the passed filters or the latest ref value — never stale closure
+      const appliedFilters = newFilters ?? filtersRef.current;
       const data: ProductsResponse = await productService.getAll(appliedFilters);
-      setProducts(data.products);
+      setProducts(dedupeProducts(data.products));
       setTotalPages(data.totalPages);
       setTotalProducts(data.totalProducts);
       setCurrentPage(data.currentPage);
@@ -30,37 +50,42 @@ export function useProducts(initialFilters?: ProductFilters) {
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, []); // no deps — reads from ref
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoading) return;
     setIsLoading(true);
     try {
-      const data = await productService.getAll({ ...filters, page: currentPage + 1 });
-      setProducts((prev) => [...prev, ...data.products]);
+      const nextPage = filtersRef.current.page ? Number(filtersRef.current.page) + 1 : 2;
+      const newFilters = { ...filtersRef.current, page: nextPage };
+      filtersRef.current = newFilters;
+      const data = await productService.getAll(newFilters);
+      setProducts((prev) => dedupeProducts([...prev, ...data.products]));
       setCurrentPage(data.currentPage);
       setHasMore(data.hasMore);
+      setFiltersState(newFilters);
     } catch {
       setError('Failed to load more products.');
     } finally {
       setIsLoading(false);
     }
-  }, [filters, currentPage, hasMore, isLoading]);
+  }, [hasMore, isLoading]);
 
   const updateFilters = useCallback((newFilters: Partial<ProductFilters>) => {
-    const updated = { ...filters, ...newFilters, page: 1 };
+    const updated = { ...filtersRef.current, ...newFilters, page: 1 };
     setFilters(updated);
     fetchProducts(updated);
-  }, [filters, fetchProducts]);
+  }, [fetchProducts, setFilters]);
 
   const goToPage = useCallback((page: number) => {
-    const updated = { ...filters, page };
+    const updated = { ...filtersRef.current, page };
     setFilters(updated);
     fetchProducts(updated);
-  }, [filters, fetchProducts]);
+  }, [fetchProducts, setFilters]);
 
   useEffect(() => {
-    fetchProducts();
+    // Fetch on mount using the initial filters (already in ref)
+    fetchProducts(filtersRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

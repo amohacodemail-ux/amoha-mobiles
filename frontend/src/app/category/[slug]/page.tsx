@@ -1,32 +1,83 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { HiOutlineChevronRight, HiOutlineViewGrid } from 'react-icons/hi';
-import type { Category } from '@/types';
+import type { Category, Product, ProductFilters } from '@/types';
 import { categoryService } from '@/services/category.service';
-import { useProducts } from '@/hooks/useProducts';
+import { productService } from '@/services/product.service';
 import ProductCard from '@/components/ui/ProductCard';
 import FilterSidebar from '@/components/ui/FilterSidebar';
 import Pagination from '@/components/ui/Pagination';
 import { ProductGridSkeleton } from '@/components/ui/Skeletons';
 
+const LIMIT = 12;
+
+/** Deduplicate products by _id. */
+function dedupeProducts(products: Product[]): Product[] {
+  const seen = new Set<string>();
+  return products.filter((p) => {
+    if (seen.has(p._id)) return false;
+    seen.add(p._id);
+    return true;
+  });
+}
+
 export default function CategoryPage() {
   const { slug } = useParams<{ slug: string }>();
   const [category, setCategory] = useState<Category | null>(null);
-  const {
-    products, isLoading, filters, totalPages, totalProducts,
-    currentPage, updateFilters, goToPage, setFilters, fetchProducts,
-  } = useProducts({ category: slug });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filters, setFilters] = useState<ProductFilters>({ page: 1, limit: LIMIT });
+  const filtersRef = useRef<ProductFilters>({ page: 1, limit: LIMIT });
+
+  const fetchProducts = useCallback(async (extraFilters?: ProductFilters) => {
+    if (!slug) return;
+    setIsLoading(true);
+    try {
+      const appliedFilters = extraFilters ?? filtersRef.current;
+      const data = await productService.getByCategory(slug, appliedFilters);
+      setProducts(dedupeProducts(data.products));
+      setTotalPages(data.totalPages);
+      setTotalProducts(data.totalProducts);
+      setCurrentPage(data.currentPage);
+    } catch {
+      // silently ignore
+    } finally {
+      setIsLoading(false);
+    }
+  }, [slug]);
 
   useEffect(() => {
     if (!slug) return;
     categoryService.getBySlug(slug).then(setCategory).catch(() => {});
-  }, [slug]);
+    filtersRef.current = { page: 1, limit: LIMIT };
+    setFilters({ page: 1, limit: LIMIT });
+    fetchProducts({ page: 1, limit: LIMIT });
+  }, [slug, fetchProducts]);
+
+  const updateFilters = (newFilters: Partial<ProductFilters>) => {
+    const updated = { ...filtersRef.current, ...newFilters, page: 1 };
+    filtersRef.current = updated;
+    setFilters(updated);
+    fetchProducts(updated);
+  };
+
+  const goToPage = (page: number) => {
+    const updated = { ...filtersRef.current, page };
+    filtersRef.current = updated;
+    setFilters(updated);
+    fetchProducts(updated);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleClearFilters = () => {
-    const cleared = { category: slug, page: 1 };
+    const cleared: ProductFilters = { page: 1, limit: LIMIT };
+    filtersRef.current = cleared;
     setFilters(cleared);
     fetchProducts(cleared);
   };
@@ -52,7 +103,7 @@ export default function CategoryPage() {
               {category?.name || 'Category'}
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              {category?.description || `${totalProducts} products found`}
+              {category?.description || `${totalProducts} product${totalProducts !== 1 ? 's' : ''} found`}
             </p>
           </div>
         </div>
@@ -63,7 +114,7 @@ export default function CategoryPage() {
         {/* Products Grid */}
         <div className="mt-6">
             {isLoading ? (
-              <ProductGridSkeleton count={8} />
+              <ProductGridSkeleton count={LIMIT} />
             ) : products.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">

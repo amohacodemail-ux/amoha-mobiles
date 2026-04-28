@@ -80,9 +80,11 @@ export default function ProductsPage() {
     searchParams.get('category') || null
   );
 
-  // Fetch categories on mount
+  // Fetch categories on mount — exclude auto-generated test categories
   useEffect(() => {
-    categoryService.getAll().then(setCategories).catch(() => {});
+    categoryService.getAll().then((cats) => {
+      setCategories(cats.filter((c) => !c.name?.startsWith('PW-Cat-') && !c.slug?.startsWith('pw-cat-')));
+    }).catch(() => {});
   }, []);
 
   // Fetch products
@@ -91,7 +93,14 @@ export default function ProductsPage() {
     try {
       const appliedFilters = newFilters || filters;
       const data = await productService.getAll({ ...appliedFilters, limit: 12 });
-      setProducts(data.products);
+      // Deduplicate by _id to guard against any backend-level duplicates
+      const seen = new Set<string>();
+      const deduped = (data.products || []).filter((p) => {
+        if (seen.has(p._id)) return false;
+        seen.add(p._id);
+        return true;
+      });
+      setProducts(deduped);
       setTotalPages(data.totalPages);
       setTotalProducts(data.totalProducts);
       setCurrentPage(data.currentPage);
@@ -114,7 +123,12 @@ export default function ProductsPage() {
     setActiveCategory(initialFilters.category || null);
     setIsLoading(true);
     productService.getAll({ ...initialFilters, limit: 12 }).then((data) => {
-      setProducts(data.products);
+      const seen = new Set<string>();
+      setProducts((data.products || []).filter((p) => {
+        if (seen.has(p._id)) return false;
+        seen.add(p._id);
+        return true;
+      }));
       setTotalPages(data.totalPages);
       setTotalProducts(data.totalProducts);
       setCurrentPage(data.currentPage);

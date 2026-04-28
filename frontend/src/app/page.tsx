@@ -57,7 +57,7 @@ export default function HomePage() {
         if (featuredRes.status === 'fulfilled') setFeaturedProducts(toArray<Product>(featuredRes.value));
         if (trendingRes.status === 'fulfilled') setTrendingProducts(toArray<Product>(trendingRes.value));
         if (bannersRes.status === 'fulfilled') setBanners(toArray<Banner>(bannersRes.value));
-        if (categoriesRes.status === 'fulfilled') setCategories(toArray<Category>(categoriesRes.value));
+        if (categoriesRes.status === 'fulfilled') setCategories(toArray<Category>(categoriesRes.value).filter((c) => !c.name?.startsWith('PW-Cat-') && !c.slug?.startsWith('pw-cat-')));
         if (newArrivalsRes.status === 'fulfilled') setNewArrivals(toArray<Product>(newArrivalsRes.value?.products));
         if (reviewsRes.status === 'fulfilled') setTopReviews(toArray<HomepageReview>(reviewsRes.value));
       } finally {
