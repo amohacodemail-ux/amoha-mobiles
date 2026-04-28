@@ -1,170 +1,191 @@
 /**
  * Checkout Validation E2E Tests
  *
- * Covers:
- *  1. Empty form → all required fields show inline errors
- *  2. Phone validation: too long, alphabetic, too short — all rejected
- *  3. Pincode validation: all-same-digits, alphanumeric — all rejected
- *  4. Out-of-stock checkout blocked (mocked via cart store patch)
- *  5. Backend API rejects invalid phone, invalid pincode
+ * Strategy:
+ *  - UI tests (form validation, stock check): use page.addInitScript + API mocking
+ *    so they run fully offline without any real auth token.
+ *  - Backend API tests: require a real token; skip gracefully when unavailable.
  */
 
 import { test, expect, Page } from '@playwright/test';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://www.amohamobiles.com';
-const API_URL = process.env.API_URL || 'https://amoha-backend-v2.onrender.com/api';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3002';
+const API_URL      = process.env.API_URL      || 'https://amoha-backend-v2.onrender.com/api';
+const API_ORIGIN   = API_URL.replace(/\/api$/, '');
 
-const TEST_EMAIL = process.env.CHECKOUT_TEST_EMAIL || 'checkout_validation_e2e@amohatest.com';
-const TEST_PASSWORD = process.env.CHECKOUT_TEST_PASSWORD || 'Test@1234Secure!';
-const TEST_NAME = 'Checkout Validation User';
+const API_TEST_EMAIL    = process.env.CHECKOUT_TEST_EMAIL    || `checkout_api_${Date.now()}@amohatest.com`;
+const API_TEST_PASSWORD = process.env.CHECKOUT_TEST_PASSWORD || 'Test@1234Secure!';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Mock data ----------------------------------------------------------------
 
-async function apiLogin(): Promise<string> {
-  const loginResp = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
-  });
-  const loginData = await loginResp.json();
-  if (loginData.token) return loginData.token as string;
+const MOCK_PRODUCT_IN_STOCK = {
+  _id: 'mock-prod-1', id: 'mock-prod-1', name: 'Test Phone X', slug: 'test-phone-x',
+  thumbnail: '/images/no-product.svg', images: ['/images/no-product.svg'],
+  price: 9999, sellingPrice: 9999, stock: 10, inStock: true,
+};
 
-  // Register on first run
-  const regResp = await fetch(`${API_URL}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: TEST_NAME, email: TEST_EMAIL,
-      password: TEST_PASSWORD, confirmPassword: TEST_PASSWORD,
-      phone: '9876543210',
-    }),
-  });
-  const regData = await regResp.json();
-  if (regData.token) return regData.token as string;
+const MOCK_PRODUCT_OOS = {
+  ...MOCK_PRODUCT_IN_STOCK, _id: 'mock-prod-oos', id: 'mock-prod-oos',
+  name: 'OOS Phone', stock: 0, inStock: false,
+};
 
-  // Retry login
-  const retry = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
-  });
-  const retryData = await retry.json();
-  if (retryData.token) return retryData.token as string;
-
-  throw new Error(`Cannot authenticate test user: ${JSON.stringify(retryData)}`);
+function mockCartItem(oos: boolean) {
+  return {
+    _id: 'mock-item-1', product: oos ? MOCK_PRODUCT_OOS : MOCK_PRODUCT_IN_STOCK,
+    quantity: 1, price: 9999, totalPrice: 9999,
+  };
 }
 
-async function injectAuthAndCart(page: Page, token: string, outOfStock = false) {
-  await page.evaluate(
-    ([t, email, name, oos]) => {
-      // Inject auth — Zustand persist key is 'amoha-auth'
-      localStorage.setItem(
-        'amoha-auth',
-        JSON.stringify({
-          state: {
-            user: { name, email, role: 'customer' },
-            token: t,
-            isAuthenticated: true,
-          },
-          version: 0,
-        }),
-      );
+// --- Helpers ------------------------------------------------------------------
 
-      // Inject a minimal cart with one product so the checkout page renders
-      // Zustand persist key is 'amoha-cart'
-      localStorage.setItem(
-        'amoha-cart',
-        JSON.stringify({
-          state: {
-            items: [
-              {
-                _id: 'test-cart-item-1',
-                product: {
-                  _id: 'test-product-1',
-                  name: 'Test Phone',
-                  slug: 'test-phone',
-                  thumbnail: '/images/no-product.svg',
-                  price: 9999,
-                  stock: oos ? 0 : 10,
-                  inStock: !oos,
-                },
-                quantity: 1,
-                price: 9999,
-                totalPrice: 9999,
-              },
-            ],
-            savedForLater: [],
-            totalItems: 1,
-            subtotal: 9999,
-            discount: 0,
-            deliveryCharge: 0,
-            totalAmount: 9999,
-          },
-          version: 0,
-        }),
-      );
-    },
-    [token, TEST_EMAIL, TEST_NAME, outOfStock] as [string, string, string, boolean],
-  );
+/** Inject auth + cart into localStorage BEFORE any page JS runs. */
+function buildInitScript(oos: boolean): string {
+  const auth = {
+    state: {
+      user: { _id: 'mu1', name: 'Test User', email: 'test@example.com', role: 'customer', phone: '9876543210' },
+      token: 'mock-ui-test-token',
+      isAuthenticated: true,
+    }, version: 0,
+  };
+  const cart = {
+    state: {
+      items: [mockCartItem(oos)],
+      savedForLater: [], totalItems: 1,
+      subtotal: 9999, discount: 0, deliveryCharge: 0, totalAmount: 9999, coupon: null,
+    }, version: 0,
+  };
+  return `
+    try {
+      localStorage.setItem('amoha-auth', ${JSON.stringify(JSON.stringify(auth))});
+      localStorage.setItem('amoha-cart', ${JSON.stringify(JSON.stringify(cart))});
+      // Also set cookie so apiClient interceptor uses our mock token
+      document.cookie = 'token=mock-ui-test-token; path=/; max-age=86400';
+    } catch(e) {}
+  `;
+}
+
+/** Intercept all API calls so fake token never hits the real backend.
+ *  The frontend uses Next.js rewrites so all API calls go to /api/** on the same origin.
+ */
+async function setupMocks(page: Page, oos: boolean) {
+  const item = mockCartItem(oos);
+
+  // Mock relative /api/** routes (Next.js proxy rewrites)
+  await page.route(`${FRONTEND_URL}/api/**`, async (route) => {
+    const url = route.request().url();
+    if (url.includes('/auth/')) {
+      return route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { _id: 'mu1', name: 'Test User', email: 'test@example.com' } }) });
+    }
+    if (url.includes('/cart')) {
+      return route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { _id: 'mc1', items: [item], savedForLater: [],
+          totalItems: 1, subtotal: 9999, discount: 0, deliveryCharge: 0, totalAmount: 9999, coupon: null } }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: [] }) });
+  });
+
+  // Also mock direct backend calls as fallback
+  await page.route(`${API_ORIGIN}/**`, async (route) => {
+    const url = route.request().url();
+    if (url.includes('/auth/')) {
+      return route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { _id: 'mu1', name: 'Test User', email: 'test@example.com' } }) });
+    }
+    if (url.includes('/cart')) {
+      return route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { _id: 'mc1', items: [item], savedForLater: [],
+          totalItems: 1, subtotal: 9999, discount: 0, deliveryCharge: 0, totalAmount: 9999, coupon: null } }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: [] }) });
+  });
 }
 
 async function goToCheckout(page: Page) {
-  await page.goto(`${FRONTEND_URL}/checkout`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await page.goto(`${FRONTEND_URL}/checkout`, { waitUntil: 'domcontentloaded', timeout: 45_000 });
 }
 
-/**
- * Returns true if the checkout form is visible (auth hydrated correctly).
- * Returns false if the page shows "Login Required" or redirected to /login.
- */
-async function isCheckoutFormReady(page: Page): Promise<boolean> {
-  if (page.url().includes('/login')) return false;
-  // The form input exists only when the user is authenticated and cart non-empty
-  return page.locator('input[name="fullName"]').isVisible({ timeout: 5000 }).catch(() => false);
+async function isFormReady(page: Page): Promise<boolean> {
+  // Wait for the checkout form OR the "Login Required" message
+  try {
+    await page.waitForSelector('input[name="fullName"], h2:has-text("Login Required"), h2:has-text("Cart is empty")',
+      { timeout: 15000 });
+    const loginRequired = await page.locator('h2:has-text("Login Required")').isVisible().catch(() => false);
+    if (loginRequired) {
+      console.error('[checkout] Got "Login Required" — auth injection failed');
+      return false;
+    }
+    const cartEmpty = await page.locator('h2:has-text("Cart is empty")').isVisible().catch(() => false);
+    if (cartEmpty) {
+      console.error('[checkout] Got "Cart is empty" — cart injection failed');
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function clickPlaceOrder(page: Page) {
-  // Click the Place Order / Pay Now button
   await page.locator('button:has-text("Pay Now"), button:has-text("Place Order")').first().click();
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+async function fillValidAddress(page: Page, overrides: Record<string, string> = {}) {
+  const fields: Record<string, string> = {
+    fullName: 'Test User', phone: '9876543210',
+    addressLine1: '123 MG Road, Test Area',
+    city: 'Bengaluru', state: 'Karnataka', pincode: '560001',
+    ...overrides,
+  };
+  for (const [name, value] of Object.entries(fields)) {
+    await page.locator(`input[name="${name}"]`).fill(value);
+  }
+}
 
-test.describe('Checkout – Inline Field Validation', () => {
+async function tryGetApiToken(): Promise<string> {
+  try {
+    const r = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: API_TEST_EMAIL, password: API_TEST_PASSWORD }),
+    });
+    const d = await r.json();
+    if (d?.token) return d.token;
+  } catch { /* fall through */ }
+
+  try {
+    const r = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Checkout API Test', email: API_TEST_EMAIL,
+        password: API_TEST_PASSWORD, confirmPassword: API_TEST_PASSWORD, phone: '9876543210' }),
+    });
+    const d = await r.json();
+    if (d?.token) return d.token;
+  } catch { /* fall through */ }
+
+  return '';
+}
+
+// --- 1. Inline Field Validation -----------------------------------------------
+
+test.describe('Checkout � Field Validation', () => {
   test.setTimeout(60_000);
 
-  let token: string;
-
-  test.beforeAll(async () => {
-    try {
-      token = await apiLogin();
-    } catch (e) {
-      console.warn('Auth unavailable — checkout validation tests will be skipped:', e);
-      token = '';
-    }
-  });
-
-  test('empty form submission shows inline error for every required field', async ({ page }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    await page.goto(FRONTEND_URL, { waitUntil: 'domcontentloaded' });
-    await injectAuthAndCart(page, token);
+  test('empty form shows required error for every field', async ({ page }) => {
+    await page.addInitScript(buildInitScript(false));
+    await setupMocks(page, false);
     await goToCheckout(page);
 
-    if (!(await isCheckoutFormReady(page))) {
-      test.skip(true, 'Checkout form not visible — auth not hydrated');
-      return;
-    }
+    if (!(await isFormReady(page))) test.skip(true, 'Form not rendered');
 
-    // Clear pre-populated fields so all required fields are empty
     for (const name of ['fullName', 'phone', 'addressLine1', 'city', 'state', 'pincode']) {
       await page.locator(`input[name="${name}"]`).fill('');
     }
 
     await clickPlaceOrder(page);
+    await page.screenshot({ path: 'test-results/cv-01-empty-form.png', fullPage: true });
 
-    await page.screenshot({ path: 'test-results/checkout-validation-empty-form.png', fullPage: true });
-
-    // Each required field should show its specific error
     await expect(page.getByText('Full Name is required')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Phone number is required')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Address Line 1 is required')).toBeVisible({ timeout: 5000 });
@@ -173,347 +194,165 @@ test.describe('Checkout – Inline Field Validation', () => {
     await expect(page.getByText('Pincode is required')).toBeVisible({ timeout: 5000 });
   });
 
-  test('inline error clears when user types in a field', async ({ page }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    await page.goto(FRONTEND_URL, { waitUntil: 'domcontentloaded' });
-    await injectAuthAndCart(page, token);
+  test('inline error clears when user types in the field', async ({ page }) => {
+    await page.addInitScript(buildInitScript(false));
+    await setupMocks(page, false);
     await goToCheckout(page);
 
-    if (!(await isCheckoutFormReady(page))) {
-      test.skip(true, 'Checkout form not visible — auth not hydrated');
-      return;
-    }
+    if (!(await isFormReady(page))) test.skip(true, 'Form not rendered');
 
     await page.locator('input[name="fullName"]').fill('');
     await clickPlaceOrder(page);
-
-    // Error should be visible
     await expect(page.getByText('Full Name is required')).toBeVisible({ timeout: 5000 });
 
-    // Now type something — error should disappear
-    await page.locator('input[name="fullName"]').fill('A');
-    await expect(page.getByText('Full Name is required')).not.toBeVisible({ timeout: 5000 });
+    await page.locator('input[name="fullName"]').fill('J');
+    await expect(page.getByText('Full Name is required')).not.toBeVisible({ timeout: 3000 });
   });
 });
 
-test.describe('Checkout – Phone Number Validation', () => {
+// --- 2. Phone Validation ------------------------------------------------------
+
+test.describe('Checkout � Phone Validation', () => {
   test.setTimeout(60_000);
 
-  let token: string;
-  test.beforeAll(async () => {
-    try { token = await apiLogin(); } catch { token = ''; }
-  });
-
   const INVALID_PHONES = [
-    { value: '999999999999', label: 'too long (12 digits starting with 9)' },
-    { value: 'abc',          label: 'alphabetic' },
-    { value: '123',          label: 'too short (3 digits)' },
-    { value: '1234567890',   label: '10 digits but starts with 1 (not 6-9)' },
-  ];
+    ['999999999999', 'too long (12 digits)'],
+    ['abc',          'alphabetic'],
+    ['123',          'too short (3 digits)'],
+    ['1234567890',   'starts with 1 (invalid Indian prefix)'],
+  ] as const;
 
-  for (const { value, label } of INVALID_PHONES) {
-    test(`phone "${value}" (${label}) is rejected`, async ({ page }) => {
-      if (!token) test.skip(true, 'Auth unavailable');
-
-      await page.goto(FRONTEND_URL, { waitUntil: 'domcontentloaded' });
-      await injectAuthAndCart(page, token);
+  for (const [value, label] of INVALID_PHONES) {
+    test(`"${value}" � ${label} ? rejected`, async ({ page }) => {
+      await page.addInitScript(buildInitScript(false));
+      await setupMocks(page, false);
       await goToCheckout(page);
 
-      if (!(await isCheckoutFormReady(page))) {
-        test.skip(true, 'Checkout form not visible — auth not hydrated');
-        return;
-      }
+      if (!(await isFormReady(page))) test.skip(true, 'Form not rendered');
 
-      // Fill all other required fields with valid data
-      await page.locator('input[name="fullName"]').fill('Test User');
-      await page.locator('input[name="phone"]').fill(value);
-      await page.locator('input[name="addressLine1"]').fill('123 MG Road, Test Area');
-      await page.locator('input[name="city"]').fill('Bengaluru');
-      await page.locator('input[name="state"]').fill('Karnataka');
-      await page.locator('input[name="pincode"]').fill('560001');
-
+      await fillValidAddress(page, { phone: value });
       await clickPlaceOrder(page);
+      await page.screenshot({ path: `test-results/cv-phone-${value.replace(/\W/g,'_')}.png`, fullPage: true });
 
-      await page.screenshot({
-        path: `test-results/checkout-phone-${value.replace(/[^a-z0-9]/gi, '_')}.png`,
-        fullPage: true,
-      });
-
-      // Should show phone validation error
-      await expect(
-        page.getByText(/valid.*mobile|mobile.*number|10.digit/i),
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/valid.*mobile|10.digit|Indian mobile/i)).toBeVisible({ timeout: 5000 });
     });
   }
 
-  test('valid phone 9876543210 passes validation', async ({ page }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    await page.goto(FRONTEND_URL, { waitUntil: 'domcontentloaded' });
-    await injectAuthAndCart(page, token);
+  test('"9876543210" � valid Indian number ? no error', async ({ page }) => {
+    await page.addInitScript(buildInitScript(false));
+    await setupMocks(page, false);
     await goToCheckout(page);
 
-    if (!(await isCheckoutFormReady(page))) {
-      test.skip(true, 'Checkout form not visible — auth not hydrated');
-      return;
-    }
+    if (!(await isFormReady(page))) test.skip(true, 'Form not rendered');
 
-    await page.locator('input[name="fullName"]').fill('Test User');
-    await page.locator('input[name="phone"]').fill('9876543210');
-    await page.locator('input[name="addressLine1"]').fill('123 MG Road, Test Area');
-    await page.locator('input[name="city"]').fill('Bengaluru');
-    await page.locator('input[name="state"]').fill('Karnataka');
-    await page.locator('input[name="pincode"]').fill('560001');
-
+    await fillValidAddress(page, { phone: '9876543210' });
     await clickPlaceOrder(page);
 
-    // No phone error
     await expect(page.getByText('Phone number is required')).not.toBeVisible({ timeout: 3000 });
     await expect(page.getByText(/valid.*mobile|10.digit/i)).not.toBeVisible({ timeout: 3000 });
   });
 });
 
-test.describe('Checkout – Pincode Validation', () => {
+// --- 3. Pincode Validation ----------------------------------------------------
+
+test.describe('Checkout � Pincode Validation', () => {
   test.setTimeout(60_000);
 
-  let token: string;
-  test.beforeAll(async () => {
-    try { token = await apiLogin(); } catch { token = ''; }
-  });
-
   const INVALID_PINCODES = [
-    // Note: '111111' is numerically valid format (6 digits, no leading zero) — not tested here.
-    // Real-world pincode existence would need an India Post API check.
-    { value: '12AB56', label: 'alphanumeric' },
-    { value: '012345', label: 'starts with zero' },
-    { value: '1234',   label: 'too short (4 digits)' },
-  ];
+    ['12AB56', 'alphanumeric'],
+    ['012345', 'leading zero'],
+    ['1234',   'too short (4 digits)'],
+  ] as const;
 
-  for (const { value, label } of INVALID_PINCODES) {
-    test(`pincode "${value}" (${label}) is rejected`, async ({ page }) => {
-      if (!token) test.skip(true, 'Auth unavailable');
-
-      await page.goto(FRONTEND_URL, { waitUntil: 'domcontentloaded' });
-      await injectAuthAndCart(page, token);
+  for (const [value, label] of INVALID_PINCODES) {
+    test(`"${value}" � ${label} ? rejected`, async ({ page }) => {
+      await page.addInitScript(buildInitScript(false));
+      await setupMocks(page, false);
       await goToCheckout(page);
 
-      if (!(await isCheckoutFormReady(page))) {
-        test.skip(true, 'Checkout form not visible — auth not hydrated');
-        return;
-      }
+      if (!(await isFormReady(page))) test.skip(true, 'Form not rendered');
 
-      await page.locator('input[name="fullName"]').fill('Test User');
-      await page.locator('input[name="phone"]').fill('9876543210');
-      await page.locator('input[name="addressLine1"]').fill('123 MG Road, Test Area');
-      await page.locator('input[name="city"]').fill('Bengaluru');
-      await page.locator('input[name="state"]').fill('Karnataka');
-      await page.locator('input[name="pincode"]').fill(value);
-
+      await fillValidAddress(page, { pincode: value });
       await clickPlaceOrder(page);
+      await page.screenshot({ path: `test-results/cv-pin-${value.replace(/\W/g,'_')}.png`, fullPage: true });
 
-      await page.screenshot({
-        path: `test-results/checkout-pincode-${value.replace(/[^a-z0-9]/gi, '_')}.png`,
-        fullPage: true,
-      });
-
-      // Should show pincode error
-      await expect(
-        page.getByText(/valid.*pincode|pincode.*required|6.digit/i),
-      ).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/valid.*6.digit.*pincode|6.digit.*pincode|valid.*pincode/i)).toBeVisible({ timeout: 5000 });
     });
   }
 
-  test('valid pincode 560001 passes validation', async ({ page }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    await page.goto(FRONTEND_URL, { waitUntil: 'domcontentloaded' });
-    await injectAuthAndCart(page, token);
+  test('"560001" � valid pincode ? no error', async ({ page }) => {
+    await page.addInitScript(buildInitScript(false));
+    await setupMocks(page, false);
     await goToCheckout(page);
 
-    if (!(await isCheckoutFormReady(page))) {
-      test.skip(true, 'Checkout form not visible — auth not hydrated');
-      return;
-    }
+    if (!(await isFormReady(page))) test.skip(true, 'Form not rendered');
 
-    await page.locator('input[name="fullName"]').fill('Test User');
-    await page.locator('input[name="phone"]').fill('9876543210');
-    await page.locator('input[name="addressLine1"]').fill('123 MG Road, Test Area');
-    await page.locator('input[name="city"]').fill('Bengaluru');
-    await page.locator('input[name="state"]').fill('Karnataka');
-    await page.locator('input[name="pincode"]').fill('560001');
-
+    await fillValidAddress(page, { pincode: '560001' });
     await clickPlaceOrder(page);
 
     await expect(page.getByText('Pincode is required')).not.toBeVisible({ timeout: 3000 });
-    await expect(page.getByText(/valid.*pincode|6.digit/i)).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(/valid.*pincode/i)).not.toBeVisible({ timeout: 3000 });
   });
 });
 
-test.describe('Checkout – Out-of-Stock Protection', () => {
+// --- 4. Out-of-Stock Protection -----------------------------------------------
+
+test.describe('Checkout � Out-of-Stock Protection', () => {
   test.setTimeout(60_000);
 
-  let token: string;
-  test.beforeAll(async () => {
-    try { token = await apiLogin(); } catch { token = ''; }
-  });
-
-  test('checkout is blocked when cart contains out-of-stock items', async ({ page }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    await page.goto(FRONTEND_URL, { waitUntil: 'domcontentloaded' });
-    // Inject cart with out-of-stock product
-    await injectAuthAndCart(page, token, /* outOfStock */ true);
+  test('checkout blocked when cart has out-of-stock item', async ({ page }) => {
+    await page.addInitScript(buildInitScript(true));
+    await setupMocks(page, true);
     await goToCheckout(page);
 
-    if (!(await isCheckoutFormReady(page))) {
-      test.skip(true, 'Checkout form not visible — auth not hydrated');
-      return;
-    }
+    if (!(await isFormReady(page))) test.skip(true, 'Form not rendered');
 
-    // Fill a valid address
-    await page.locator('input[name="fullName"]').fill('Test User');
-    await page.locator('input[name="phone"]').fill('9876543210');
-    await page.locator('input[name="addressLine1"]').fill('123 MG Road, Test Area');
-    await page.locator('input[name="city"]').fill('Bengaluru');
-    await page.locator('input[name="state"]').fill('Karnataka');
-    await page.locator('input[name="pincode"]').fill('560001');
-
+    await fillValidAddress(page);
     await clickPlaceOrder(page);
+    await page.screenshot({ path: 'test-results/cv-oos.png', fullPage: true });
 
-    await page.screenshot({ path: 'test-results/checkout-out-of-stock.png', fullPage: true });
-
-    // Should show the out-of-stock toast
-    await expect(
-      page.getByText(/no longer available|out of stock/i),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/no longer available|out of stock/i)).toBeVisible({ timeout: 5000 });
   });
 });
 
-test.describe('Checkout – Backend API Validation', () => {
+// --- 5. Backend API Validation ------------------------------------------------
+
+test.describe('Checkout � Backend API Validation', () => {
   test.setTimeout(60_000);
+  let apiToken = '';
 
-  let token: string;
   test.beforeAll(async () => {
-    try { token = await apiLogin(); } catch { token = ''; }
+    apiToken = await tryGetApiToken();
+    if (!apiToken) console.warn('[API tests] Auth unavailable � all tests will be skipped');
   });
 
-  test('COD order API rejects invalid phone number', async ({ request }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    const resp = await request.post(`${API_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        shippingAddress: {
-          fullName: 'Test User',
-          phone: '123',          // invalid — too short
-          addressLine1: '123 MG Road, Test Area',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pincode: '560001',
-          type: 'home',
-        },
-        paymentMethod: 'cod',
-      },
+  const INVALID_PHONES_API = ['123', 'abcdefghij', '999999999999'];
+  for (const phone of INVALID_PHONES_API) {
+    test(`API rejects phone "${phone}"`, async ({ request }) => {
+      if (!apiToken) test.skip(true, 'Auth unavailable');
+      const resp = await request.post(`${API_URL}/orders`, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+        data: { shippingAddress: { fullName: 'T', phone,
+          addressLine1: '123 MG Road', city: 'Bengaluru', state: 'KA', pincode: '560001', type: 'home' },
+          paymentMethod: 'cod' },
+      });
+      expect(resp.status()).toBeGreaterThanOrEqual(400);
+      expect(JSON.stringify(await resp.json()).toLowerCase()).toMatch(/phone|mobile|valid/);
     });
+  }
 
-    expect(resp.status()).toBeGreaterThanOrEqual(400);
-    const body = await resp.json();
-    console.log('Invalid phone API response:', JSON.stringify(body));
-    // Should contain a validation error message
-    const bodyStr = JSON.stringify(body).toLowerCase();
-    expect(bodyStr).toMatch(/phone|mobile|valid|invalid/);
-  });
-
-  test('COD order API rejects alphabetic phone', async ({ request }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    const resp = await request.post(`${API_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        shippingAddress: {
-          fullName: 'Test User',
-          phone: 'abcdefghij',   // invalid — alphabetic
-          addressLine1: '123 MG Road, Test Area',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pincode: '560001',
-          type: 'home',
-        },
-        paymentMethod: 'cod',
-      },
+  const INVALID_PINCODES_API = ['12AB56', '012345'];
+  for (const pincode of INVALID_PINCODES_API) {
+    test(`API rejects pincode "${pincode}"`, async ({ request }) => {
+      if (!apiToken) test.skip(true, 'Auth unavailable');
+      const resp = await request.post(`${API_URL}/orders`, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+        data: { shippingAddress: { fullName: 'T', phone: '9876543210',
+          addressLine1: '123 MG Road', city: 'Bengaluru', state: 'KA', pincode, type: 'home' },
+          paymentMethod: 'cod' },
+      });
+      expect(resp.status()).toBeGreaterThanOrEqual(400);
+      expect(JSON.stringify(await resp.json()).toLowerCase()).toMatch(/pincode|pin|valid/);
     });
-
-    expect(resp.status()).toBeGreaterThanOrEqual(400);
-  });
-
-  test('COD order API rejects invalid pincode 12AB56', async ({ request }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    const resp = await request.post(`${API_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        shippingAddress: {
-          fullName: 'Test User',
-          phone: '9876543210',
-          addressLine1: '123 MG Road, Test Area',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pincode: '12AB56',     // invalid — alphanumeric
-          type: 'home',
-        },
-        paymentMethod: 'cod',
-      },
-    });
-
-    expect(resp.status()).toBeGreaterThanOrEqual(400);
-    const body = await resp.json();
-    console.log('Invalid pincode API response:', JSON.stringify(body));
-    const bodyStr = JSON.stringify(body).toLowerCase();
-    expect(bodyStr).toMatch(/pincode|pin|valid|invalid/);
-  });
-
-  test('COD order API rejects pincode starting with zero', async ({ request }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    const resp = await request.post(`${API_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        shippingAddress: {
-          fullName: 'Test User',
-          phone: '9876543210',
-          addressLine1: '123 MG Road, Test Area',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pincode: '012345',     // invalid — leading zero
-          type: 'home',
-        },
-        paymentMethod: 'cod',
-      },
-    });
-
-    expect(resp.status()).toBeGreaterThanOrEqual(400);
-  });
-
-  test('COD order API rejects overly long phone 999999999999', async ({ request }) => {
-    if (!token) test.skip(true, 'Auth unavailable');
-
-    const resp = await request.post(`${API_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        shippingAddress: {
-          fullName: 'Test User',
-          phone: '999999999999', // invalid — 12 digits
-          addressLine1: '123 MG Road, Test Area',
-          city: 'Bengaluru',
-          state: 'Karnataka',
-          pincode: '560001',
-          type: 'home',
-        },
-        paymentMethod: 'cod',
-      },
-    });
-
-    expect(resp.status()).toBeGreaterThanOrEqual(400);
-  });
+  }
 });
