@@ -40,6 +40,7 @@ interface CartState {
   coupon: AppliedCoupon | null;
   isLoading: boolean;
   error: string | null;
+  updatingItemId: string | null;
   fetchCart: () => Promise<void>;
   addToCart: (productId: string, quantity?: number, color?: string) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
@@ -66,6 +67,7 @@ export const useCartStore = create<CartState>()(
       coupon: null,
       isLoading: false,
       error: null,
+      updatingItemId: null,
 
       setCartFromResponse: (cart: Cart) => {
         set(applyCartResponse(cart));
@@ -102,22 +104,26 @@ export const useCartStore = create<CartState>()(
 
       updateQuantity: async (itemId, quantity) => {
         return enqueueCartMutation(async () => {
+          // Set loading state for this specific item
+          set({ updatingItemId: itemId, error: null });
+          
           // Optimistic: update the item quantity in-place
           const prevItems = get().items;
           const optimisticItems = prevItems.map((item) =>
             item._id === itemId ? { ...item, quantity } : item,
           );
-          set({ items: optimisticItems, error: null });
+          set({ items: optimisticItems });
+          
           try {
             const cart = await cartService.updateQuantity(itemId, quantity);
-            set({ ...applyCartResponse(cart), isLoading: false });
+            set({ ...applyCartResponse(cart), updatingItemId: null, isLoading: false });
           } catch (err: unknown) {
             // Rollback
             set({ items: prevItems });
             const message =
               (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
               'Failed to update quantity.';
-            set({ error: message, isLoading: false });
+            set({ error: message, updatingItemId: null, isLoading: false });
             throw new Error(message);
           }
         });
@@ -125,6 +131,8 @@ export const useCartStore = create<CartState>()(
 
       removeFromCart: async (itemId) => {
         return enqueueCartMutation(async () => {
+          set({ updatingItemId: itemId, error: null });
+          
           // Optimistic: remove item immediately
           const prevItems = get().items;
           const prevTotal = get().totalItems;
@@ -132,14 +140,14 @@ export const useCartStore = create<CartState>()(
           set({
             items: prevItems.filter((i) => i._id !== itemId),
             totalItems: Math.max(0, prevTotal - (removed?.quantity || 1)),
-            error: null,
           });
+          
           try {
             const cart = await cartService.removeItem(itemId);
-            set({ ...applyCartResponse(cart), isLoading: false });
+            set({ ...applyCartResponse(cart), updatingItemId: null, isLoading: false });
           } catch {
             // Rollback
-            set({ items: prevItems, totalItems: prevTotal, isLoading: false });
+            set({ items: prevItems, totalItems: prevTotal, updatingItemId: null, isLoading: false });
           }
         });
       },

@@ -13,7 +13,7 @@ import type { Product } from '@/types';
 export default function CartPage() {
   const {
     items, savedForLater, totalItems, subtotal, discount, deliveryCharge,
-    totalAmount, coupon, isLoading,
+    totalAmount, coupon, isLoading, updatingItemId,
     updateQuantity, removeFromCart, clearCart, applyCoupon, removeCoupon,
     saveForLater, moveToCart, removeSavedItem,
   } = useCartStore();
@@ -75,52 +75,97 @@ export default function CartPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Cart Items */}
         <div className="min-w-0 space-y-3 lg:col-span-2">
-          {items.filter((i) => i.product).map((item) => (
-            <div key={item._id} className="glass-card-sm flex gap-3 sm:gap-4 p-3 sm:p-4">
-              <Link href={`/product/${item.product?.slug || '#'}`} className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-white/5 sm:h-28 sm:w-28">
-                <Image src={item.product?.thumbnail || '/images/no-product.svg'} alt={item.product?.name || 'Product'} fill className="object-cover" sizes="112px" onError={(e) => { const t = e.currentTarget; t.srcset = ''; t.src = '/images/no-product.svg'; }} />
-              </Link>
-              <div className="flex flex-1 flex-col justify-between min-w-0">
-                <div>
-                  <Link href={`/product/${item.product?.slug || '#'}`} className="text-sm font-semibold text-gray-900 dark:text-white hover:text-primary-400 line-clamp-2">
-                    {item.product?.name || 'Product'}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-gray-500">{item.product?.brand || ''}{item.color ? ` · ${item.color}` : ''}</p>
-                </div>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center rounded-lg border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5">
-                    <button
-                      onClick={() => updateQuantity(item._id, Math.max(1, item.quantity - 1))}
-                      disabled={isLoading}
-                      className="px-2.5 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 sm:px-3"
-                    >−</button>
-                    <span className="min-w-[1.5rem] text-center text-xs font-semibold text-gray-900 dark:text-white">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                      disabled={isLoading}
-                      className="px-2.5 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 sm:px-3"
-                    >+</button>
+          {items.filter((i) => i.product).map((item) => {
+            const isUpdating = updatingItemId === item._id;
+            const currentStock = item.product?.stock ?? 0;
+            const atStockLimit = item.quantity >= currentStock;
+            
+            return (
+              <div key={item._id} className="glass-card-sm flex gap-3 sm:gap-4 p-3 sm:p-4">
+                <Link href={`/product/${item.product?.slug || '#'}`} className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-white/5 sm:h-28 sm:w-28">
+                  <Image src={item.product?.thumbnail || '/images/no-product.svg'} alt={item.product?.name || 'Product'} fill className="object-cover" sizes="112px" onError={(e) => { const t = e.currentTarget; t.srcset = ''; t.src = '/images/no-product.svg'; }} />
+                </Link>
+                <div className="flex flex-1 flex-col justify-between min-w-0">
+                  <div>
+                    <Link href={`/product/${item.product?.slug || '#'}`} className="text-sm font-semibold text-gray-900 dark:text-white hover:text-primary-400 line-clamp-2">
+                      {item.product?.name || 'Product'}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-gray-500">{item.product?.brand || ''}{item.color ? ` · ${item.color}` : ''}</p>
+                    {currentStock <= 5 && currentStock > 0 && (
+                      <p className="mt-1 text-xs text-amber-500">Only {currentStock} left in stock</p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <span className="text-sm font-bold text-gray-900 dark:text-white">{formatPrice(item.totalPrice)}</span>
-                    <button
-                      onClick={() => { saveForLater(item._id); toast.success('Saved for later'); }}
-                      className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-primary-500/10 hover:text-primary-400"
-                      title="Save for later"
-                    >
-                      <HiOutlineBookmark className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => { removeFromCart(item._id); toast.success('Removed'); }}
-                      className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                    >
-                      <HiOutlineTrash className="h-4 w-4" />
-                    </button>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center rounded-lg border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await updateQuantity(item._id, Math.max(1, item.quantity - 1));
+                          } catch (err: unknown) {
+                            const message = err instanceof Error ? err.message : 'Failed to update quantity';
+                            toast.error(message);
+                          }
+                        }}
+                        disabled={isUpdating || item.quantity <= 1}
+                        className="px-2.5 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed sm:px-3"
+                      >−</button>
+                      <span className="min-w-[1.5rem] text-center text-xs font-semibold text-gray-900 dark:text-white flex items-center justify-center gap-1">
+                        {item.quantity}
+                        {isUpdating && (
+                          <svg className="animate-spin h-3 w-3 text-primary-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        )}
+                      </span>
+                      <button
+                        onClick={async () => {
+                          if (atStockLimit) {
+                            toast.error(`Only ${currentStock} item${currentStock !== 1 ? 's' : ''} available in stock`);
+                            return;
+                          }
+                          try {
+                            await updateQuantity(item._id, item.quantity + 1);
+                          } catch (err: unknown) {
+                            const message = err instanceof Error ? err.message : 'Failed to update quantity';
+                            toast.error(message);
+                          }
+                        }}
+                        disabled={isUpdating || atStockLimit}
+                        className="px-2.5 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed sm:px-3"
+                        title={atStockLimit ? 'Stock limit reached' : 'Increase quantity'}
+                      >+</button>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{formatPrice(item.totalPrice)}</span>
+                      <button
+                        onClick={() => { saveForLater(item._id); toast.success('Saved for later'); }}
+                        disabled={isUpdating}
+                        className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-primary-500/10 hover:text-primary-400 disabled:opacity-50"
+                        title="Save for later"
+                      >
+                        <HiOutlineBookmark className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={async () => { 
+                          try {
+                            await removeFromCart(item._id);
+                            toast.success('Removed'); 
+                          } catch {
+                            toast.error('Failed to remove item');
+                          }
+                        }}
+                        disabled={isUpdating}
+                        className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                      >
+                        <HiOutlineTrash className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Saved for Later */}
           {savedForLater.length > 0 && (
