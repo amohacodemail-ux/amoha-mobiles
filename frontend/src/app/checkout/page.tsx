@@ -24,6 +24,7 @@ export default function CheckoutPage() {
 
   const [selectedPayment, setSelectedPayment] = useState('razorpay');
   const [isPlacing, setIsPlacing] = useState(false);
+  const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
   const [razorpayLoaded, setRazorpayLoaded] = useState(
     typeof window !== 'undefined' && typeof (window as any).Razorpay !== 'undefined',
   );
@@ -73,24 +74,47 @@ export default function CheckoutPage() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setAddress((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setAddress((prev) => ({ ...prev, [name]: value }));
+    // Clear the error for this field as the user types
+    if (addressErrors[name]) {
+      setAddressErrors((prev) => ({ ...prev, [name]: '' }));
+    }
   };
 
-  const validateAddress = () => {
-    if (!address.fullName || !address.phone || !address.addressLine1 || !address.city || !address.state || !address.pincode) {
-      toast.error('Please fill all required address fields');
-      return false;
+  const validateAddress = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!address.fullName.trim()) {
+      errors.fullName = 'Full Name is required';
     }
-    const phoneDigits = address.phone.replace(/[^0-9]/g, '');
-    if (phoneDigits.length < 10 || phoneDigits.length > 12) {
-      toast.error('Please enter a valid phone number');
-      return false;
+
+    if (!address.phone.trim()) {
+      errors.phone = 'Phone number is required';
+    } else if (!/^(?:\+91|0)?[6-9]\d{9}$/.test(address.phone.trim())) {
+      errors.phone = 'Enter a valid 10-digit Indian mobile number (starting with 6–9)';
     }
-    if (!/^\d{6}$/.test(address.pincode)) {
-      toast.error('Pincode must be 6 digits');
-      return false;
+
+    if (!address.addressLine1.trim()) {
+      errors.addressLine1 = 'Address Line 1 is required';
     }
-    return true;
+
+    if (!address.city.trim()) {
+      errors.city = 'City is required';
+    }
+
+    if (!address.state.trim()) {
+      errors.state = 'State is required';
+    }
+
+    if (!address.pincode.trim()) {
+      errors.pincode = 'Pincode is required';
+    } else if (!/^[1-9][0-9]{5}$/.test(address.pincode.trim())) {
+      errors.pincode = 'Enter a valid 6-digit pincode (no leading zero)';
+    }
+
+    setAddressErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   /** Load Razorpay checkout.js on-demand and resolve once window.Razorpay is available. */
@@ -221,6 +245,12 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    // Block checkout if any cart item is out of stock
+    const unavailable = items.filter((i) => !i.product?.inStock || i.product?.stock === 0);
+    if (unavailable.length > 0) {
+      toast.error('Some items in your cart are no longer available. Please remove them before placing your order.');
+      return;
+    }
     if (!validateAddress()) return;
     if (selectedPayment === 'razorpay') {
       await handleRazorpayPayment();
@@ -262,15 +292,18 @@ export default function CheckoutPage() {
               <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Full Name *</label>
-                  <input name="fullName" value={address.fullName} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="John Doe" />
+                  <input name="fullName" value={address.fullName} onChange={handleInputChange} className={`glass-input py-2.5 text-base sm:text-sm ${addressErrors.fullName ? 'border-red-500' : ''}`} placeholder="John Doe" />
+                  {addressErrors.fullName && <p className="mt-1 text-xs text-red-500">{addressErrors.fullName}</p>}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Phone *</label>
-                  <input name="phone" value={address.phone} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="+91 98765 43210" />
+                  <input name="phone" value={address.phone} onChange={handleInputChange} className={`glass-input py-2.5 text-base sm:text-sm ${addressErrors.phone ? 'border-red-500' : ''}`} placeholder="+91 98765 43210" />
+                  {addressErrors.phone && <p className="mt-1 text-xs text-red-500">{addressErrors.phone}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Address Line 1 *</label>
-                  <input name="addressLine1" value={address.addressLine1} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="House/Flat No., Street" />
+                  <input name="addressLine1" value={address.addressLine1} onChange={handleInputChange} className={`glass-input py-2.5 text-base sm:text-sm ${addressErrors.addressLine1 ? 'border-red-500' : ''}`} placeholder="House/Flat No., Street" />
+                  {addressErrors.addressLine1 && <p className="mt-1 text-xs text-red-500">{addressErrors.addressLine1}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Address Line 2</label>
@@ -278,15 +311,18 @@ export default function CheckoutPage() {
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">City *</label>
-                  <input name="city" value={address.city} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="Mumbai" />
+                  <input name="city" value={address.city} onChange={handleInputChange} className={`glass-input py-2.5 text-base sm:text-sm ${addressErrors.city ? 'border-red-500' : ''}`} placeholder="Mumbai" />
+                  {addressErrors.city && <p className="mt-1 text-xs text-red-500">{addressErrors.city}</p>}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">State *</label>
-                  <input name="state" value={address.state} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="Maharashtra" />
+                  <input name="state" value={address.state} onChange={handleInputChange} className={`glass-input py-2.5 text-base sm:text-sm ${addressErrors.state ? 'border-red-500' : ''}`} placeholder="Maharashtra" />
+                  {addressErrors.state && <p className="mt-1 text-xs text-red-500">{addressErrors.state}</p>}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Pincode *</label>
-                  <input name="pincode" value={address.pincode} onChange={handleInputChange} className="glass-input py-2.5 text-base sm:text-sm" placeholder="400001" maxLength={6} />
+                  <input name="pincode" value={address.pincode} onChange={handleInputChange} className={`glass-input py-2.5 text-base sm:text-sm ${addressErrors.pincode ? 'border-red-500' : ''}`} placeholder="400001" maxLength={6} />
+                  {addressErrors.pincode && <p className="mt-1 text-xs text-red-500">{addressErrors.pincode}</p>}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Address Type</label>

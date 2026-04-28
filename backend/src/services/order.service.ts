@@ -66,6 +66,38 @@ class OrderService {
       couponCode = couponCode || cart.coupon_code || null;
     }
 
+    // --- PRE-CHECK: validate stock availability BEFORE creating the order row ---
+    const stockErrors: string[] = [];
+    for (const item of items) {
+      const { data: inv } = await supabase
+        .from('inventory')
+        .select('available_stock, product_id')
+        .eq('product_id', item.productId)
+        .maybeSingle();
+      if (!inv) {
+        // No inventory record — check product stock column as fallback
+        const { data: prod } = await supabase
+          .from('products')
+          .select('stock, name')
+          .eq('id', item.productId)
+          .maybeSingle();
+        if (!prod || prod.stock < item.quantity) {
+          stockErrors.push(prod?.name || `Product ${item.productId}`);
+        }
+      } else if (inv.available_stock < item.quantity) {
+        const { data: prod } = await supabase
+          .from('products')
+          .select('name')
+          .eq('id', item.productId)
+          .maybeSingle();
+        stockErrors.push(prod?.name || `Product ${item.productId}`);
+      }
+    }
+    if (stockErrors.length > 0) {
+      throw new BadRequestError('Some items in your cart are no longer available');
+    }
+    // --- END PRE-CHECK ---
+
     const orderInsert: any = {
       user_id: userId,
       order_number: orderData.orderNumber || this.generateOrderNumber(),
