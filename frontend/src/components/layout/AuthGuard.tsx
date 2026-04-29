@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 import { useAuthStore } from '@/store/auth.store';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -28,7 +29,7 @@ function isAuthPath(pathname: string): boolean {
 }
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, token, fetchProfile } = useAuthStore();
+  const { isAuthenticated, token, fetchProfile, logout } = useAuthStore();
   const pathname = usePathname();
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
@@ -39,23 +40,81 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     setHydrated(true);
   }, []);
 
-  // Fetch profile on mount if token exists
+  // Validate auth whenever protected route changes to prevent stale session rendering.
   useEffect(() => {
     const checkAuth = async () => {
-      if (token) {
-        try {
-          await fetchProfile();
-        } catch {
-          // Token invalid — silently continue as guest
-        }
+      const protectedPath = isProtectedPath(pathname);
+      if (!protectedPath) {
+        setIsCheckingAuth(false);
+        return;
       }
-      setIsCheckingAuth(false);
+
+      setIsCheckingAuth(true);
+      const cookieToken = Cookies.get('token');
+      if (!token || !cookieToken) {
+        logout();
+        setIsCheckingAuth(false);
+        return;
+      }
+
+      try {
+        await fetchProfile();
+      } catch {
+        logout();
+      } finally {
+        setIsCheckingAuth(false);
+      }
     };
 
     if (hydrated) {
       checkAuth();
     }
-  }, [token, fetchProfile, hydrated]);
+  }, [pathname, token, fetchProfile, hydrated, logout]);
+
+  // Enforce auth when navigating browser history/back-forward cache.
+  useEffect(() => {
+    if (!hydrated) return;
+
+    const enforceProtectedRouteAuth = () => {
+      const currentPath = window.location.pathname;
+      if (!isProtectedPath(currentPath)) return;
+      const hasToken = !!Cookies.get('token');
+      if (!hasToken) {
+        logout();
+        const redirect = encodeURIComponent(`${currentPath}${window.location.search || ''}`);
+        window.location.replace(`/login?redirect=${redirect}`);
+      }
+    };
+
+    const onPageShow = () => enforceProtectedRouteAuth();
+    const onPopState = () => enforceProtectedRouteAuth();
+
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('popstate', onPopState);
+
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, [hydrated, logout]);
+
+  // Background profile refresh on public/auth pages when a token exists.
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (isProtectedPath(pathname)) return;
+      if (token && Cookies.get('token')) {
+        try {
+          await fetchProfile();
+        } catch {
+          logout();
+        }
+      }
+    };
+
+    if (hydrated) {
+      checkAuth();
+    }
+  }, [pathname, token, fetchProfile, hydrated, logout]);
 
   // Redirect authenticated users away from auth pages (login/register)
   useEffect(() => {
@@ -67,7 +126,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   // Redirect unauthenticated users to login ONLY for protected pages
   useEffect(() => {
     if (hydrated && !isCheckingAuth && !isAuthenticated && isProtectedPath(pathname)) {
-      router.replace('/login');
+      router.replace('/login?redirect=' + encodeURIComponent(pathname));
     }
   }, [hydrated, isCheckingAuth, isAuthenticated, pathname, router]);
 

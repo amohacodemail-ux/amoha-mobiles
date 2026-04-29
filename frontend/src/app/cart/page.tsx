@@ -16,6 +16,7 @@ export default function CartPage() {
     totalAmount, coupon, isLoading, updatingItemId,
     updateQuantity, removeFromCart, clearCart, applyCoupon, removeCoupon,
     saveForLater, moveToCart, removeSavedItem,
+    isProductPending,
   } = useCartStore();
   const [couponCode, setCouponCode] = useState('');
   const [accessories, setAccessories] = useState<Product[]>([]);
@@ -210,7 +211,9 @@ export default function CartPage() {
             <div className="mt-6">
               <h3 className="mb-3 text-base font-bold text-gray-900 dark:text-white">Accessories for your items</h3>
               <div className="flex w-full gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {accessories.map((acc) => (
+                {accessories.map((acc) => {
+                  const addPending = isProductPending(acc._id);
+                  return (
                     <div key={acc._id} className="glass-card-sm flex w-36 flex-shrink-0 flex-col p-2.5 sm:w-40 sm:p-3">
                     <Link href={`/product/${acc.slug}`} className="relative mx-auto h-28 w-28 overflow-hidden rounded-lg bg-gray-100 dark:bg-white/5">
                       <Image src={acc.images?.[0] || '/images/no-product.svg'} alt={acc.name} fill className="object-cover" sizes="112px" onError={(e) => { const t = e.currentTarget; t.srcset = ''; t.src = '/images/no-product.svg'; }} />
@@ -228,13 +231,15 @@ export default function CartPage() {
                           toast.success('Added to cart');
                         } catch { toast.error('Failed to add'); }
                       }}
-                      className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-primary-600/20 py-1.5 text-xs font-semibold text-primary-400 transition-colors hover:bg-primary-600/30"
+                      disabled={addPending}
+                      className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-primary-600/20 py-1.5 text-xs font-semibold text-primary-400 transition-colors hover:bg-primary-600/30 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <HiOutlinePlus className="h-3.5 w-3.5" />
-                      Add
+                      {addPending ? 'Adding...' : 'Add'}
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

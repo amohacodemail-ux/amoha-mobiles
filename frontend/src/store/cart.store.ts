@@ -41,8 +41,10 @@ interface CartState {
   isLoading: boolean;
   error: string | null;
   updatingItemId: string | null;
+  pendingProductIds: Record<string, boolean>;
   fetchCart: () => Promise<void>;
   addToCart: (productId: string, quantity?: number, color?: string) => Promise<void>;
+  isProductPending: (productId: string) => boolean;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeFromCart: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -68,6 +70,11 @@ export const useCartStore = create<CartState>()(
       isLoading: false,
       error: null,
       updatingItemId: null,
+      pendingProductIds: {},
+
+      isProductPending: (productId: string) => {
+        return !!get().pendingProductIds[productId];
+      },
 
       setCartFromResponse: (cart: Cart) => {
         set(applyCartResponse(cart));
@@ -84,22 +91,39 @@ export const useCartStore = create<CartState>()(
       },
 
       addToCart: async (productId, quantity = 1, color) => {
-        return enqueueCartMutation(async () => {
-          // Optimistic: bump count and disable button during API call
-          const prev = { totalItems: get().totalItems };
-          set({ totalItems: prev.totalItems + quantity, isLoading: true, error: null });
-          try {
-            const cart = await cartService.addItem(productId, quantity, color);
-            set({ ...applyCartResponse(cart), isLoading: false, error: null });
-          } catch (err: unknown) {
-            // Rollback
-            const message =
-              (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-              'Failed to add to cart.';
-            set({ totalItems: prev.totalItems, error: message, isLoading: false });
-            throw new Error(message);
-          }
-        });
+        if (get().pendingProductIds[productId]) {
+          return;
+        }
+
+        set((state) => ({
+          pendingProductIds: { ...state.pendingProductIds, [productId]: true },
+          isLoading: true,
+          error: null,
+        }));
+
+        try {
+          const cart = await enqueueCartMutation(() => cartService.addItem(productId, quantity, color));
+          set((state) => {
+            const nextPending = { ...state.pendingProductIds };
+            delete nextPending[productId];
+            return {
+              ...applyCartResponse(cart),
+              isLoading: false,
+              error: null,
+              pendingProductIds: nextPending,
+            };
+          });
+        } catch (err: unknown) {
+          const message =
+            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+            'Failed to add to cart.';
+          set((state) => {
+            const nextPending = { ...state.pendingProductIds };
+            delete nextPending[productId];
+            return { error: message, isLoading: false, pendingProductIds: nextPending };
+          });
+          throw new Error(message);
+        }
       },
 
       updateQuantity: async (itemId, quantity) => {

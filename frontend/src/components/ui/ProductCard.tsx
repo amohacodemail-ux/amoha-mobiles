@@ -24,6 +24,7 @@ function ProductCard({ product }: ProductCardProps) {
   const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
   const wishlisted = useWishlistStore((s) => s.items.some((item) => item?.product?._id === product._id));
   const addToCart = useCartStore((s) => s.addToCart);
+  const isProductPending = useCartStore((s) => s.isProductPending);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const addToCompare = useCompareStore((s) => s.addToCompare);
   const removeFromCompare = useCompareStore((s) => s.removeFromCompare);
@@ -33,6 +34,7 @@ function ProductCard({ product }: ProductCardProps) {
   const ratingValue = Number((product as any).ratings ?? (product as any).averageRating ?? 0);
   const reviewCount = Number((product as any).numReviews ?? (product as any).reviewCount ?? 0);
   const compared = isInCompare(product._id);
+  const addPending = isProductPending(product._id);
 
   const handleCompare = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -149,10 +151,11 @@ function ProductCard({ product }: ProductCardProps) {
           {inStock && (
             <button
               onClick={handleAddToCart}
-              className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 bg-primary-600 py-2.5 text-xs font-semibold text-white opacity-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 group-hover:opacity-100 hover:bg-primary-500 active:scale-[0.98]"
+              disabled={addPending}
+              className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 bg-primary-600 py-2.5 text-xs font-semibold text-white opacity-0 transition-all duration-300 translate-y-full group-hover:translate-y-0 group-hover:opacity-100 hover:bg-primary-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-primary-500/80"
             >
               <HiOutlineShoppingCart className="h-3.5 w-3.5" />
-              Add to Cart
+              {addPending ? 'Adding...' : 'Add to Cart'}
             </button>
           )}
         </div>

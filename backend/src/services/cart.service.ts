@@ -1,6 +1,12 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
-import { NotFoundError, BadRequestError } from '../errors/app-error';
+import { NotFoundError, BadRequestError, ConflictError } from '../errors/app-error';
+
+const inFlightAddItemLocks = new Set<string>();
+
+function buildAddItemLockKey(userId: string, productId: string, color?: string) {
+  return `${userId}:${productId}:${color || ''}`;
+}
 
 class CartService {
   async getCart(userId: string) {
@@ -63,38 +69,48 @@ class CartService {
   }
 
   async addItem(userId: string, productId: string, quantity: number = 1, color?: string) {
-    const { data: product } = await supabase.from('products').select('id, stock, is_active, selling_price, original_price').eq('id', productId).single();
-    if (!product) throw new NotFoundError('Product');
-    if (!product.is_active) throw new BadRequestError('Product is not available');
-    if (product.stock < quantity) throw new BadRequestError('Insufficient stock');
-
-    const unitPrice = product.selling_price ?? product.original_price ?? 0;
-
-    let { data: cart } = await supabase.from('carts').select('id').eq('user_id', userId).maybeSingle();
-    if (!cart) {
-      const { data: newCart } = await supabase
-        .from('carts').insert({ user_id: userId, subtotal: 0, tax: 0, shipping_fee: 0, discount: 0, total: 0 })
-        .select('id').single();
-      cart = newCart!;
+    const lockKey = buildAddItemLockKey(userId, productId, color);
+    if (inFlightAddItemLocks.has(lockKey)) {
+      throw new ConflictError('Add to cart already in progress for this product');
     }
 
-    const { data: existing } = await supabase
-      .from('cart_items').select('id, quantity').eq('cart_id', cart!.id).eq('product_id', productId).eq('saved_for_later', false).maybeSingle();
+    inFlightAddItemLocks.add(lockKey);
+    try {
+      const { data: product } = await supabase.from('products').select('id, stock, is_active, selling_price, original_price').eq('id', productId).single();
+      if (!product) throw new NotFoundError('Product');
+      if (!product.is_active) throw new BadRequestError('Product is not available');
+      if (product.stock < quantity) throw new BadRequestError('Insufficient stock');
 
-    if (existing) {
-      const newQty = existing.quantity + quantity;
-      await supabase.from('cart_items').update({ quantity: newQty, total_price: unitPrice * newQty }).eq('id', existing.id);
-    } else {
-      const { error: insertErr } = await supabase.from('cart_items').insert({
-        cart_id: cart!.id, product_id: productId, quantity,
-        color: color || null, saved_for_later: false,
-        price: unitPrice, total_price: unitPrice * quantity
-      });
-      if (insertErr) throw insertErr;
+      const unitPrice = product.selling_price ?? product.original_price ?? 0;
+
+      let { data: cart } = await supabase.from('carts').select('id').eq('user_id', userId).maybeSingle();
+      if (!cart) {
+        const { data: newCart } = await supabase
+          .from('carts').insert({ user_id: userId, subtotal: 0, tax: 0, shipping_fee: 0, discount: 0, total: 0 })
+          .select('id').single();
+        cart = newCart!;
+      }
+
+      const { data: existing } = await supabase
+        .from('cart_items').select('id, quantity').eq('cart_id', cart!.id).eq('product_id', productId).eq('saved_for_later', false).maybeSingle();
+
+      if (existing) {
+        const newQty = existing.quantity + quantity;
+        await supabase.from('cart_items').update({ quantity: newQty, total_price: unitPrice * newQty }).eq('id', existing.id);
+      } else {
+        const { error: insertErr } = await supabase.from('cart_items').insert({
+          cart_id: cart!.id, product_id: productId, quantity,
+          color: color || null, saved_for_later: false,
+          price: unitPrice, total_price: unitPrice * quantity
+        });
+        if (insertErr) throw insertErr;
+      }
+
+      await supabase.rpc('recalculate_cart', { p_cart_id: cart!.id });
+      return this.getCart(userId);
+    } finally {
+      inFlightAddItemLocks.delete(lockKey);
     }
-
-    await supabase.rpc('recalculate_cart', { p_cart_id: cart!.id });
-    return this.getCart(userId);
   }
 
   async updateItemQuantity(userId: string, itemId: string, quantity: number) {

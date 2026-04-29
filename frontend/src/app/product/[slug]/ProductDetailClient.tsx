@@ -59,7 +59,7 @@ export default function ProductDetailClient() {
   const ctaRef = useRef<HTMLDivElement>(null);
 
   const addToCart = useCartStore((s) => s.addToCart);
-  const cartLoading = useCartStore((s) => s.isLoading);
+  const isProductPending = useCartStore((s) => s.isProductPending);
   const wishlisted = useWishlistStore((s) => s.items.some((item) => item?.product?._id === (product?._id ?? '')));
   const addToWishlist = useWishlistStore((s) => s.addToWishlist);
   const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
@@ -266,6 +266,7 @@ export default function ProductDetailClient() {
   const ratingValue = Number((product as any).ratings ?? (product as any).averageRating ?? 0);
   const reviewCount = Number((product as any).numReviews ?? (product as any).reviewCount ?? 0);
   const inStock = typeof (product as any).inStock === 'boolean' ? (product as any).inStock : product.stock > 0;
+  const addPending = isProductPending(product._id);
   const productImages = Array.isArray(product.images) && product.images.length > 0
     ? product.images
     : [product.thumbnail || PLACEHOLDER_IMG];
@@ -544,11 +545,11 @@ export default function ProductDetailClient() {
             <div ref={ctaRef} className="mt-6 flex gap-3">
               <button
                 onClick={handleAddToCart}
-                disabled={!inStock || cartLoading}
+                disabled={!inStock || addPending}
                 className="flex flex-1 items-center justify-center gap-2.5 rounded-xl bg-primary-600 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:bg-primary-500 hover:shadow-[0_0_24px_rgba(99,102,241,0.25)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:py-4 sm:text-base"
               >
                 <HiOutlineShoppingBag className="h-5 w-5" />
-                {inStock ? 'Add to Cart' : 'Out of Stock'}
+                {!inStock ? 'Out of Stock' : addPending ? 'Adding...' : 'Add to Cart'}
               </button>
               <button
                 onClick={handleCompare}
@@ -806,11 +807,11 @@ export default function ProductDetailClient() {
             </div>
             <button
               onClick={handleAddToCart}
-              disabled={cartLoading}
+              disabled={addPending}
               className="flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-3 text-sm font-bold text-white transition-all hover:bg-primary-500 active:scale-[0.98] disabled:opacity-50"
             >
               <HiOutlineShoppingBag className="h-4 w-4" />
-              Add to Cart
+              {addPending ? 'Adding...' : 'Add to Cart'}
             </button>
           </div>
         </div>

@@ -41,7 +41,7 @@ export default function Header() {
   const handleLogout = () => {
     logout();
     toast.success('Logged out successfully');
-    router.push('/login');
+    router.replace('/login');
   };
 
   return (
