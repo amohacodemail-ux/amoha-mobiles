@@ -7,9 +7,12 @@ import { sendReturnRequestEmail, sendReturnStatusEmail } from '../utils/email.ut
 class ReturnService {
   async createReturnRequest(userId: string, data: any) {
     const { data: order } = await supabase
-      .from('orders').select('*, order_items(*)').eq('id', data.orderId).eq('user_id', userId).maybeSingle();
+      .from('orders').select('*').eq('id', data.orderId).eq('user_id', userId).maybeSingle();
     if (!order) throw new NotFoundError('Order');
     if (!['delivered'].includes(order.status)) throw new BadRequestError('Order is not eligible for return');
+    // Fetch items separately (PostgREST join blocked by RLS)
+    const { data: returnOrderItems } = await supabase.from('order_items').select('*').eq('order_id', data.orderId);
+    const orderItemsList = returnOrderItems || [];
 
     const returnNumber = `RET-${Date.now().toString(36).toUpperCase()}`;
     // Support both 'type' and 'returnType' from frontend
@@ -46,9 +49,9 @@ class ReturnService {
         let orderItem: any = null;
         // Find the matching order_item
         if (item.orderItemId) {
-          orderItem = (order.order_items || []).find((oi: any) => oi.id === item.orderItemId);
+          orderItem = orderItemsList.find((oi: any) => oi.id === item.orderItemId);
         } else if (item.productId) {
-          orderItem = (order.order_items || []).find((oi: any) => oi.product_id === item.productId);
+          orderItem = orderItemsList.find((oi: any) => oi.product_id === item.productId);
         }
         if (orderItem) {
           const itemReason = validReasons.includes(item.reason) ? item.reason : reason;

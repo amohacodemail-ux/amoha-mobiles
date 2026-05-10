@@ -105,14 +105,31 @@ class OrderService {
       if (orderValueForCheck > 50000) {
         throw new BadRequestError('Cash on Delivery is not available for orders above ₹50,000. Please choose an online payment method.');
       }
-      // Add COD handling fee to total
-      total = (total || orderValueForCheck) + COD_FEE;
+      // Only add COD fee when total was not explicitly provided by the frontend
+      // (prevents double-counting when checkout already computed the total)
+      if (!orderData.total && !orderData.totalAmount) {
+        total = orderValueForCheck + COD_FEE;
+      }
     }
     // --- END COD BUSINESS RULES ---
+
+    // Generate collision-safe invoice number for online orders
+    const { data: settings } = await supabase.from('site_settings').select('billing').limit(1).maybeSingle();
+    const billingCfg = (settings as any)?.billing || {};
+    const invoicePrefix = billingCfg?.invoicePrefix || 'INV';
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const todayStart = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+    const { count: todayCount } = await supabase
+      .from('orders').select('*', { count: 'exact', head: true })
+      .eq('is_walk_in', false).gte('created_at', todayStart);
+    // Append random 3-char suffix to prevent race-condition duplicates
+    const invoiceSuffix = Math.random().toString(36).slice(2, 5).toUpperCase();
+    const invoiceNumber = `${invoicePrefix}-${todayStr}-${String((todayCount || 0) + 1).padStart(4, '0')}-${invoiceSuffix}`;
 
     const orderInsert: any = {
       user_id: userId,
       order_number: orderData.orderNumber || this.generateOrderNumber(),
+      invoice_number: invoiceNumber,
       shipping_address: orderData.shippingAddress,
       billing_address: orderData.billingAddress || orderData.shippingAddress,
       payment_method: orderData.paymentMethod,
@@ -183,7 +200,7 @@ class OrderService {
     const limit = parseInt(query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    let qb = supabase.from('orders').select('*, order_items(*)', { count: 'exact' });
+    let qb = supabase.from('orders').select('*', { count: 'exact' });
 
     if (query.userId) qb = qb.eq('user_id', query.userId);
     if (query.status || query.orderStatus) qb = qb.eq('status', query.status || query.orderStatus);
@@ -201,6 +218,19 @@ class OrderService {
     const { data: orders, error, count } = await qb;
     if (error) throw error;
 
+    // Batch-fetch order_items separately (PostgREST join blocked by RLS)
+    const orderIds = (orders || []).map((o: any) => o.id);
+    const { data: allItems } = orderIds.length
+      ? await supabase.from('order_items').select('*').in('order_id', orderIds)
+      : { data: [] };
+    const itemsByOrderId = new Map<string, any[]>();
+    for (const item of allItems || []) {
+      if (!itemsByOrderId.has(item.order_id)) itemsByOrderId.set(item.order_id, []);
+      const ti = transformRow(item);
+      if (!ti.product) ti.product = { name: ti.productName || 'Product', images: ti.productImage ? [ti.productImage] : [] };
+      itemsByOrderId.get(item.order_id)!.push(ti);
+    }
+
     // Batch-fetch user data for all orders
     const userIds = [...new Set((orders || []).map((o: any) => o.user_id).filter(Boolean))];
     const usersMap: Record<string, any> = {};
@@ -214,7 +244,7 @@ class OrderService {
     return {
       orders: (orders || []).map((o: any) => {
         const t = transformRow(o);
-        t.items = (o.order_items || []).map(transformRow);
+        t.items = itemsByOrderId.get(o.id) || [];
         t.user = usersMap[o.user_id] || { _id: o.user_id, name: 'Unknown', email: '' };
         delete t.orderItems;
         return normalizeOrder(t);
@@ -228,15 +258,21 @@ class OrderService {
 
   async getOrderById(orderId: string) {
     const { data: order, error } = await supabase
-      .from('orders').select('*, order_items(*), order_status_history(*)').eq('id', orderId).maybeSingle();
+      .from('orders').select('*, order_status_history(*)').eq('id', orderId).maybeSingle();
     if (error) throw error;
     if (!order) throw new NotFoundError('Order');
 
+    // Fetch order_items separately (PostgREST join blocked by RLS)
+    const { data: itemsData } = await supabase.from('order_items').select('*').eq('order_id', orderId);
     // Get user info
     const { data: user } = await supabase.from('users').select('id, name, email, phone').eq('id', order.user_id).maybeSingle();
 
     const transformed = transformRow(order);
-    transformed.items = (order.order_items || []).map(transformRow);
+    transformed.items = (itemsData || []).map((item: any) => {
+      const ti = transformRow(item);
+      if (!ti.product) ti.product = { name: ti.productName || 'Product', images: ti.productImage ? [ti.productImage] : [] };
+      return ti;
+    });
     transformed.statusHistory = (order.order_status_history || []).map(transformRow);
     transformed.user = user ? transformRow(user) : null;
     delete transformed.orderItems;
@@ -250,7 +286,7 @@ class OrderService {
 
   async updateOrderStatus(orderId: string, status: string, comment?: string) {
     const { data: order, error } = await supabase
-      .from('orders').update({ status }).eq('id', orderId).select('*, order_items(*)').single();
+      .from('orders').update({ status }).eq('id', orderId).select('*').single();
     if (error) throw error;
     if (!order) throw new NotFoundError('Order');
 
@@ -258,9 +294,12 @@ class OrderService {
       order_id: orderId, status, comment: comment || null,
     });
 
+    // Fetch items separately for inventory ledger operations
+    const { data: orderItems } = await supabase.from('order_items').select('product_id, quantity').eq('order_id', orderId);
+
     // When delivered: move reserved → sold
-    if (status === 'delivered' && order.order_items) {
-      const soldItems = order.order_items.map((item: any) => ({
+    if (status === 'delivered' && orderItems?.length) {
+      const soldItems = orderItems.map((item: any) => ({
         productId: item.product_id,
         quantity: item.quantity,
       }));
@@ -268,8 +307,8 @@ class OrderService {
     }
 
     // When cancelled at this stage: move reserved → available
-    if (status === 'cancelled' && order.order_items) {
-      const unreserveItems = order.order_items.map((item: any) => ({
+    if (status === 'cancelled' && orderItems?.length) {
+      const unreserveItems = orderItems.map((item: any) => ({
         productId: item.product_id,
         quantity: item.quantity,
       }));
@@ -292,7 +331,7 @@ class OrderService {
   }
 
   async cancelOrder(orderId: string, userId?: string) {
-    let qb = supabase.from('orders').select('*, order_items(*)').eq('id', orderId);
+    let qb = supabase.from('orders').select('*').eq('id', orderId);
     if (userId) qb = qb.eq('user_id', userId);
     const { data: order } = await qb.maybeSingle();
     if (!order) throw new NotFoundError('Order');
@@ -300,8 +339,9 @@ class OrderService {
       throw new BadRequestError('Order cannot be cancelled at this stage');
     }
 
-    // Restore stock via inventory ledger
-    const unreserveItems = (order.order_items || []).map((item: any) => ({
+    // Fetch items separately for inventory ledger
+    const { data: cancelItems } = await supabase.from('order_items').select('product_id, quantity').eq('order_id', orderId);
+    const unreserveItems = (cancelItems || []).map((item: any) => ({
       productId: item.product_id,
       quantity: item.quantity,
     }));

@@ -8,7 +8,7 @@ class DashboardService {
       supabase.rpc('get_dashboard_analytics'),
       supabase.rpc('get_order_status_counts'),
       supabase.rpc('get_top_products', { p_limit: 5 }),
-      supabase.from('orders').select('*, order_items(*)').order('created_at', { ascending: false }).limit(5),
+      supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(5),
       supabase.from('products').select('id, name, sku, stock, images').lte('stock', 10).eq('is_active', true).order('stock', { ascending: true }).limit(10),
     ]);
 
@@ -16,12 +16,14 @@ class DashboardService {
       analytics: analytics.data,
       orderStatusCounts: statusCounts.data,
       topProducts: topProducts.data,
-      recentOrders: (recentOrders.data || []).map((o: any) => {
-        const t = transformRow(o);
-        t.items = (o.order_items || []).map(transformRow);
-        delete t.orderItems;
-        return t;
-      }),
+      recentOrders: await (async () => {
+        const orders = recentOrders.data || [];
+        const ids = orders.map((o: any) => o.id);
+        const { data: riData } = ids.length ? await supabase.from('order_items').select('*').in('order_id', ids) : { data: [] };
+        const riMap = new Map<string, any[]>();
+        for (const ri of riData || []) { if (!riMap.has(ri.order_id)) riMap.set(ri.order_id, []); riMap.get(ri.order_id)!.push(transformRow(ri)); }
+        return orders.map((o: any) => { const t = transformRow(o); t.items = riMap.get(o.id) || []; delete t.orderItems; return t; });
+      })(),
       lowStockProducts: (lowStock.data || []).map(transformRow),
     };
   }

@@ -110,11 +110,12 @@ class PaymentService {
       await supabase.from('carts').update({ subtotal: 0, tax: 0, discount: 0, total: 0, shipping_fee: 0, coupon_code: null }).eq('id', cart.id);
     }
 
-    // Return full order
+    // Return full order (fetch order_items separately — PostgREST join blocked by RLS)
     const { data: fullOrder } = await supabase
-      .from('orders').select('*, order_items(*), order_status_history(*)').eq('id', order.id).single();
+      .from('orders').select('*, order_status_history(*)').eq('id', order.id).single();
+    const { data: paymentItems } = await supabase.from('order_items').select('*').eq('order_id', order.id);
     const transformed = transformRow(fullOrder);
-    transformed.items = (fullOrder.order_items || []).map(transformRow);
+    transformed.items = (paymentItems || []).map(transformRow);
     transformed.statusHistory = (fullOrder.order_status_history || []).map(transformRow);
     delete transformed.orderItems;
     delete transformed.orderStatusHistory;

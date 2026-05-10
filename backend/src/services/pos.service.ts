@@ -52,10 +52,10 @@ class PosService {
       { order_id: order.id, status: 'delivered', comment: 'POS order - immediate delivery' },
     ]);
 
-    const { data: fullOrder } = await supabase
-      .from('orders').select('*, order_items(*)').eq('id', order.id).single();
+    const { data: fullOrder } = await supabase.from('orders').select('*').eq('id', order.id).single();
+    const { data: itemsData } = await supabase.from('order_items').select('*').eq('order_id', order.id);
     const transformed = transformRow(fullOrder);
-    transformed.items = (fullOrder.order_items || []).map(transformRow);
+    transformed.items = (itemsData || []).map(transformRow);
     delete transformed.orderItems;
     return transformed;
   }
@@ -71,11 +71,19 @@ class PosService {
   }
 
   async getProductByBarcode(barcode: string) {
+    // No is_active filter — POS counter must be able to scan any product (incl. restocked ones)
     const { data, error } = await supabase
       .from('products').select('id, name, sku, barcode, selling_price, original_price, stock, images')
-      .eq('barcode', barcode).eq('is_active', true).maybeSingle();
+      .eq('barcode', barcode).maybeSingle();
     if (error) throw error;
-    if (!data) throw new NotFoundError('Product');
+    if (!data) {
+      // Fallback: try SKU match
+      const { data: bySku } = await supabase
+        .from('products').select('id, name, sku, barcode, selling_price, original_price, stock, images')
+        .eq('sku', barcode).maybeSingle();
+      if (!bySku) throw new NotFoundError('Product');
+      return transformRow(bySku);
+    }
     return transformRow(data);
   }
 

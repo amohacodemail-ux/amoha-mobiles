@@ -51,10 +51,21 @@ router.get('/reports/sales', async (req: Request, res: Response, next: NextFunct
 
     const { data: orders } = await supabase
       .from('orders')
-      .select('*, order_items(*), users:user_id(name, email, phone)')
+      .select('*, users:user_id(name, email, phone)')
       .gte('created_at', startDate)
       .lte('created_at', endDate)
       .order('created_at', { ascending: false });
+
+    // Fetch order_items separately (PostgREST join blocked by RLS)
+    const salesOrderIds = (orders || []).map((o: any) => o.id);
+    const { data: salesItems } = salesOrderIds.length
+      ? await supabase.from('order_items').select('order_id, product_name, quantity').in('order_id', salesOrderIds)
+      : { data: [] };
+    const salesItemsByOrder = new Map<string, any[]>();
+    for (const si of salesItems || []) {
+      if (!salesItemsByOrder.has(si.order_id)) salesItemsByOrder.set(si.order_id, []);
+      salesItemsByOrder.get(si.order_id)!.push(si);
+    }
 
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const monthName = monthNames[targetMonth - 1];
@@ -74,7 +85,7 @@ router.get('/reports/sales', async (req: Request, res: Response, next: NextFunct
     let totalDiscount = 0;
 
     (orders || []).forEach((order: any) => {
-      const items = (order.order_items || []).map((i: any) => `${i.product_name || 'N/A'} x${i.quantity}`).join('; ');
+      const items = (salesItemsByOrder.get(order.id) || []).map((i: any) => `${i.product_name || 'N/A'} x${i.quantity}`).join('; ');
       const user = order.users || {};
       const addr = order.shipping_address as any || {};
       csv += `${sanitizeCsv(order.order_number)},${new Date(order.created_at).toLocaleDateString()},${sanitizeCsv(user.name || 'N/A')},${sanitizeCsv(user.email || 'N/A')},${sanitizeCsv(addr.phone || 'N/A')},"${sanitizeCsv(items)}",${order.subtotal},${order.discount},${order.shipping_fee},${order.total},${order.payment_status},${order.status}\n`;
@@ -215,7 +226,11 @@ router.get('/orders/:id/invoice', async (req: Request, res: Response, next: Next
     const { generateInvoicePDF } = await import('../utils/invoice.util');
     const order: any = await (await import('../services/order.service')).default.getById(req.params.id);
 
-    // Get customer info from order's user, or walk-in fields for POS orders
+    // Fetch billing settings from site_settings (JSONB — cast to any for safe field access)
+    const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
+    const billing: any = (settings as any)?.billing || {};
+
+    // Get customer info
     let customerName = 'Customer';
     let customerEmail = '';
     let customerPhone = '';
@@ -241,8 +256,13 @@ router.get('/orders/:id/invoice', async (req: Request, res: Response, next: Next
       phone: customerPhone,
     };
 
+    // Build business address string
+    const bizAddrParts = [billing.billingAddress, billing.billingCity, billing.billingState, billing.billingPincode].filter(Boolean);
+    const businessAddress = bizAddrParts.join(', ') || settings?.address || '';
+
     generateInvoicePDF(res, {
-      orderNumber: order.orderNumber || order.invoiceNumber || req.params.id.slice(0, 8).toUpperCase(),
+      orderNumber: order.orderNumber || req.params.id.slice(0, 8).toUpperCase(),
+      invoiceNumber: order.invoiceNumber || undefined,
       orderDate: order.createdAt,
       customerName,
       customerEmail,
@@ -256,10 +276,23 @@ router.get('/orders/:id/invoice', async (req: Request, res: Response, next: Next
       subtotal: order.subtotal,
       discount: order.discount || 0,
       deliveryCharge: order.deliveryCharge ?? order.shippingFee ?? 0,
+      codFee: (!order.isWalkIn && order.paymentMethod === 'cod') ? 49 : 0,
+      gstAmount: order.gstAmount || 0,
+      gstRate: order.gstRate || 0,
       totalAmount: order.totalAmount ?? order.total ?? 0,
       paymentMethod: order.isWalkIn ? (order.posPaymentMethod || 'cash') : (order.paymentMethod || 'cod'),
       paymentStatus: order.paymentStatus || 'paid',
       couponCode: order.couponCode,
+      // Business fields from settings
+      businessName: billing.businessName || settings?.site_name || 'AMOHA MOBILES',
+      gstin: billing.gstin || '',
+      panNumber: billing.panNumber || '',
+      businessAddress,
+      businessPhone: billing.billingPhone || settings?.contact_phone || '',
+      businessEmail: billing.billingEmail || settings?.contact_email || '',
+      termsOnInvoice: billing.termsOnInvoice || '',
+      footerNote: billing.footerNote || 'Thank you for shopping with us!',
+      hsnCode: billing.hsnCode || '',
     });
   } catch (error) {
     next(error);
@@ -273,9 +306,12 @@ router.post('/orders/:id/refund', async (req: Request, res: Response, next: Next
     const { transformRow } = await import('../utils/transform.util');
     const { NotFoundError } = await import('../errors/app-error');
 
-    const { data: order, error } = await supabase.from('orders').select('*, order_items(*)').eq('id', req.params.id).maybeSingle();
+    const { data: order, error } = await supabase.from('orders').select('*').eq('id', req.params.id).maybeSingle();
     if (error) throw error;
     if (!order) throw new NotFoundError('Order');
+
+    // Fetch items separately for stock restore (PostgREST join blocked by RLS)
+    const { data: refundItems } = await supabase.from('order_items').select('product_id, quantity').eq('order_id', order.id);
 
     await supabase.from('orders').update({ status: 'returned', payment_status: 'refunded' }).eq('id', order.id);
     await supabase.from('order_status_history').insert({
@@ -284,7 +320,7 @@ router.post('/orders/:id/refund', async (req: Request, res: Response, next: Next
     });
 
     // Restore stock
-    for (const item of (order.order_items || [])) {
+    for (const item of (refundItems || [])) {
       const { data: product } = await supabase.from('products').select('id, stock').eq('id', item.product_id).maybeSingle();
       if (product) {
         await supabase.from('products').update({ stock: product.stock + item.quantity, is_active: true }).eq('id', product.id);
@@ -479,7 +515,7 @@ router.patch('/orders/:id/tracking', async (req: Request, res: Response, next: N
     if (logisticsPartner !== undefined) updates.logistics_partner = logisticsPartner;
     if (estimatedDelivery !== undefined) updates.estimated_delivery = estimatedDelivery;
 
-    const { data: order, error } = await supabase.from('orders').update(updates).eq('id', req.params.id).select('*, order_items(*)').single();
+    const { data: order, error } = await supabase.from('orders').update(updates).eq('id', req.params.id).select('*').single();
     if (error) throw error;
     if (!order) { const { NotFoundError } = await import('../errors/app-error'); throw new NotFoundError('Order'); }
     sendSuccess(res, transformRow(order), 'Tracking info updated');
@@ -515,6 +551,10 @@ router.get('/barcode/lookup/:code', barcodeController.lookup);
 router.get('/barcode/stock/:code', barcodeController.stockCheck);
 router.post('/barcode/bulk-lookup', barcodeController.bulkLookup);
 router.post('/barcode/regenerate/:productId', barcodeController.regenerate);
+router.post('/barcode/validate', barcodeController.validate);
+router.get('/barcode/types', barcodeController.getTypes);
+router.post('/barcode/bulk-generate', barcodeController.bulkGenerate);
+router.post('/barcode/migrate-to-code128', barcodeController.migrateToCode128);
 
 // ====== POS / Counter Billing ======
 router.post('/pos/create-order', posController.createOrder);
@@ -534,20 +574,26 @@ router.get('/reports/orders', async (req: Request, res: Response, next: NextFunc
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
-    const { startDate, endDate, source, status, page, limit: limitQ } = req.query as Record<string, string>;
+    const { startDate, endDate, source, status, search, page, limit: limitQ } = req.query as Record<string, string>;
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limitQ) || 20;
     const offset = (pageNum - 1) * limitNum;
 
     let qb = supabase
       .from('orders')
-      .select('id, order_number, created_at, status, payment_status, total, subtotal, discount, shipping_fee, is_walk_in, user_id, shipping_address, users:user_id(name, email, phone)', { count: 'exact' });
+      .select(
+        'id, order_number, invoice_number, created_at, status, payment_status, payment_method, pos_payment_method, total, subtotal, discount, shipping_fee, gst_amount, gst_rate, is_walk_in, walk_in_customer_name, walk_in_customer_phone, walk_in_customer_email, user_id, shipping_address, users:user_id(name, email, phone)',
+        { count: 'exact' },
+      );
 
     if (startDate) qb = qb.gte('created_at', new Date(startDate).toISOString());
     if (endDate) qb = qb.lte('created_at', new Date(endDate + 'T23:59:59').toISOString());
     if (source === 'online') qb = qb.eq('is_walk_in', false);
     if (source === 'pos') qb = qb.eq('is_walk_in', true);
     if (status) qb = qb.eq('status', status);
+    if (search) {
+      qb = qb.or(`order_number.ilike.%${search}%,invoice_number.ilike.%${search}%,walk_in_customer_name.ilike.%${search}%`);
+    }
 
     qb = qb.order('created_at', { ascending: false }).range(offset, offset + limitNum - 1);
 
@@ -556,7 +602,22 @@ router.get('/reports/orders', async (req: Request, res: Response, next: NextFunc
 
     const orders = (data || []).map((o: any) => {
       const t = transformRow(o);
-      t.customer = o.users || { name: t.shippingAddress?.name || 'Walk-in', email: '', phone: t.shippingAddress?.phone || '' };
+      // Fix customer mapping
+      if (o.is_walk_in) {
+        t.customer = {
+          name: o.walk_in_customer_name || 'Walk-in Customer',
+          email: o.walk_in_customer_email || '',
+          phone: o.walk_in_customer_phone || '',
+        };
+      } else {
+        const u = o.users || {};
+        const addr = (o.shipping_address as any) || {};
+        t.customer = {
+          name: u.name || addr.fullName || addr.name || 'Customer',
+          email: u.email || addr.email || '',
+          phone: u.phone || addr.phone || '',
+        };
+      }
       t.source = o.is_walk_in ? 'POS' : 'Online';
       delete t.users;
       return t;
@@ -568,6 +629,76 @@ router.get('/reports/orders', async (req: Request, res: Response, next: NextFunc
       totalPages: Math.ceil((count || 0) / limitNum),
       currentPage: pageNum,
     }, 'Orders report fetched');
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ====== GST Report CSV ======
+router.get('/reports/gst-summary', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { startDate, endDate, period } = req.query as Record<string, string>;
+
+    let start: Date;
+    let end: Date = new Date();
+    end.setHours(23, 59, 59, 999);
+
+    if (startDate && endDate) {
+      start = new Date(startDate);
+      end = new Date(endDate); end.setHours(23, 59, 59, 999);
+    } else if (period === 'day') {
+      start = new Date(); start.setHours(0, 0, 0, 0);
+    } else if (period === 'week') {
+      start = new Date(); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+    } else {
+      start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+    }
+
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('order_number, invoice_number, created_at, total, subtotal, discount, gst_amount, gst_rate, payment_status, status, is_walk_in, walk_in_customer_name, shipping_address, users:user_id(name, email, phone)')
+      .gte('created_at', start.toISOString())
+      .lte('created_at', end.toISOString())
+      .not('status', 'eq', 'cancelled')
+      .order('created_at', { ascending: false });
+
+    const sanitize = (val: string) => {
+      if (!val) return '';
+      if (/^[=+\-@\t\r]/.test(val)) return `'${val}`;
+      return val;
+    };
+
+    let csv = `AMOHA Mobiles - GST Report\n`;
+    csv += `Period: ${start.toLocaleDateString('en-IN')} to ${end.toLocaleDateString('en-IN')}\n`;
+    csv += `Generated: ${new Date().toLocaleDateString('en-IN')}\n\n`;
+    csv += `Invoice No,Order No,Date,Customer,Source,Taxable Value,GST Rate,GST Amount,CGST,SGST,Grand Total,Status\n`;
+
+    let totalTaxable = 0, totalGst = 0;
+
+    (orders || []).forEach((o: any) => {
+      const user = o.users || {};
+      const addr = o.shipping_address as any || {};
+      const custName = o.is_walk_in ? (o.walk_in_customer_name || 'Walk-in') : (user.name || addr.fullName || 'N/A');
+      const taxableVal = (o.subtotal || 0) - (o.discount || 0);
+      const gstAmt = o.gst_amount || 0;
+      const cgst = Math.round(gstAmt / 2);
+      const sgst = gstAmt - cgst;
+      const gstRate = o.gst_rate || 0;
+      csv += `${sanitize(o.invoice_number || '')},${sanitize(o.order_number)},${new Date(o.created_at).toLocaleDateString('en-IN')},${sanitize(custName)},${o.is_walk_in ? 'POS' : 'Online'},${taxableVal},${gstRate}%,${gstAmt},${cgst},${sgst},${o.total},${o.status}\n`;
+      totalTaxable += taxableVal;
+      totalGst += gstAmt;
+    });
+
+    csv += `\nTotals\n`;
+    csv += `,,,,Total Taxable Value,${totalTaxable}\n`;
+    csv += `,,,,Total GST,${totalGst}\n`;
+    csv += `,,,,Total CGST,${Math.round(totalGst / 2)}\n`;
+    csv += `,,,,Total SGST,${totalGst - Math.round(totalGst / 2)}\n`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=GST-Report-${start.toISOString().split('T')[0]}.csv`);
+    res.send(csv);
   } catch (error) {
     next(error);
   }
@@ -597,7 +728,7 @@ router.get('/reports/sales-summary', async (req: Request, res: Response, next: N
 
     const { data: orders, error } = await supabase
       .from('orders')
-      .select('id, created_at, total, subtotal, discount, payment_status, status, is_walk_in')
+      .select('id, created_at, total, subtotal, discount, gst_amount, payment_status, status, is_walk_in, pos_payment_method')
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString())
       .not('status', 'eq', 'cancelled');
@@ -605,11 +736,17 @@ router.get('/reports/sales-summary', async (req: Request, res: Response, next: N
     if (error) throw error;
 
     const all = orders || [];
-    const paid = all.filter((o: any) => o.payment_status === 'paid');
+    const paid = all.filter((o: any) => o.payment_status === 'paid' || o.is_walk_in);
     const totalRevenue = paid.reduce((s: number, o: any) => s + (o.total || 0), 0);
     const totalOrders = all.length;
-    const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / (paid.length || 1)) : 0;
+    const avgOrderValue = paid.length > 0 ? Math.round(totalRevenue / paid.length) : 0;
     const totalDiscount = all.reduce((s: number, o: any) => s + (o.discount || 0), 0);
+    const totalGst = all.reduce((s: number, o: any) => s + (o.gst_amount || 0), 0);
+
+    const paidOnline = paid.filter((o: any) => !o.is_walk_in);
+    const paidPos = paid.filter((o: any) => o.is_walk_in);
+    const onlineRevenue = paidOnline.reduce((s: number, o: any) => s + (o.total || 0), 0);
+    const posRevenue = paidPos.reduce((s: number, o: any) => s + (o.total || 0), 0);
     const onlineOrders = all.filter((o: any) => !o.is_walk_in).length;
     const posOrders = all.filter((o: any) => o.is_walk_in).length;
 
@@ -619,7 +756,7 @@ router.get('/reports/sales-summary', async (req: Request, res: Response, next: N
       const d = new Date(o.created_at).toISOString().split('T')[0];
       if (!dayMap[d]) dayMap[d] = { date: d, orders: 0, revenue: 0 };
       dayMap[d].orders++;
-      if (o.payment_status === 'paid') dayMap[d].revenue += o.total || 0;
+      if (o.payment_status === 'paid' || o.is_walk_in) dayMap[d].revenue += o.total || 0;
     });
     const dailyBreakdown = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date));
 
@@ -628,6 +765,9 @@ router.get('/reports/sales-summary', async (req: Request, res: Response, next: N
       totalOrders,
       avgOrderValue,
       totalDiscount,
+      totalGst,
+      onlineRevenue,
+      posRevenue,
       onlineOrders,
       posOrders,
       dailyBreakdown,

@@ -43,8 +43,19 @@ class AdminService {
 
   async getRecentOrders(limit: number = 10) {
     const { data, error } = await supabase
-      .from('orders').select('*, order_items(*)').order('created_at', { ascending: false }).limit(limit);
+      .from('orders').select('*').order('created_at', { ascending: false }).limit(limit);
     if (error) throw error;
+
+    // Fetch order_items separately (PostgREST join blocked by RLS)
+    const orderIds = (data || []).map((o: any) => o.id);
+    const { data: itemsData } = orderIds.length
+      ? await supabase.from('order_items').select('*').in('order_id', orderIds)
+      : { data: [] };
+    const itemsByOrder = new Map<string, any[]>();
+    for (const item of itemsData || []) {
+      if (!itemsByOrder.has(item.order_id)) itemsByOrder.set(item.order_id, []);
+      itemsByOrder.get(item.order_id)!.push(transformRow(item));
+    }
 
     // Batch-fetch user data
     const userIds = [...new Set((data || []).map((o: any) => o.user_id).filter(Boolean))];
@@ -56,7 +67,7 @@ class AdminService {
 
     return (data || []).map((o: any) => {
       const t = transformRow(o);
-      t.items = (o.order_items || []).map(transformRow);
+      t.items = itemsByOrder.get(o.id) || [];
       t.user = usersMap[o.user_id] || { _id: o.user_id, name: 'Unknown', email: '' };
       t.orderStatus = o.status || 'pending';
       t.totalAmount = o.total ?? 0;

@@ -5,10 +5,11 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { ArrowLeft, X, Plus, Loader2 } from 'lucide-react';
+import { ArrowLeft, X, Plus, Loader2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
 import { MultiImageUploader } from '@/components/shared/image-uploader';
+import { BarcodeVisual } from '@/components/shared/barcode-visual';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { productService } from '@/services/product.service';
 import { categoryService } from '@/services/category.service';
 import { brandService } from '@/services/brand.service';
+import { barcodeService, type BarcodeType } from '@/services/barcode.service';
 import type { Category, Brand } from '@/types';
 
 const schema = z.object({
@@ -34,6 +36,8 @@ const schema = z.object({
   colors: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isTrending: z.boolean().default(false),
+  barcode: z.string().optional(),
+  barcodeType: z.enum(['EAN13', 'EAN8', 'UPCA', 'CODE128', 'CODE39']).default('EAN13'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -60,6 +64,14 @@ const isUuid = (value: string) =>
 
 interface Props { productId?: string }
 
+const BARCODE_TYPES = [
+  { value: 'EAN13', label: 'EAN-13 (Retail)', description: '13-digit retail barcode' },
+  { value: 'CODE128', label: 'Code 128', description: 'Alphanumeric barcode' },
+  { value: 'EAN8', label: 'EAN-8', description: '8-digit small product barcode' },
+  { value: 'UPCA', label: 'UPC-A', description: '12-digit North America barcode' },
+  { value: 'CODE39', label: 'Code 39', description: 'Industrial barcode' },
+];
+
 export function ProductForm({ productId }: Props) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -69,11 +81,16 @@ export function ProductForm({ productId }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(!!productId);
   const [imagesUploading, setImagesUploading] = useState(false);
+  const [barcodePreview, setBarcodePreview] = useState<string>('');
+  const [regeneratingBarcode, setRegeneratingBarcode] = useState(false);
 
-  const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false },
+    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, barcodeType: 'EAN13' },
   });
+
+  const barcodeType = watch('barcodeType');
+  const barcodeValue = watch('barcode');
 
   useEffect(() => {
     const loadData = async () => {
@@ -100,7 +117,10 @@ export function ProductForm({ productId }: Props) {
             colors: p.colors?.join(', ') || '',
             isFeatured: p.isFeatured,
             isTrending: p.isTrending,
+            barcode: p.barcode || '',
+            barcodeType: (p.barcodeType as BarcodeType) || 'EAN13',
           });
+          setBarcodePreview(p.barcode || '');
           setExistingImages(p.images || []);
           const specEntries = p.specifications
             ? Object.entries(p.specifications).filter(([, v]) => v !== '' && v !== false).map(([key, value]) => ({ key, value: String(value) }))
@@ -115,6 +135,28 @@ export function ProductForm({ productId }: Props) {
     };
     loadData();
   }, [productId, reset]);
+
+  const handleRegenerateBarcode = async () => {
+    if (!productId) {
+      // For new products, just generate a preview
+      toast.success('Barcode will be auto-generated on create');
+      return;
+    }
+
+    setRegeneratingBarcode(true);
+    try {
+      const result = await barcodeService.regenerate(productId, {
+        type: barcodeType,
+      });
+      setValue('barcode', result.barcode);
+      setBarcodePreview(result.barcode);
+      toast.success('Barcode regenerated successfully');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to regenerate barcode');
+    } finally {
+      setRegeneratingBarcode(false);
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     if (imagesUploading) {
@@ -158,6 +200,8 @@ export function ProductForm({ productId }: Props) {
         warranty: data.warranty || '',
         images: existingImages.length > 0 ? existingImages : [],
         thumbnail: existingImages[0] || '',
+        barcode: data.barcode || undefined,
+        barcodeType: data.barcodeType,
       };
 
       if (productId) {
@@ -252,6 +296,78 @@ export function ProductForm({ productId }: Props) {
                 <Input label="Tags (comma separated)" placeholder="smartphone, 5g, flagship" {...register('tags')} />
                 <Input label="Colors (comma separated)" placeholder="Black, Silver, Gold" {...register('colors')} />
                 <Input label="Warranty" placeholder="e.g. 1 Year, 6 Months" {...register('warranty')} />
+
+                {/* Barcode Section */}
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-sm font-medium mb-3">Barcode Information</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">Barcode Type</label>
+                      <Controller
+                        name="barcodeType"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value || 'EAN13'}>
+                            <SelectTrigger><SelectValue placeholder="Select barcode type" /></SelectTrigger>
+                            <SelectContent>
+                              {BARCODE_TYPES.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  <div>
+                                    <div>{type.label}</div>
+                                    <div className="text-xs text-muted-foreground">{type.description}</div>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">Barcode</label>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Auto-generated if empty"
+                          {...register('barcode')}
+                          value={barcodeValue || ''}
+                        />
+                        {productId && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={handleRegenerateBarcode}
+                            disabled={regeneratingBarcode}
+                            title="Regenerate barcode"
+                          >
+                            <RefreshCw className={`h-4 w-4 ${regeneratingBarcode ? 'animate-spin' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Leave empty to auto-generate {barcodeType === 'EAN13' ? 'EAN-13' : barcodeType} barcode
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Barcode Preview */}
+                  {barcodeValue && (
+                    <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                      <div className="flex items-center gap-4">
+                        <BarcodeVisual
+                          code={barcodeValue}
+                          type={barcodeType as any}
+                          compact
+                          height={40}
+                        />
+                        <code className="text-sm font-mono bg-background px-2 py-1 rounded">
+                          {barcodeValue}
+                        </code>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

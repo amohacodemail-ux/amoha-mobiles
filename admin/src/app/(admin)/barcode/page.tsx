@@ -89,9 +89,18 @@ export default function BarcodePage() {
   const [labelW, setLabelW] = useState(62);   // mm
   const [labelH, setLabelH] = useState(34);   // mm
 
+  // Track whether user has explicitly toggled GST (so billingInfo load won't override it)
+  const userToggledGst = useRef(false);
+
   // Load billing info + today stats on mount
   useEffect(() => {
-    posService.getBillingInfo().then(setBillingInfo).catch(() => {});
+    posService.getBillingInfo().then((info) => {
+      setBillingInfo(info);
+      // Only apply the settings default if user has NOT manually toggled
+      if (!userToggledGst.current) {
+        setLocalGstEnabled(null); // let derived value pick up billingInfo.enableGst
+      }
+    }).catch(() => {});
     posService.getTodayStats().then(setTodayStats).catch(() => {});
   }, []);
 
@@ -241,8 +250,12 @@ export default function BarcodePage() {
 
   // Billing helpers
 
+  // Keep a ref to billingInfo so addToBilling always gets the latest value
+  const billingInfoRef = useRef<PosBillingInfo | null>(null);
+  useEffect(() => { billingInfoRef.current = billingInfo; }, [billingInfo]);
+
   const addToBilling = (product: BarcodeProduct) => {
-    const defaultRate = billingInfo?.billing?.gstRate ?? 18;
+    const defaultRate = billingInfoRef.current?.billing?.gstRate ?? 18;
     setBillingItems((prev) => {
       const existing = prev.find((item) => item._id === product._id);
       if (existing) {
@@ -255,8 +268,7 @@ export default function BarcodePage() {
         );
       }
       if (product.stock <= 0) {
-        toast.error(`"${product.name}" is out of stock`);
-        return prev;
+        toast(`"${product.name}" shows 0 stock — verify physical stock before billing`, { icon: '⚠️' });
       }
       return [...prev, { ...product, quantity: 1, itemGstRate: defaultRate }];
     });
@@ -381,10 +393,10 @@ export default function BarcodePage() {
     if (!printWindow) return;
 
     const itemsHtml = (order.items || []).map((item: any) => {
-      const name = escapeHtml(item.product?.name || 'Product');
+      const name = escapeHtml(item.productName || item.product?.name || item.name || 'Product');
       const qty = item.quantity;
-      const price = item.price;
-      const total = price * qty;
+      const price = item.price ?? item.unitPrice ?? 0;
+      const total = item.total ?? price * qty;
       return `<tr>
         <td style="padding:6px 4px;border-bottom:1px solid #eee;">${name}</td>
         <td style="padding:6px 4px;text-align:center;border-bottom:1px solid #eee;">${qty}</td>
@@ -401,12 +413,15 @@ export default function BarcodePage() {
     const footer = escapeHtml(billing.footerNote || 'Thank you for your purchase!');
     const terms = billing.termsOnInvoice ? `<p style="font-size:10px;color:#888;margin-top:12px;">${escapeHtml(billing.termsOnInvoice)}</p>` : '';
 
+    const cgst = Math.floor(data.gstAmount / 2);
+    const sgst = data.gstAmount - cgst;
     const gstSection = data.gstRate > 0 ? `
-      <tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">CGST (${data.gstRate / 2}%)</td><td style="text-align:right;padding:3px 4px;font-size:12px;">Rs.${Math.round(data.gstAmount / 2).toLocaleString('en-IN')}</td></tr>
-      <tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">SGST (${data.gstRate / 2}%)</td><td style="text-align:right;padding:3px 4px;font-size:12px;">Rs.${Math.round(data.gstAmount / 2).toLocaleString('en-IN')}</td></tr>
+      <tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">CGST (${data.gstRate / 2}%)</td><td style="text-align:right;padding:3px 4px;font-size:12px;">Rs.${cgst.toLocaleString('en-IN')}</td></tr>
+      <tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">SGST (${data.gstRate / 2}%)</td><td style="text-align:right;padding:3px 4px;font-size:12px;">Rs.${sgst.toLocaleString('en-IN')}</td></tr>
     ` : '';
 
-    const discountRow = order.discount > 0 ? `<tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">Discount</td><td style="text-align:right;padding:3px 4px;font-size:12px;color:green;">-Rs.${order.discount.toLocaleString('en-IN')}</td></tr>` : '';
+    const orderDiscount = order.discount ?? order.posDiscount ?? 0;
+    const discountRow = orderDiscount > 0 ? `<tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">Discount</td><td style="text-align:right;padding:3px 4px;font-size:12px;color:green;">-Rs.${orderDiscount.toLocaleString('en-IN')}</td></tr>` : '';
 
     printWindow.document.write(`<!DOCTYPE html><html><head><title>Invoice ${invoiceNum}</title>
       <style>
@@ -441,10 +456,10 @@ export default function BarcodePage() {
         </tr></thead>
         <tbody>
           ${itemsHtml}
-          <tr><td colspan="3" style="text-align:right;padding:6px 4px;font-size:12px;color:#666;">Subtotal</td><td style="text-align:right;padding:6px 4px;">Rs.${order.subtotal.toLocaleString('en-IN')}</td></tr>
+          <tr><td colspan="3" style="text-align:right;padding:6px 4px;font-size:12px;color:#666;">Subtotal</td><td style="text-align:right;padding:6px 4px;">Rs.${(order.subtotal ?? order.total ?? 0).toLocaleString('en-IN')}</td></tr>
           ${discountRow}
           ${gstSection}
-          <tr class="total-row"><td colspan="3" style="text-align:right;">Grand Total</td><td style="text-align:right;">Rs.${order.totalAmount.toLocaleString('en-IN')}</td></tr>
+          <tr class="total-row"><td colspan="3" style="text-align:right;">Grand Total</td><td style="text-align:right;">Rs.${(order.totalAmount ?? order.total ?? 0).toLocaleString('en-IN')}</td></tr>
         </tbody>
       </table>
       <div class="divider"></div>
@@ -529,8 +544,8 @@ export default function BarcodePage() {
     printWindow.document.close();
   };
 
-  const renderBarcodeVisual = (code?: string, compact = false) => {
-    return <BarcodeVisual code={code} compact={compact} />;
+  const renderBarcodeVisual = (code?: string, compact = false, type?: string) => {
+    return <BarcodeVisual code={code} compact={compact} type={(type as any) || 'CODE128'} />;
   };
 
   const productColumns: Column<Product>[] = [
@@ -544,7 +559,7 @@ export default function BarcodePage() {
       ),
     },
     { key: 'sku', header: 'SKU', render: (p) => <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{(p as any).sku || '—'}</code> },
-    { key: 'barcode', header: 'Barcode', render: (p) => renderBarcodeVisual((p as any).barcode, true) },
+    { key: 'barcode', header: 'Barcode', render: (p) => renderBarcodeVisual((p as any).barcode, true, (p as any).barcodeType) },
     { key: 'stock', header: 'Stock', render: (p) => <Badge variant={p.stock > 10 ? 'success' : p.stock > 0 ? 'warning' : 'destructive'}>{p.stock} units</Badge> },
     {
       key: 'actions', header: '',
@@ -773,7 +788,7 @@ export default function BarcodePage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setLocalGstEnabled(!enableGst)}
+                      onClick={() => { userToggledGst.current = true; setLocalGstEnabled(!enableGst); }}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${enableGst ? 'bg-primary' : 'bg-muted-foreground/30'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enableGst ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -881,11 +896,11 @@ export default function BarcodePage() {
                         {order.walkInCustomerName && order.walkInCustomerName !== 'Walk-in Customer' ? order.walkInCustomerName : 'Walk-in'} — {new Date(order.createdAt).toLocaleString('en-IN')}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {order.items?.length} item(s): {order.items?.map((i: any) => i.product?.name || 'Product').join(', ')}
+                        {order.items?.length ?? 0} item(s): {order.items?.map((i: any) => i.productName || i.product?.name || 'Product').join(', ')}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-lg font-bold">{formatCurrency(order.totalAmount)}</span>
+                      <span className="text-lg font-bold">{formatCurrency(order.total ?? order.totalAmount ?? 0)}</span>
                       <Button variant="outline" size="sm" onClick={() => {
                         printInvoice({
                           order,

@@ -5,10 +5,13 @@ interface InvoiceItem {
   name: string;
   quantity: number;
   price: number;
+  hsnCode?: string;
+  gstRate?: number;
 }
 
-interface InvoiceData {
+export interface InvoiceData {
   orderNumber: string;
+  invoiceNumber?: string;
   orderDate: string;
   customerName: string;
   customerEmail: string;
@@ -27,120 +30,205 @@ interface InvoiceData {
   discount: number;
   deliveryCharge: number;
   codFee?: number;
+  gstAmount?: number;
+  gstRate?: number;
   totalAmount: number;
   paymentMethod: string;
   paymentStatus: string;
   couponCode?: string;
+  // Business / billing settings
+  businessName?: string;
+  gstin?: string;
+  panNumber?: string;
+  businessAddress?: string;
+  businessPhone?: string;
+  businessEmail?: string;
+  invoicePrefix?: string;
+  termsOnInvoice?: string;
+  footerNote?: string;
+  hsnCode?: string;
 }
 
 export function generateInvoicePDF(res: Response, data: InvoiceData) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
-  // Set response headers
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename=Invoice-${data.orderNumber}.pdf`);
+  const invoiceRef = data.invoiceNumber || data.orderNumber;
+  res.setHeader('Content-Disposition', `attachment; filename=Invoice-${invoiceRef}.pdf`);
   doc.pipe(res);
 
-  // Header
-  doc.fontSize(20).font('Helvetica-Bold').text('AMOHA MOBILES', 50, 50);
-  doc.fontSize(10).font('Helvetica').text('GST: GSTIN_PLACEHOLDER', 50, 75);
-  doc.text('support@amohamobiles.com', 50, 88);
+  const businessName = data.businessName || 'AMOHA MOBILES';
+  const footerNote = data.footerNote || 'Thank you for shopping with us!';
 
-  // Invoice title
-  doc.fontSize(16).font('Helvetica-Bold').text('TAX INVOICE', 400, 50, { align: 'right' });
-  doc.fontSize(10).font('Helvetica').text(`#${data.orderNumber}`, 400, 72, { align: 'right' });
-  doc.text(`Date: ${new Date(data.orderDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, 400, 85, { align: 'right' });
+  // ── Header ──────────────────────────────────────────────
+  doc.fontSize(20).font('Helvetica-Bold').text(businessName.toUpperCase(), 50, 50);
+  let headerY = 75;
+  if (data.gstin) {
+    doc.fontSize(9).font('Helvetica').text(`GSTIN: ${data.gstin}`, 50, headerY);
+    headerY += 13;
+  }
+  if (data.panNumber) {
+    doc.fontSize(9).font('Helvetica').text(`PAN: ${data.panNumber}`, 50, headerY);
+    headerY += 13;
+  }
+  if (data.businessAddress) {
+    doc.fontSize(9).font('Helvetica').text(data.businessAddress, 50, headerY, { width: 250 });
+    headerY += 13;
+  }
+  if (data.businessPhone) {
+    doc.fontSize(9).font('Helvetica').text(`Phone: ${data.businessPhone}`, 50, headerY);
+    headerY += 13;
+  }
+  if (data.businessEmail) {
+    doc.fontSize(9).font('Helvetica').text(data.businessEmail, 50, headerY);
+  }
+
+  // Invoice title (right-aligned)
+  const invoiceTitle = data.gstAmount && data.gstAmount > 0 ? 'TAX INVOICE' : 'INVOICE';
+  doc.fontSize(16).font('Helvetica-Bold').text(invoiceTitle, 350, 50, { width: 195, align: 'right' });
+  doc.fontSize(9).font('Helvetica').text(`Invoice #: ${invoiceRef}`, 350, 72, { width: 195, align: 'right' });
+  doc.text(
+    `Date: ${new Date(data.orderDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+    350, 85, { width: 195, align: 'right' },
+  );
+  if (data.invoiceNumber && data.orderNumber && data.invoiceNumber !== data.orderNumber) {
+    doc.text(`Order: ${data.orderNumber}`, 350, 98, { width: 195, align: 'right' });
+  }
 
   // Separator
-  doc.moveTo(50, 110).lineTo(545, 110).stroke('#e5e7eb');
+  const sep1 = 120;
+  doc.moveTo(50, sep1).lineTo(545, sep1).stroke('#e5e7eb');
 
-  // Bill To / Ship To
-  const y1 = 125;
+  // ── Bill To / Ship To ───────────────────────────────────
+  const y1 = sep1 + 12;
   doc.fontSize(9).font('Helvetica-Bold').text('BILL TO:', 50, y1);
   doc.fontSize(9).font('Helvetica')
-    .text(data.customerName, 50, y1 + 14)
-    .text(data.customerEmail, 50, y1 + 26)
-    .text(data.customerPhone, 50, y1 + 38);
+    .text(data.customerName, 50, y1 + 13)
+    .text(data.customerEmail || '', 50, y1 + 25)
+    .text(data.customerPhone || '', 50, y1 + 37);
 
-  doc.fontSize(9).font('Helvetica-Bold').text('SHIP TO:', 300, y1);
+  doc.fontSize(9).font('Helvetica-Bold').text('SHIP TO / SOLD TO:', 300, y1);
+  const addr = data.shippingAddress;
   doc.fontSize(9).font('Helvetica')
-    .text(data.shippingAddress.fullName, 300, y1 + 14)
-    .text(data.shippingAddress.addressLine1, 300, y1 + 26)
-    .text(`${data.shippingAddress.city}, ${data.shippingAddress.state} - ${data.shippingAddress.pincode}`, 300, y1 + 38)
-    .text(`Phone: ${data.shippingAddress.phone}`, 300, y1 + 50);
+    .text(addr.fullName, 300, y1 + 13)
+    .text(addr.addressLine1, 300, y1 + 25);
+  let addrLine = `${addr.city}`;
+  if (addr.state) addrLine += `, ${addr.state}`;
+  if (addr.pincode) addrLine += ` - ${addr.pincode}`;
+  doc.text(addrLine, 300, y1 + 37);
+  doc.text(`Phone: ${addr.phone || '—'}`, 300, y1 + 49);
 
-  // Table header
-  const tableTop = y1 + 75;
-  doc.moveTo(50, tableTop).lineTo(545, tableTop).stroke('#e5e7eb');
+  // ── Items table ──────────────────────────────────────────
+  const tableTop = y1 + 72;
+  doc.moveTo(50, tableTop).lineTo(545, tableTop).stroke('#d1d5db');
+  doc.rect(50, tableTop, 495, 20).fill('#f9fafb').stroke('#e5e7eb');
+  doc.fontSize(8).font('Helvetica-Bold').fillColor('#374151');
+  doc.text('#', 52, tableTop + 6, { width: 20 });
+  doc.text('Item', 74, tableTop + 6, { width: 220 });
+  doc.text('HSN', 296, tableTop + 6, { width: 50, align: 'center' });
+  doc.text('Qty', 348, tableTop + 6, { width: 35, align: 'center' });
+  doc.text('Rate', 385, tableTop + 6, { width: 70, align: 'right' });
+  doc.text('Amount', 457, tableTop + 6, { width: 88, align: 'right' });
 
-  doc.fontSize(9).font('Helvetica-Bold');
-  doc.text('#', 50, tableTop + 8, { width: 30 });
-  doc.text('Item', 80, tableTop + 8, { width: 250 });
-  doc.text('Qty', 340, tableTop + 8, { width: 50, align: 'center' });
-  doc.text('Price', 400, tableTop + 8, { width: 70, align: 'right' });
-  doc.text('Total', 475, tableTop + 8, { width: 70, align: 'right' });
+  doc.moveTo(50, tableTop + 20).lineTo(545, tableTop + 20).stroke('#e5e7eb');
 
-  doc.moveTo(50, tableTop + 24).lineTo(545, tableTop + 24).stroke('#e5e7eb');
-
-  // Table rows
-  let rowY = tableTop + 32;
-  doc.font('Helvetica').fontSize(9);
+  let rowY = tableTop + 28;
+  doc.font('Helvetica').fontSize(8).fillColor('#111827');
   data.items.forEach((item, idx) => {
-    doc.text(String(idx + 1), 50, rowY, { width: 30 });
-    doc.text(item.name, 80, rowY, { width: 250 });
-    doc.text(String(item.quantity), 340, rowY, { width: 50, align: 'center' });
-    doc.text(formatINR(item.price), 400, rowY, { width: 70, align: 'right' });
-    doc.text(formatINR(item.price * item.quantity), 475, rowY, { width: 70, align: 'right' });
-    rowY += 20;
+    const lineTotal = item.price * item.quantity;
+    doc.text(String(idx + 1), 52, rowY, { width: 20 });
+    doc.text(item.name, 74, rowY, { width: 220 });
+    doc.text(item.hsnCode || data.hsnCode || '—', 296, rowY, { width: 50, align: 'center' });
+    doc.text(String(item.quantity), 348, rowY, { width: 35, align: 'center' });
+    doc.text(formatINR(item.price), 385, rowY, { width: 70, align: 'right' });
+    doc.text(formatINR(lineTotal), 457, rowY, { width: 88, align: 'right' });
+    rowY += 18;
+    if (rowY > 700) {
+      doc.addPage();
+      rowY = 50;
+    }
   });
 
   // Separator before totals
-  doc.moveTo(350, rowY + 5).lineTo(545, rowY + 5).stroke('#e5e7eb');
-
-  // Totals
+  doc.moveTo(350, rowY + 4).lineTo(545, rowY + 4).stroke('#d1d5db');
   rowY += 14;
-  doc.font('Helvetica').fontSize(9);
-  doc.text('Subtotal:', 400, rowY, { align: 'left' });
-  doc.text(formatINR(data.subtotal), 475, rowY, { width: 70, align: 'right' });
-  rowY += 16;
+
+  const addRow = (label: string, value: string, bold = false) => {
+    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 10 : 9).fillColor('#111827');
+    doc.text(label, 360, rowY, { width: 95 });
+    doc.text(value, 457, rowY, { width: 88, align: 'right' });
+    rowY += bold ? 18 : 15;
+  };
+
+  addRow('Subtotal:', formatINR(data.subtotal));
 
   if (data.discount > 0) {
-    doc.text(`Discount${data.couponCode ? ` (${data.couponCode})` : ''}:`, 400, rowY, { align: 'left' });
-    doc.text(`-${formatINR(data.discount)}`, 475, rowY, { width: 70, align: 'right' });
-    rowY += 16;
+    addRow(`Discount${data.couponCode ? ` (${data.couponCode})` : ''}:`, `-${formatINR(data.discount)}`);
   }
 
-  doc.text('Delivery Charge:', 400, rowY, { align: 'left' });
-  doc.text(data.deliveryCharge === 0 ? 'FREE' : formatINR(data.deliveryCharge), 475, rowY, { width: 70, align: 'right' });
-  rowY += 16;
+  if (data.deliveryCharge !== undefined) {
+    addRow('Delivery:', data.deliveryCharge === 0 ? 'FREE' : formatINR(data.deliveryCharge));
+  }
 
   if (data.codFee && data.codFee > 0) {
-    doc.text('Cash on Delivery Fee:', 400, rowY, { align: 'left' });
-    doc.text(formatINR(data.codFee), 475, rowY, { width: 70, align: 'right' });
-    rowY += 16;
+    addRow('COD Fee:', formatINR(data.codFee));
   }
 
-  doc.moveTo(400, rowY).lineTo(545, rowY).stroke('#374151');
-  rowY += 8;
-  doc.font('Helvetica-Bold').fontSize(11);
-  doc.text('Total:', 400, rowY, { align: 'left' });
-  doc.text(formatINR(data.totalAmount), 475, rowY, { width: 70, align: 'right' });
+  if (data.gstAmount && data.gstAmount > 0) {
+    const halfGst = Math.round(data.gstAmount / 2);
+    const rate = data.gstRate || 18;
+    addRow(`CGST (${rate / 2}%)  [inclusive]:`, formatINR(halfGst));
+    addRow(`SGST (${rate / 2}%)  [inclusive]:`, formatINR(data.gstAmount - halfGst));
+  }
 
-  // Payment info
-  rowY += 30;
-  doc.font('Helvetica').fontSize(9);
-  doc.text(`Payment: ${data.paymentMethod === 'razorpay' ? 'Online (Razorpay)' : 'Cash on Delivery'} — ${data.paymentStatus.toUpperCase()}`, 50, rowY);
+  doc.moveTo(350, rowY).lineTo(545, rowY).stroke('#374151');
+  rowY += 6;
+  addRow('Grand Total:', formatINR(data.totalAmount), true);
 
-  // Footer
-  const footerY = 750;
+  // ── Payment Info ────────────────────────────────────────
+  rowY += 10;
+  const pmLabel = (() => {
+    const pm = (data.paymentMethod || '').toLowerCase();
+    if (pm === 'cod') return 'Cash on Delivery';
+    if (pm === 'razorpay') return 'Online Payment (Razorpay)';
+    if (['cash', 'card', 'upi'].includes(pm)) return pm.toUpperCase();
+    return data.paymentMethod;
+  })();
+  doc.font('Helvetica').fontSize(9).fillColor('#374151');
+  doc.text(`Payment Mode: ${pmLabel}   |   Payment Status: ${(data.paymentStatus || '').toUpperCase()}`, 50, rowY);
+
+  // ── GST Note ───────────────────────────────────────────
+  if (data.gstAmount && data.gstAmount > 0) {
+    rowY += 14;
+    doc.fontSize(8).fillColor('#6b7280')
+      .text('* Prices are inclusive of GST. CGST & SGST have been extracted and shown above for compliance.', 50, rowY);
+  }
+
+  // ── Terms ──────────────────────────────────────────────
+  if (data.termsOnInvoice) {
+    rowY += 20;
+    doc.fontSize(8).font('Helvetica-Bold').fillColor('#374151').text('Terms & Conditions:', 50, rowY);
+    rowY += 12;
+    doc.font('Helvetica').fillColor('#6b7280').text(data.termsOnInvoice, 50, rowY, { width: 495 });
+    rowY = doc.y + 4;
+  }
+
+  // ── Footer ─────────────────────────────────────────────
+  // If content has pushed past the footer zone, add a new page
+  const footerY = doc.page.height - 70;
+  if (rowY > footerY - 20) {
+    doc.addPage();
+  }
   doc.moveTo(50, footerY).lineTo(545, footerY).stroke('#e5e7eb');
-  doc.fontSize(8).font('Helvetica')
-    .text('Thank you for shopping with Amoha Mobiles!', 50, footerY + 10, { align: 'center' })
-    .text('This is a computer-generated invoice and does not require a signature.', 50, footerY + 22, { align: 'center' });
+  doc.fontSize(8).font('Helvetica').fillColor('#6b7280')
+    .text(footerNote, 50, footerY + 8, { align: 'center', width: 495 })
+    .text('This is a computer-generated invoice and does not require a physical signature.', 50, footerY + 20, { align: 'center', width: 495 });
 
+  // Reset fill color to avoid state leak across PDFs
+  doc.fillColor('#000000');
   doc.end();
 }
 
 function formatINR(amount: number): string {
-  return `₹${amount.toLocaleString('en-IN')}`;
+  return `\u20B9${Number(amount || 0).toLocaleString('en-IN')}`;
 }

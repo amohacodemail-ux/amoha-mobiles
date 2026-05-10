@@ -79,6 +79,7 @@ export interface Product {
   slug: string;
   sku: string;
   barcode: string;
+  barcodeType?: 'EAN13' | 'EAN8' | 'UPCA' | 'CODE128' | 'CODE39';
   brandId: string;
   categoryId: string;
   brand: string | Brand;

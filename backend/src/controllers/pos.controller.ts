@@ -21,10 +21,9 @@ class PosController {
         if (!item.productId || !item.quantity || item.quantity < 1) return sendMessage(res, 'Each item needs productId and quantity', 400);
         const { data: product } = await supabase.from('products').select('*').eq('id', item.productId).single();
         if (!product) return sendMessage(res, `Product not found: ${item.productId}`, 404);
-        if (product.stock < item.quantity) return sendMessage(res, `Insufficient stock for "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`, 400);
         const price = item.price ?? product.selling_price;
         const itemGstRate = typeof item.gstRate === 'number' ? item.gstRate : null;
-        orderItems.push({ product_id: product.id, product_name: product.name, product_image: product.images?.[0] || null, quantity: item.quantity, price, total: price * item.quantity, item_gst_rate: itemGstRate });
+        orderItems.push({ product_id: product.id, product_name: product.name, product_image: product.images?.[0] || null, quantity: item.quantity, price, total: price * item.quantity, _itemGstRate: itemGstRate });
         subtotal += price * item.quantity;
       }
 
@@ -35,10 +34,10 @@ class PosController {
       }
 
       const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
-      const billing = settings?.billing_settings || {};
-      // gstEnabled: use request override if provided, else fall back to settings
-      const enableGst = typeof gstEnabledOverride === 'boolean' ? gstEnabledOverride : (billing?.enableGst ?? false);
-      const defaultGstRate = billing?.gstRate ?? 18;
+      const billing: any = (settings as any)?.billing || {};
+      // Frontend can override the GST toggle; fall back to DB setting
+      const enableGst: boolean = typeof gstEnabledOverride === 'boolean' ? gstEnabledOverride : (billing?.enableGst ?? false);
+      const defaultGstRate: number = billing?.gstRate ?? 18;
       const afterDiscount = subtotal - discount;
       const discountRatio = subtotal > 0 ? afterDiscount / subtotal : 1;
 
@@ -46,7 +45,7 @@ class PosController {
       let totalGstAmount = 0;
       if (enableGst) {
         for (const item of orderItems) {
-          const rate = item.item_gst_rate !== null ? item.item_gst_rate : defaultGstRate;
+          const rate = item._itemGstRate !== null ? item._itemGstRate : defaultGstRate;
           if (rate > 0) {
             const itemAfterDiscount = item.total * discountRatio;
             totalGstAmount += Math.round(itemAfterDiscount - (itemAfterDiscount * 100) / (100 + rate));
@@ -60,11 +59,13 @@ class PosController {
       const random = uuidv4().slice(0, 6).toUpperCase();
       const orderNumber = `POS-${timestamp}-${random}`;
 
-      const prefix = billing?.invoicePrefix || 'INV';
+      const prefix = billing?.invoicePrefix ? `${billing.invoicePrefix}` : 'INV';
       const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const todayStart = new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
       const { count: countToday } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('is_walk_in', true).gte('created_at', todayStart);
-      const invoiceNumber = `${prefix}-${todayStr}-${String((countToday || 0) + 1).padStart(4, '0')}`;
+      // Append random suffix to prevent race-condition duplicates on busy counters
+      const posSuffix = Math.random().toString(36).slice(2, 5).toUpperCase();
+      const invoiceNumber = `${prefix}-${todayStr}-${String((countToday || 0) + 1).padStart(4, '0')}-${posSuffix}`;
 
       const { data: order, error } = await supabase.from('orders').insert({
         order_number: orderNumber, user_id: req.user!.userId,
@@ -79,8 +80,10 @@ class PosController {
       }).select('*').single();
       if (error) throw error;
 
-      const itemsInsert = orderItems.map(i => ({ ...i, order_id: order.id }));
-      await supabase.from('order_items').insert(itemsInsert);
+      // Strip internal fields before DB insert
+      const itemsInsert = orderItems.map(({ _itemGstRate, ...i }) => ({ ...i, order_id: order.id }));
+      const { error: itemsErr } = await supabase.from('order_items').insert(itemsInsert);
+      if (itemsErr) logger.error('[POS] order_items insert error:', itemsErr);
       await supabase.from('order_status_history').insert([
         { order_id: order.id, status: 'pending', comment: 'POS counter order' },
         { order_id: order.id, status: 'delivered', comment: `Counter sale - paid via ${paymentMethod}` },
@@ -107,10 +110,21 @@ class PosController {
         });
       }
 
-      const { data: fullOrder } = await supabase.from('orders').select('*, order_items(*)').eq('id', order.id).single();
-      const t = transformRow(fullOrder);
-      t.items = (fullOrder.order_items || []).map(transformRow);
-      delete t.orderItems;
+      // Build response items directly from orderItems (avoids join timing issues)
+      const responseItems = orderItems.map((item: any) => ({
+        orderId: order.id,
+        productId: item.product_id,
+        productName: item.product_name,
+        productImage: item.product_image,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total,
+        gstRate: item._itemGstRate,
+        product: { name: item.product_name, images: item.product_image ? [item.product_image] : [] },
+      }));
+      const t = transformRow(order);
+      t.totalAmount = t.total ?? 0;
+      t.items = responseItems;
 
       sendCreated(res, { order: t, billing, gstAmount, gstRate: enableGst ? defaultGstRate : 0, invoiceNumber }, 'POS order created and stock updated');
     } catch (error) { next(error); }
@@ -123,7 +137,7 @@ class PosController {
       const offset = (page - 1) * limit;
       const search = req.query.search as string;
 
-      let qb = supabase.from('orders').select('*, order_items(*)', { count: 'exact' }).eq('is_walk_in', true);
+      let qb = supabase.from('orders').select('*', { count: 'exact' }).eq('is_walk_in', true);
       if (search) {
         qb = qb.or(`order_number.ilike.%${search}%,invoice_number.ilike.%${search}%,walk_in_customer_name.ilike.%${search}%,walk_in_customer_phone.ilike.%${search}%`);
       }
@@ -131,8 +145,26 @@ class PosController {
       const { data: orders, error, count } = await qb;
       if (error) throw error;
 
+      // Fetch order_items separately (PostgREST join is blocked by RLS on order_items)
+      const orderIds = (orders || []).map((o: any) => o.id);
+      const { data: allItems } = orderIds.length
+        ? await supabase.from('order_items').select('*').in('order_id', orderIds)
+        : { data: [] };
+      const itemsByOrderId = new Map<string, any[]>();
+      for (const item of allItems || []) {
+        if (!itemsByOrderId.has(item.order_id)) itemsByOrderId.set(item.order_id, []);
+        const ti = transformRow(item);
+        if (!ti.product) ti.product = { name: ti.productName || 'Product', images: ti.productImage ? [ti.productImage] : [] };
+        itemsByOrderId.get(item.order_id)!.push(ti);
+      }
+
       sendSuccess(res, {
-        orders: (orders || []).map((o: any) => { const t = transformRow(o); t.items = (o.order_items || []).map(transformRow); delete t.orderItems; return t; }),
+        orders: (orders || []).map((o: any) => {
+          const t = transformRow(o);
+          t.totalAmount = t.total ?? 0;
+          t.items = itemsByOrderId.get(o.id) || [];
+          return t;
+        }),
         totalOrders: count || 0,
         totalPages: Math.ceil((count || 0) / limit),
         currentPage: page,
@@ -164,7 +196,7 @@ class PosController {
     try {
       const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
       sendSuccess(res, {
-        billing: settings?.billing_settings || {},
+        billing: (settings as any)?.billing || {},
         siteName: settings?.site_name || 'AMOHA Mobiles',
         contactPhone: settings?.contact_phone || '',
         contactEmail: settings?.contact_email || '',
