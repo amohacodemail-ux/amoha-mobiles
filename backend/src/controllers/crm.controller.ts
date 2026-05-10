@@ -63,6 +63,17 @@ class CrmController {
       next(error);
     }
   }
+
+  /** Manually create a customer from admin panel */
+  async createCustomer(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { name, phone, email, address, city, state, pincode, notes, tags } = req.body;
+      const customer = await crmService.createCustomer({ name, phone, email, address, city, state, pincode, notes, tags });
+      sendSuccess(res, customer, 'Customer created successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new CrmController();

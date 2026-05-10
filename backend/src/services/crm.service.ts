@@ -1,7 +1,9 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
-import { NotFoundError } from '../errors/app-error';
+import { NotFoundError, ConflictError, BadRequestError } from '../errors/app-error';
 import logger from '../utils/logger.util';
+import { hashPassword } from '../utils/password.util';
+import crypto from 'crypto';
 
 /** Compute CRM segment label based on total spend */
 function computeSegment(totalSpent: number, totalOrders: number): string {
@@ -224,6 +226,89 @@ class CrmService {
       count: data.count,
       totalRevenue: Math.round(data.totalRevenue),
     }));
+  }
+
+  async createCustomer(data: {
+    name: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    notes?: string;
+    tags?: string;
+  }) {
+    const name = (data.name || '').trim();
+    const phone = (data.phone || '').trim();
+
+    if (!name) throw new BadRequestError('Full name is required');
+    if (!phone) throw new BadRequestError('Phone number is required');
+    if (!/^\d{10}$/.test(phone)) throw new BadRequestError('Phone must be exactly 10 digits');
+
+    if (data.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email.trim())) throw new BadRequestError('Invalid email format');
+    }
+
+    // Duplicate phone check
+    const { data: existingPhone } = await supabase
+      .from('users').select('id').eq('phone', phone).maybeSingle();
+    if (existingPhone) throw new ConflictError('User with this phone number already exists');
+
+    // Duplicate email check
+    if (data.email) {
+      const { data: existingEmail } = await supabase
+        .from('users').select('id').eq('email', data.email.trim().toLowerCase()).maybeSingle();
+      if (existingEmail) throw new ConflictError('User with this email already exists');
+    }
+
+    // Random temp password (user can reset via forgot-password)
+    const tempPassword = await hashPassword(crypto.randomBytes(16).toString('hex'));
+
+    const insertData: any = {
+      name,
+      phone,
+      role: 'user',
+      is_verified: true,
+      password: tempPassword,
+    };
+    if (data.email) insertData.email = data.email.trim().toLowerCase();
+    if (data.address || data.city || data.state || data.pincode) {
+      insertData.address = [data.address, data.city, data.state, data.pincode]
+        .filter(Boolean).join(', ');
+    }
+
+    const { data: user, error } = await supabase
+      .from('users').insert(insertData).select('id, name, email, phone, created_at').single();
+    if (error) {
+      if (error.code === '23505') throw new ConflictError('User with this phone or email already exists');
+      logger.error('[CrmService] createCustomer error:', error);
+      throw error;
+    }
+
+    // Add initial CRM note if provided
+    if (data.notes?.trim()) {
+      await supabase.from('crm_notes').insert({
+        customer_id: user.id,
+        author_id: user.id,
+        content: data.notes.trim(),
+        type: 'note',
+      }).select('id').single();
+    }
+
+    return {
+      _id: user.id,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      createdAt: user.created_at,
+      segment: 'new',
+      totalOrders: 0,
+      totalSpent: 0,
+      notesCount: data.notes ? 1 : 0,
+    };
   }
 
   // Controller aliases

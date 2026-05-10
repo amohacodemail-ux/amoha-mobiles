@@ -564,6 +564,7 @@ router.get('/pos/billing-info', posController.getBillingInfo);
 
 // ====== CRM ======
 router.get('/crm/customers', crmController.getCustomers);
+router.post('/crm/customers', crmController.createCustomer);
 router.get('/crm/customers/:customerId', crmController.getCustomerProfile);
 router.post('/crm/customers/:customerId/notes', crmController.addNote);
 router.delete('/crm/notes/:noteId', crmController.deleteNote);

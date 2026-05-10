@@ -1,9 +1,9 @@
 'use client';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDebouncedValue } from '@/lib/hooks';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { Crown, Users, TrendingUp, UserCheck, UserPlus } from 'lucide-react';
+import { Crown, TrendingUp, UserCheck, UserPlus, X } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Pagination } from '@/components/shared/pagination';
@@ -11,8 +11,130 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { crmService, CrmCustomer, SegmentSummary } from '@/services/crm.service';
+import { crmService, CrmCustomer, SegmentSummary, CreateCustomerPayload } from '@/services/crm.service';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
+
+const EMPTY_FORM: CreateCustomerPayload = {
+  name: '', phone: '', email: '', address: '', city: '', state: '', pincode: '', notes: '', tags: '',
+};
+
+function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: (c: CrmCustomer) => void }) {
+  const [form, setForm] = useState<CreateCustomerPayload>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Partial<Record<keyof CreateCustomerPayload, string>>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { nameRef.current?.focus(); }, []);
+
+  const set = (k: keyof CreateCustomerPayload, v: string) => {
+    setForm((prev) => ({ ...prev, [k]: v }));
+    setErrors((prev) => ({ ...prev, [k]: undefined }));
+  };
+
+  const validate = (): boolean => {
+    const e: Partial<Record<keyof CreateCustomerPayload, string>> = {};
+    if (!form.name.trim()) e.name = 'Full name is required';
+    if (!form.phone.trim()) e.phone = 'Phone number is required';
+    else if (!/^\d{10}$/.test(form.phone.trim())) e.phone = 'Phone must be exactly 10 digits';
+    if (form.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'Invalid email format';
+    if (form.pincode?.trim() && !/^\d{6}$/.test(form.pincode.trim())) e.pincode = 'Pincode must be 6 digits';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setSubmitting(true);
+    try {
+      const payload: CreateCustomerPayload = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        ...(form.email?.trim() && { email: form.email.trim() }),
+        ...(form.address?.trim() && { address: form.address.trim() }),
+        ...(form.city?.trim() && { city: form.city.trim() }),
+        ...(form.state?.trim() && { state: form.state.trim() }),
+        ...(form.pincode?.trim() && { pincode: form.pincode.trim() }),
+        ...(form.notes?.trim() && { notes: form.notes.trim() }),
+        ...(form.tags?.trim() && { tags: form.tags.trim() }),
+      };
+      const customer = await crmService.createCustomer(payload);
+      toast.success(`Customer "${customer.name}" created successfully`);
+      onCreated(customer);
+      onClose();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to create customer';
+      if (msg.toLowerCase().includes('phone') && msg.toLowerCase().includes('exists')) {
+        setErrors((prev) => ({ ...prev, phone: 'This phone number is already registered' }));
+        toast.error('User with this phone already exists');
+      } else if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('exists')) {
+        setErrors((prev) => ({ ...prev, email: 'This email is already registered' }));
+        toast.error('User with this email already exists');
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const Field = ({ label, field, type = 'text', placeholder, required }: { label: string; field: keyof CreateCustomerPayload; type?: string; placeholder?: string; required?: boolean }) => (
+    <div>
+      <label className="block text-sm font-medium text-foreground mb-1">
+        {label}{required && <span className="text-destructive ml-0.5">*</span>}
+      </label>
+      <input
+        type={type}
+        value={(form[field] as string) || ''}
+        onChange={(e) => set(field, e.target.value)}
+        placeholder={placeholder}
+        className={`w-full rounded-md border px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition ${errors[field] ? 'border-destructive' : 'border-input'}`}
+      />
+      {errors[field] && <p className="text-xs text-destructive mt-1">{errors[field]}</p>}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-background rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold">Add New Customer</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition"><X className="h-5 w-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2"><Field label="Full Name" field="name" placeholder="e.g. Ramesh Kumar" required /></div>
+            <div className="col-span-2 md:col-span-1"><Field label="Phone Number" field="phone" placeholder="10-digit mobile number" required /></div>
+            <div className="col-span-2 md:col-span-1"><Field label="Email" field="email" type="email" placeholder="optional" /></div>
+          </div>
+          <Field label="Address" field="address" placeholder="Street / Flat No." />
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="City" field="city" placeholder="City" />
+            <Field label="State" field="state" placeholder="State" />
+            <Field label="Pincode" field="pincode" placeholder="6 digits" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Notes</label>
+            <textarea
+              value={form.notes || ''}
+              onChange={(e) => set('notes', e.target.value)}
+              placeholder="Internal notes about this customer..."
+              rows={2}
+              className="w-full rounded-md border border-input px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition resize-none"
+            />
+          </div>
+          <Field label="Tags / Segment" field="tags" placeholder="e.g. wholesale, walk-in" />
+          <div className="flex justify-end gap-3 pt-2 border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Creating...' : 'Create Customer'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 const LIMIT = 15;
 
@@ -32,6 +154,7 @@ export default function CrmPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [segment, setSegment] = useState('all');
   const [segments, setSegments] = useState<SegmentSummary[]>([]);
+  const [showModal, setShowModal] = useState(false);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -61,6 +184,11 @@ export default function CrmPage() {
   useEffect(() => {
     crmService.getSegmentSummary().then(setSegments).catch(() => {});
   }, []);
+
+  const handleCustomerCreated = (newCustomer: CrmCustomer) => {
+    setCustomers((prev) => [newCustomer, ...prev]);
+    setTotalItems((n) => n + 1);
+  };
 
   const getSegmentTotal = (seg: string) =>
     segments.find((s) => s.segment === seg)?.count ?? 0;
@@ -135,9 +263,11 @@ export default function CrmPage() {
 
   return (
     <div>
+      {showModal && <AddCustomerModal onClose={() => setShowModal(false)} onCreated={handleCustomerCreated} />}
       <PageHeader
         title="CRM"
         description="Customer relationship management and segmentation"
+        action={<Button onClick={() => setShowModal(true)}><UserPlus className="h-4 w-4 mr-2" />Add Customer</Button>}
       />
 
       {/* Segment summary cards */}

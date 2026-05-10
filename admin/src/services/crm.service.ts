@@ -61,7 +61,24 @@ export interface CrmCustomersResponse {
   totalPages: number;
 }
 
+export interface CreateCustomerPayload {
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  notes?: string;
+  tags?: string;
+}
+
 export const crmService = {
+  createCustomer: async (payload: CreateCustomerPayload): Promise<CrmCustomer> => {
+    const { data } = await apiClient.post<ApiResponse<CrmCustomer>>('/admin/crm/customers', payload);
+    return data.data;
+  },
+
   getCustomers: async (params: { page?: number; limit?: number; search?: string; segment?: string } = {}): Promise<CrmCustomersResponse> => {
     const { data } = await apiClient.get<ApiResponse<CrmCustomersResponse>>(
       `/admin/crm/customers?${buildQueryString(params)}`,
