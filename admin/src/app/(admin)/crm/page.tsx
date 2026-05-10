@@ -78,21 +78,8 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
     }
   };
 
-  const Field = ({ label, field, type = 'text', placeholder, required }: { label: string; field: keyof CreateCustomerPayload; type?: string; placeholder?: string; required?: boolean }) => (
-    <div>
-      <label className="block text-sm font-medium text-foreground mb-1">
-        {label}{required && <span className="text-destructive ml-0.5">*</span>}
-      </label>
-      <input
-        type={type}
-        value={(form[field] as string) || ''}
-        onChange={(e) => set(field, e.target.value)}
-        placeholder={placeholder}
-        className={`w-full rounded-md border px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition ${errors[field] ? 'border-destructive' : 'border-input'}`}
-      />
-      {errors[field] && <p className="text-xs text-destructive mt-1">{errors[field]}</p>}
-    </div>
-  );
+  const iCls = (field: keyof CreateCustomerPayload) =>
+    `w-full rounded-md border px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition ${errors[field] ? 'border-destructive' : 'border-input'}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -103,32 +90,52 @@ function AddCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreat
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2"><Field label="Full Name" field="name" placeholder="e.g. Ramesh Kumar" required /></div>
-            <div className="col-span-2 md:col-span-1"><Field label="Phone Number" field="phone" placeholder="10-digit mobile number" required /></div>
-            <div className="col-span-2 md:col-span-1"><Field label="Email" field="email" type="email" placeholder="optional" /></div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-1">Full Name<span className="text-destructive ml-0.5">*</span></label>
+              <input ref={nameRef} type="text" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Ramesh Kumar" className={iCls('name')} />
+              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <label className="block text-sm font-medium text-foreground mb-1">Phone Number<span className="text-destructive ml-0.5">*</span></label>
+              <input type="text" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="10-digit mobile number" className={iCls('phone')} />
+              {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+              <input type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} placeholder="optional" className={iCls('email')} />
+              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
+            </div>
           </div>
-          <Field label="Address" field="address" placeholder="Street / Flat No." />
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Address</label>
+            <input type="text" value={form.address || ''} onChange={(e) => set('address', e.target.value)} placeholder="Street / Flat No." className={iCls('address')} />
+          </div>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="City" field="city" placeholder="City" />
-            <Field label="State" field="state" placeholder="State" />
-            <Field label="Pincode" field="pincode" placeholder="6 digits" />
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">City</label>
+              <input type="text" value={form.city || ''} onChange={(e) => set('city', e.target.value)} placeholder="City" className={iCls('city')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">State</label>
+              <input type="text" value={form.state || ''} onChange={(e) => set('state', e.target.value)} placeholder="State" className={iCls('state')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Pincode</label>
+              <input type="text" value={form.pincode || ''} onChange={(e) => set('pincode', e.target.value)} placeholder="6 digits" className={iCls('pincode')} />
+              {errors.pincode && <p className="text-xs text-destructive mt-1">{errors.pincode}</p>}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Notes</label>
-            <textarea
-              value={form.notes || ''}
-              onChange={(e) => set('notes', e.target.value)}
-              placeholder="Internal notes about this customer..."
-              rows={2}
-              className="w-full rounded-md border border-input px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition resize-none"
-            />
+            <textarea value={form.notes || ''} onChange={(e) => set('notes', e.target.value)} placeholder="Internal notes about this customer..." rows={2} className="w-full rounded-md border border-input px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition resize-none" />
           </div>
-          <Field label="Tags / Segment" field="tags" placeholder="e.g. wholesale, walk-in" />
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Tags / Segment</label>
+            <input type="text" value={form.tags || ''} onChange={(e) => set('tags', e.target.value)} placeholder="e.g. wholesale, walk-in" className={iCls('tags')} />
+          </div>
           <div className="flex justify-end gap-3 pt-2 border-t">
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Customer'}
-            </Button>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create Customer'}</Button>
           </div>
         </form>
       </div>

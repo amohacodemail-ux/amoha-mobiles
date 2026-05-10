@@ -73,22 +73,8 @@ function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
     }
   };
 
-  const F = ({ label, field, type = 'text', placeholder, required }: { label: string; field: keyof CreateUserPayload; type?: string; placeholder?: string; required?: boolean }) => (
-    <div>
-      <label className="block text-sm font-medium text-foreground mb-1">
-        {label}{required && <span className="text-destructive ml-0.5">*</span>}
-      </label>
-      <input
-        ref={field === 'name' ? nameRef : undefined}
-        type={type}
-        value={(form[field] as string) || ''}
-        onChange={(e) => set(field, e.target.value)}
-        placeholder={placeholder}
-        className={`w-full rounded-md border px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition ${errors[field] ? 'border-destructive' : 'border-input'}`}
-      />
-      {errors[field] && <p className="text-xs text-destructive mt-1">{errors[field]}</p>}
-    </div>
-  );
+  const inputCls = (field: keyof CreateUserPayload) =>
+    `w-full rounded-md border px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition ${errors[field] ? 'border-destructive' : 'border-input'}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -99,15 +85,40 @@ function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2"><F label="Full Name" field="name" placeholder="e.g. Ramesh Kumar" required /></div>
-            <div className="col-span-2 md:col-span-1"><F label="Phone Number" field="phone" placeholder="10-digit mobile number" required /></div>
-            <div className="col-span-2 md:col-span-1"><F label="Email" field="email" type="email" placeholder="optional" /></div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-1">Full Name<span className="text-destructive ml-0.5">*</span></label>
+              <input ref={nameRef} type="text" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Ramesh Kumar" className={inputCls('name')} />
+              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <label className="block text-sm font-medium text-foreground mb-1">Phone Number<span className="text-destructive ml-0.5">*</span></label>
+              <input type="text" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="10-digit mobile number" className={inputCls('phone')} />
+              {errors.phone && <p className="text-xs text-destructive mt-1">{errors.phone}</p>}
+            </div>
+            <div className="col-span-2 md:col-span-1">
+              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+              <input type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} placeholder="optional" className={inputCls('email')} />
+              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
+            </div>
           </div>
-          <F label="Address" field="address" placeholder="Street / Flat No." />
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Address</label>
+            <input type="text" value={form.address || ''} onChange={(e) => set('address', e.target.value)} placeholder="Street / Flat No." className={inputCls('address')} />
+          </div>
           <div className="grid grid-cols-3 gap-3">
-            <F label="City" field="city" placeholder="City" />
-            <F label="State" field="state" placeholder="State" />
-            <F label="Pincode" field="pincode" placeholder="6 digits" />
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">City</label>
+              <input type="text" value={form.city || ''} onChange={(e) => set('city', e.target.value)} placeholder="City" className={inputCls('city')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">State</label>
+              <input type="text" value={form.state || ''} onChange={(e) => set('state', e.target.value)} placeholder="State" className={inputCls('state')} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Pincode</label>
+              <input type="text" value={form.pincode || ''} onChange={(e) => set('pincode', e.target.value)} placeholder="6 digits" className={inputCls('pincode')} />
+              {errors.pincode && <p className="text-xs text-destructive mt-1">{errors.pincode}</p>}
+            </div>
           </div>
           <div className="flex justify-end gap-3 pt-2 border-t">
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
