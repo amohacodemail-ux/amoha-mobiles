@@ -269,7 +269,8 @@ class CrmService {
     const insertData: any = {
       name,
       phone,
-      email: data.email ? data.email.trim().toLowerCase() : '',
+      // Use phone-based placeholder when no email — empty string '' collides with existing users
+      email: data.email?.trim() ? data.email.trim().toLowerCase() : `${phone}@noemail.local`,
       role: 'user',
       is_verified: true,
       password: tempPassword,
