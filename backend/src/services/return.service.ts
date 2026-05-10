@@ -1,6 +1,7 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
+import inventoryLedger from './inventory-ledger.service';
 import logger from '../utils/logger.util';
 import { sendReturnRequestEmail, sendReturnStatusEmail } from '../utils/email.util';
 
@@ -162,6 +163,27 @@ class ReturnService {
     if (status === 'refund_completed' && returnReq.refund_amount && returnReq.refund_amount > 0) {
       const walletService = (await import('./wallet.service')).default;
       await walletService.credit(returnReq.user_id, returnReq.refund_amount, `Refund for return ${returnReq.return_number}`, returnReq.id);
+    }
+
+    // When item is physically received back → restore stock to available
+    if (status === 'received') {
+      try {
+        const { data: returnItems } = await supabase
+          .from('return_request_items')
+          .select('product_id, quantity')
+          .eq('return_request_id', id);
+        for (const item of returnItems || []) {
+          if (!item.product_id) continue;
+          await inventoryLedger.addStock(
+            item.product_id,
+            item.quantity,
+            `Stock restored - return ${returnReq.return_number}`,
+            returnReq.user_id,
+          );
+        }
+      } catch (stockErr: any) {
+        logger.error(`[return] Stock restore failed for return ${returnReq.return_number}: ${stockErr.message}`);
+      }
     }
 
     // Send status update email to user

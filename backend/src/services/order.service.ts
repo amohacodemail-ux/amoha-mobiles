@@ -299,20 +299,18 @@ class OrderService {
 
     // When delivered: move reserved → sold
     if (status === 'delivered' && orderItems?.length) {
-      const soldItems = orderItems.map((item: any) => ({
-        productId: item.product_id,
-        quantity: item.quantity,
-      }));
-      await inventoryLedger.markSoldForOrder(orderId, soldItems);
+      const soldItems = orderItems
+        .filter((item: any) => item.product_id)
+        .map((item: any) => ({ productId: item.product_id, quantity: item.quantity }));
+      if (soldItems.length) await inventoryLedger.markSoldForOrder(orderId, soldItems);
     }
 
     // When cancelled at this stage: move reserved → available
     if (status === 'cancelled' && orderItems?.length) {
-      const unreserveItems = orderItems.map((item: any) => ({
-        productId: item.product_id,
-        quantity: item.quantity,
-      }));
-      await inventoryLedger.unreserveForOrder(orderId, unreserveItems);
+      const unreserveItems = orderItems
+        .filter((item: any) => item.product_id)
+        .map((item: any) => ({ productId: item.product_id, quantity: item.quantity }));
+      if (unreserveItems.length) await inventoryLedger.unreserveForOrder(orderId, unreserveItems);
     }
 
     return this.getOrderById(orderId);
@@ -341,11 +339,10 @@ class OrderService {
 
     // Fetch items separately for inventory ledger
     const { data: cancelItems } = await supabase.from('order_items').select('product_id, quantity').eq('order_id', orderId);
-    const unreserveItems = (cancelItems || []).map((item: any) => ({
-      productId: item.product_id,
-      quantity: item.quantity,
-    }));
-    await inventoryLedger.unreserveForOrder(orderId, unreserveItems);
+    const unreserveItems = (cancelItems || [])
+      .filter((item: any) => item.product_id)
+      .map((item: any) => ({ productId: item.product_id, quantity: item.quantity }));
+    if (unreserveItems.length) await inventoryLedger.unreserveForOrder(orderId, unreserveItems);
 
     await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId);
     await supabase.from('order_status_history').insert({ order_id: orderId, status: 'cancelled', comment: 'Order cancelled' });
