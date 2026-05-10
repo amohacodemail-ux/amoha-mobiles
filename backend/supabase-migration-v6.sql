@@ -110,9 +110,26 @@ WHERE product_id IS NOT NULL
 DELETE FROM inventory_movements WHERE product_id IS NULL;
 
 -- =====================================================================
--- 6. INTEGRITY CHECK: Sync products.stock with inventory.available_stock
---    For products that have inventory records but products.stock is out of sync.
---    This is a one-time reconciliation.
+-- 6a. BACKFILL: Create inventory records for products that have none.
+--     Seeds available_stock and total_stock from products.stock.
+--     This makes ALL products visible in the inventory ledger.
+-- =====================================================================
+INSERT INTO inventory (product_id, total_stock, available_stock, reserved_stock, sold_stock, damaged_stock, cost_price)
+SELECT
+  p.id,
+  COALESCE(p.stock, 0),
+  COALESCE(p.stock, 0),
+  0, 0, 0, 0
+FROM products p
+WHERE NOT EXISTS (
+  SELECT 1 FROM inventory i WHERE i.product_id = p.id
+)
+ON CONFLICT (product_id) DO NOTHING;
+
+-- =====================================================================
+-- 6b. INTEGRITY CHECK: Sync products.stock with inventory.available_stock
+--     For products whose inventory record exists but is out of sync.
+--     Inventory ledger is authoritative — update products.stock to match.
 -- =====================================================================
 UPDATE products p
 SET stock = i.available_stock,
@@ -216,6 +233,26 @@ FOR EACH ROW
 EXECUTE FUNCTION auto_create_low_stock_alert();
 
 -- =====================================================================
+-- 12. TRIGGER: Auto-create inventory record on new product insert
+--     Prevents future gaps between products and inventory tables.
+-- =====================================================================
+CREATE OR REPLACE FUNCTION auto_create_inventory_for_product()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO inventory (product_id, total_stock, available_stock, reserved_stock, sold_stock, damaged_stock)
+  VALUES (NEW.id, COALESCE(NEW.stock, 0), COALESCE(NEW.stock, 0), 0, 0, 0)
+  ON CONFLICT (product_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_auto_create_inventory ON products;
+CREATE TRIGGER trg_auto_create_inventory
+AFTER INSERT ON products
+FOR EACH ROW
+EXECUTE FUNCTION auto_create_inventory_for_product();
+
+-- =====================================================================
 -- VERIFICATION QUERIES (read-only, safe to run)
 -- =====================================================================
 
@@ -248,3 +285,9 @@ SELECT
   COUNT(*) FILTER (WHERE available_stock = 0) AS out_of_stock,
   COUNT(*) FILTER (WHERE available_stock > 0 AND available_stock <= 10) AS low_stock
 FROM inventory;
+
+-- Coverage check: all products should now have inventory records
+SELECT
+  (SELECT COUNT(*) FROM products) AS total_products,
+  (SELECT COUNT(*) FROM inventory) AS total_inventory_records,
+  (SELECT COUNT(*) FROM products p WHERE NOT EXISTS (SELECT 1 FROM inventory i WHERE i.product_id = p.id)) AS products_without_inventory;
