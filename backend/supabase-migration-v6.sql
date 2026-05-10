@@ -6,11 +6,14 @@
 
 -- =====================================================================
 -- 1. FIX inventory_overview VIEW
---    Remove the "p.is_active = true" filter so temporarily disabled
+--    DROP first to avoid "cannot change name of view column" error when
+--    adding new columns or changing column order.
+--    Preserves original column order; adds product_is_active at the end.
+--    Removes the "p.is_active = true" filter so temporarily disabled
 --    products are not silently dropped from inventory tracking.
---    Admin can still see their stock levels and reactivate them.
 -- =====================================================================
-CREATE OR REPLACE VIEW inventory_overview AS
+DROP VIEW IF EXISTS inventory_overview CASCADE;
+CREATE VIEW inventory_overview AS
 SELECT
   i.id AS inventory_id,
   i.product_id,
@@ -18,7 +21,6 @@ SELECT
   p.sku,
   p.thumbnail,
   p.selling_price,
-  p.is_active AS product_is_active,
   b.name AS brand_name,
   c.name AS category_name,
   i.supplier_id,
@@ -36,7 +38,8 @@ SELECT
     WHEN i.available_stock <= 5 THEN 'critical'
     WHEN i.available_stock <= 10 THEN 'low'
     ELSE 'in_stock'
-  END AS stock_status
+  END AS stock_status,
+  p.is_active AS product_is_active
 FROM inventory i
 JOIN products p ON p.id = i.product_id
 LEFT JOIN brands b ON b.id = p.brand_id
@@ -44,16 +47,16 @@ LEFT JOIN categories c ON c.id = p.category_id;
 
 -- =====================================================================
 -- 2. FIX low_stock_products VIEW
---    Align with inventory table (available_stock) instead of products.stock
---    to be consistent with the ledger system.
+--    DROP first to avoid column rename error.
+--    Keeps original column names; adds inventory_available_stock at end.
 -- =====================================================================
-CREATE OR REPLACE VIEW low_stock_products AS
+DROP VIEW IF EXISTS low_stock_products CASCADE;
+CREATE VIEW low_stock_products AS
 SELECT
   p.id AS product_id,
   p.name,
   p.sku,
-  p.stock AS product_stock,
-  COALESCE(i.available_stock, p.stock) AS available_stock,
+  p.stock AS total_stock,
   p.selling_price,
   b.name AS brand_name,
   c.name AS category_name,
@@ -62,7 +65,8 @@ SELECT
     WHEN COALESCE(i.available_stock, p.stock) <= 5 THEN 'critical'
     WHEN COALESCE(i.available_stock, p.stock) <= 10 THEN 'low'
     ELSE 'normal'
-  END AS stock_status
+  END AS stock_status,
+  COALESCE(i.available_stock, p.stock) AS inventory_available_stock
 FROM products p
 LEFT JOIN inventory i ON i.product_id = p.id
 LEFT JOIN brands b ON b.id = p.brand_id
@@ -118,19 +122,38 @@ WHERE i.product_id = p.id
   AND p.stock != i.available_stock;
 
 -- =====================================================================
--- 7. INDEX: Improve forecast lookup performance
+-- 7. DEDUP: Remove duplicate inventory_forecasts rows
+--    (caused by the old onConflict:'id' bug). Keep the row with the
+--    highest days_of_stock_remaining (most recent calculation) per
+--    (product_id, forecast_date) pair.
+-- =====================================================================
+DELETE FROM inventory_forecasts
+WHERE id IN (
+  SELECT id FROM (
+    SELECT id,
+      ROW_NUMBER() OVER (
+        PARTITION BY product_id, forecast_date
+        ORDER BY created_at DESC
+      ) AS rn
+    FROM inventory_forecasts
+  ) ranked
+  WHERE rn > 1
+);
+
+-- =====================================================================
+-- 8. INDEX: Improve forecast lookup performance
 -- =====================================================================
 CREATE INDEX IF NOT EXISTS idx_inv_forecasts_product_date
   ON inventory_forecasts(product_id, forecast_date DESC);
 
 -- =====================================================================
--- 8. INDEX: Improve stock alert dedup query performance
+-- 9. INDEX: Improve stock alert dedup query performance
 -- =====================================================================
 CREATE INDEX IF NOT EXISTS idx_stock_alerts_dedup
   ON stock_alerts(product_id, alert_type, is_acknowledged, warehouse_id);
 
 -- =====================================================================
--- 9. FUNCTION: auto-sync products.stock from inventory.available_stock
+-- 10. FUNCTION: auto-sync products.stock from inventory.available_stock
 --    on every inventory update (keeps both tables always in sync)
 -- =====================================================================
 CREATE OR REPLACE FUNCTION sync_product_stock_from_inventory()
@@ -152,7 +175,7 @@ FOR EACH ROW
 EXECUTE FUNCTION sync_product_stock_from_inventory();
 
 -- =====================================================================
--- 10. FUNCTION: auto-create low stock alert on inventory update
+-- 11. FUNCTION: auto-create low stock alert on inventory update
 -- =====================================================================
 CREATE OR REPLACE FUNCTION auto_create_low_stock_alert()
 RETURNS TRIGGER AS $$
