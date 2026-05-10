@@ -1,17 +1,123 @@
 'use client';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
-import { ShieldBan, ShieldCheck, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { ShieldBan, ShieldCheck, Trash2, CheckCircle2, XCircle, UserPlus, X } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmModal } from '@/components/shared/confirm-modal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { userService } from '@/services/user.service';
+import { userService, CreateUserPayload } from '@/services/user.service';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
 import type { User } from '@/types';
+
+const EMPTY_FORM: CreateUserPayload = { name: '', phone: '', email: '', address: '', city: '', state: '', pincode: '' };
+
+function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: (u: User) => void }) {
+  const [form, setForm] = useState<CreateUserPayload>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Partial<Record<keyof CreateUserPayload, string>>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { nameRef.current?.focus(); }, []);
+
+  const set = (k: keyof CreateUserPayload, v: string) => {
+    setForm((p) => ({ ...p, [k]: v }));
+    setErrors((p) => ({ ...p, [k]: undefined }));
+  };
+
+  const validate = () => {
+    const e: Partial<Record<keyof CreateUserPayload, string>> = {};
+    if (!form.name.trim()) e.name = 'Full name is required';
+    if (!form.phone.trim()) e.phone = 'Phone number is required';
+    else if (!/^\d{10}$/.test(form.phone.trim())) e.phone = 'Phone must be exactly 10 digits';
+    if (form.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'Invalid email format';
+    if (form.pincode?.trim() && !/^\d{6}$/.test(form.pincode.trim())) e.pincode = 'Pincode must be 6 digits';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setSubmitting(true);
+    try {
+      const payload: CreateUserPayload = {
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        ...(form.email?.trim() && { email: form.email.trim() }),
+        ...(form.address?.trim() && { address: form.address.trim() }),
+        ...(form.city?.trim() && { city: form.city.trim() }),
+        ...(form.state?.trim() && { state: form.state.trim() }),
+        ...(form.pincode?.trim() && { pincode: form.pincode.trim() }),
+      };
+      const user = await userService.createUser(payload);
+      toast.success(`User "${user.name || payload.name}" added successfully`);
+      onCreated(user);
+      onClose();
+    } catch (err: any) {
+      const msg: string = err?.response?.data?.message || err?.message || 'Failed to create user';
+      if (msg.toLowerCase().includes('phone') && msg.toLowerCase().includes('exists')) {
+        setErrors((p) => ({ ...p, phone: 'This phone number is already registered' }));
+        toast.error('User with this phone already exists');
+      } else if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('exists')) {
+        setErrors((p) => ({ ...p, email: 'This email is already registered' }));
+        toast.error('User with this email already exists');
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const F = ({ label, field, type = 'text', placeholder, required }: { label: string; field: keyof CreateUserPayload; type?: string; placeholder?: string; required?: boolean }) => (
+    <div>
+      <label className="block text-sm font-medium text-foreground mb-1">
+        {label}{required && <span className="text-destructive ml-0.5">*</span>}
+      </label>
+      <input
+        ref={field === 'name' ? nameRef : undefined}
+        type={type}
+        value={(form[field] as string) || ''}
+        onChange={(e) => set(field, e.target.value)}
+        placeholder={placeholder}
+        className={`w-full rounded-md border px-3 py-2 text-sm bg-background outline-none focus:ring-2 focus:ring-primary/40 transition ${errors[field] ? 'border-destructive' : 'border-input'}`}
+      />
+      {errors[field] && <p className="text-xs text-destructive mt-1">{errors[field]}</p>}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-background rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h2 className="text-lg font-semibold">Add New User</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition"><X className="h-5 w-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2"><F label="Full Name" field="name" placeholder="e.g. Ramesh Kumar" required /></div>
+            <div className="col-span-2 md:col-span-1"><F label="Phone Number" field="phone" placeholder="10-digit mobile number" required /></div>
+            <div className="col-span-2 md:col-span-1"><F label="Email" field="email" type="email" placeholder="optional" /></div>
+          </div>
+          <F label="Address" field="address" placeholder="Street / Flat No." />
+          <div className="grid grid-cols-3 gap-3">
+            <F label="City" field="city" placeholder="City" />
+            <F label="State" field="state" placeholder="State" />
+            <F label="Pincode" field="pincode" placeholder="6 digits" />
+          </div>
+          <div className="flex justify-end gap-3 pt-2 border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? 'Adding...' : 'Add User'}</Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 const LIMIT = 10;
 
@@ -24,6 +130,7 @@ export default function UsersPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -47,6 +154,11 @@ export default function UsersPage() {
       toast.success(user.isBlocked ? 'User unblocked' : 'User blocked');
       load();
     } catch { toast.error('Action failed'); }
+  };
+
+  const handleUserCreated = (u: User) => {
+    setUsers((prev) => [u as User, ...prev]);
+    setTotalItems((n) => n + 1);
   };
 
   const handleDelete = async () => {
@@ -138,7 +250,12 @@ export default function UsersPage() {
 
   return (
     <div>
-      <PageHeader title="Users" description={`${totalItems} registered users`} />
+      {showAdd && <AddUserModal onClose={() => setShowAdd(false)} onCreated={handleUserCreated} />}
+      <PageHeader
+        title="Users"
+        description={`${totalItems} registered users`}
+        action={<Button onClick={() => setShowAdd(true)}><UserPlus className="h-4 w-4 mr-2" />Add New User</Button>}
+      />
       <DataTable
         columns={columns} data={users} loading={loading}
         searchValue={search} onSearchChange={setSearch}

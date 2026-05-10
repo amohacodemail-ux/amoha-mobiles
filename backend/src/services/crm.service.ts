@@ -256,8 +256,8 @@ class CrmService {
       .from('users').select('id').eq('phone', phone).maybeSingle();
     if (existingPhone) throw new ConflictError('User with this phone number already exists');
 
-    // Duplicate email check
-    if (data.email) {
+    // Duplicate email check (only if email provided)
+    if (data.email?.trim()) {
       const { data: existingEmail } = await supabase
         .from('users').select('id').eq('email', data.email.trim().toLowerCase()).maybeSingle();
       if (existingEmail) throw new ConflictError('User with this email already exists');
@@ -269,15 +269,11 @@ class CrmService {
     const insertData: any = {
       name,
       phone,
+      email: data.email ? data.email.trim().toLowerCase() : '',
       role: 'user',
       is_verified: true,
       password: tempPassword,
     };
-    if (data.email) insertData.email = data.email.trim().toLowerCase();
-    if (data.address || data.city || data.state || data.pincode) {
-      insertData.address = [data.address, data.city, data.state, data.pincode]
-        .filter(Boolean).join(', ');
-    }
 
     const { data: user, error } = await supabase
       .from('users').insert(insertData).select('id, name, email, phone, created_at').single();

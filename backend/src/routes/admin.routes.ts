@@ -336,6 +336,7 @@ router.post('/orders/:id/refund', async (req: Request, res: Response, next: Next
 
 // ====== Users ======
 router.get('/users', userController.getAllUsers);
+router.post('/users', userController.createUser);
 router.get('/users/:id', userController.getUserById);
 router.patch('/users/:id/block', userController.toggleBlock);
 router.delete('/users/:id', userController.deleteUser);

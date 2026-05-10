@@ -44,6 +44,15 @@ class UserController {
     } catch (error) { next(error); }
   }
 
+  async createUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const crmService = (await import('../services/crm.service')).default;
+      const { name, phone, email, address, city, state, pincode } = req.body;
+      const user = await crmService.createCustomer({ name, phone, email, address, city, state, pincode });
+      sendSuccess(res, user, 'User created successfully', 201);
+    } catch (error) { next(error); }
+  }
+
   async getUserById(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const user = await userService.getUserById(req.params.id);
