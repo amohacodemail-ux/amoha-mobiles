@@ -8,6 +8,7 @@ import {
   ChevronRight, Smartphone, LogOut, Menu, X, Wrench, Mail, Bell,
   Eye, AlertCircle, Users2, Barcode, FileText, RotateCcw, Wallet, Activity,
   Truck, UserCheck, Warehouse, ClipboardList, BarChart3, FileQuestion, ShoppingBag,
+  Receipt, IndianRupee,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/brands', label: 'Brands', icon: Award },
   { href: '/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/billing', label: 'Billing & Invoices', icon: IndianRupee },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/users', label: 'Users', icon: Users },
   { href: '/coupons', label: 'Coupons', icon: Ticket },
@@ -29,8 +31,8 @@ const NAV_ITEMS = [
   { href: '/notifications', label: 'Notifications', icon: Bell },
   { href: '/product-views', label: 'User Activity', icon: Eye },
   { href: '/abandoned-carts', label: 'Abandoned Carts', icon: AlertCircle },
-  { href: '/crm', label: 'CRM / Customers', icon: Users2 },
-  { href: '/barcode', label: 'POS Billing', icon: Barcode },
+  { href: '/crm', label: 'Customer Management', icon: Users2 },
+  { href: '/barcode', label: 'Counter POS Billing', icon: Receipt },
   { href: '/returns', label: 'Returns', icon: RotateCcw },
   { href: '/wallets', label: 'Wallets', icon: Wallet },
   { href: '/activity-logs', label: 'Activity Logs', icon: Activity },

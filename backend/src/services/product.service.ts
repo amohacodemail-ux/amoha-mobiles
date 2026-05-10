@@ -1,6 +1,7 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
-import { generateSku, generateBarcode } from '../models/product.model';
+import { generateSku } from '../models/product.model';
+import { generateProductBarcode, isBarcodeExists, validateBarcode, BarcodeType } from '../utils/barcode.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import logger from '../utils/logger.util';
 
@@ -200,10 +201,45 @@ class ProductService {
 
   async createProduct(data: any) {
     const sku = data.sku || generateSku();
-    const barcode = data.barcode || generateBarcode();
+
+    // Handle barcode generation/validation
+    let barcode: string;
+    let barcodeType: BarcodeType = 'EAN13';
+
+    if (data.barcode) {
+      // Validate provided barcode
+      const type = data.barcodeType || 'EAN13';
+      const validation = validateBarcode(data.barcode, type);
+
+      if (!validation.valid) {
+        throw new BadRequestError(validation.error || 'Invalid barcode format');
+      }
+
+      // Check for duplicates
+      const exists = await isBarcodeExists(data.barcode);
+      if (exists) {
+        throw new BadRequestError('Barcode already exists in database');
+      }
+
+      barcode = data.barcode;
+      barcodeType = type;
+    } else {
+      // Generate new unique barcode
+      try {
+        const result = await generateProductBarcode({
+          type: data.barcodeType || 'EAN13',
+          prefix: data.barcodePrefix,
+        });
+        barcode = result.barcode;
+        barcodeType = result.type;
+      } catch (err: any) {
+        logger.error('[ProductService] Error generating barcode:', err);
+        throw new BadRequestError(err.message || 'Failed to generate barcode');
+      }
+    }
 
     // Map frontend field names to DB column names
-    const mapped = { ...data, sku, barcode };
+    const mapped = { ...data, sku, barcode, barcodeType };
     if (mapped.brand) { mapped.brandId = mapped.brand; delete mapped.brand; }
     if (mapped.category) { mapped.categoryId = mapped.category; delete mapped.category; }
     if (!mapped.slug) {
@@ -216,12 +252,44 @@ class ProductService {
 
     const { data: product, error } = await supabase
       .from('products').insert(dbData).select('*').single();
-    if (error) throw error;
+    if (error) {
+      // Handle unique constraint violation on barcode
+      if ((error as any).code === '23505' && (error as any).message?.includes('barcode')) {
+        throw new BadRequestError('Barcode already exists (duplicate)');
+      }
+      throw error;
+    }
     return transformRow(product);
   }
 
   async updateProduct(productId: string, updates: any) {
     const mapped = { ...updates };
+
+    // Handle barcode update with validation
+    if (updates.barcode !== undefined) {
+      if (updates.barcode === null || updates.barcode === '') {
+        // Allow clearing barcode
+        mapped.barcode = null;
+        mapped.barcodeType = null;
+      } else {
+        // Validate provided barcode
+        const type = updates.barcodeType || 'EAN13';
+        const validation = validateBarcode(updates.barcode, type);
+
+        if (!validation.valid) {
+          throw new BadRequestError(validation.error || 'Invalid barcode format');
+        }
+
+        // Check for duplicates (excluding current product)
+        const exists = await isBarcodeExists(updates.barcode, productId);
+        if (exists) {
+          throw new BadRequestError('Barcode already exists in database');
+        }
+
+        mapped.barcodeType = type;
+      }
+    }
+
     if (mapped.brand) { mapped.brandId = mapped.brand; delete mapped.brand; }
     if (mapped.category) { mapped.categoryId = mapped.category; delete mapped.category; }
     if (mapped.sellingPrice === undefined && mapped.price !== undefined) mapped.sellingPrice = mapped.price;
@@ -231,7 +299,13 @@ class ProductService {
 
     const { data: product, error } = await supabase
       .from('products').update(dbUpdates).eq('id', productId).select('*').single();
-    if (error) throw error;
+    if (error) {
+      // Handle unique constraint violation on barcode
+      if ((error as any).code === '23505' && (error as any).message?.includes('barcode')) {
+        throw new BadRequestError('Barcode already exists (duplicate)');
+      }
+      throw error;
+    }
     if (!product) throw new NotFoundError('Product');
     return transformRow(product);
   }

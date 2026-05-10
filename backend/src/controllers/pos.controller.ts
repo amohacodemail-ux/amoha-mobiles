@@ -6,6 +6,7 @@ import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import { notifyOrder } from '../utils/notify';
 import { v4 as uuidv4 } from 'uuid';
 import { sendOrderConfirmationEmail } from '../utils/email.util';
+import inventoryLedger from '../services/inventory-ledger.service';
 import logger from '../utils/logger.util';
 
 class PosController {
@@ -89,11 +90,31 @@ class PosController {
         { order_id: order.id, status: 'delivered', comment: `Counter sale - paid via ${paymentMethod}` },
       ]);
 
+      // Deduct stock via inventory ledger (keeps inventory table + products.stock in sync)
+      const adminId = req.user!.userId;
       for (const item of orderItems) {
-        const { data: prod } = await supabase.from('products').select('stock').eq('id', item.product_id).single();
-        if (prod) {
-          const newStock = Math.max(0, prod.stock - item.quantity);
-          await supabase.from('products').update({ stock: newStock, is_active: newStock > 0 }).eq('id', item.product_id);
+        try {
+          const inv = await inventoryLedger.getByProductId(item.product_id);
+          if (inv) {
+            const qty = Math.min(item.quantity, inv.availableStock);
+            if (qty > 0) {
+              await inventoryLedger.removeStock(
+                item.product_id, qty,
+                `POS sale - ${orderNumber}`,
+                adminId,
+              );
+            }
+          } else {
+            // Fallback: product has no ledger record yet
+            const { data: prod } = await supabase.from('products').select('stock').eq('id', item.product_id).single();
+            if (prod) {
+              await supabase.from('products')
+                .update({ stock: Math.max(0, prod.stock - item.quantity) })
+                .eq('id', item.product_id);
+            }
+          }
+        } catch (stockErr: any) {
+          logger.warn(`[POS] Stock deduction failed for ${item.product_id}: ${stockErr.message}`);
         }
       }
 

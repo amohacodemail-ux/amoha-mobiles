@@ -5,18 +5,21 @@ const BASE_URL = process.env.FRONTEND_URL || 'https://www.amohamobiles.com';
 test.describe('Cart Quantity Validation & UX', () => {
   test.beforeEach(async ({ page }) => {
     // Note: These tests require being logged in and having items in cart
-    // For production tests, manual setup may be needed
-    await page.goto(`${BASE_URL}/cart`);
-    
+    await page.goto(`${BASE_URL}/cart`, { waitUntil: 'domcontentloaded' });
+    // Give React time to hydrate
+    await page.waitForTimeout(2000);
+
     // If redirected to login, skip test
     if (page.url().includes('/login')) {
-      test.skip();
+      test.skip(true, 'Requires authentication');
+      return;
     }
-    
-    // If cart is empty, skip tests
-    const emptyCart = page.locator('text=Your cart is empty');
-    if (await emptyCart.isVisible()) {
-      test.skip();
+
+    // If no cart items visible (empty cart or login-required state), skip tests
+    const hasItems = await page.locator('.glass-card-sm').first().isVisible();
+    if (!hasItems) {
+      test.skip(true, 'Cart is empty or requires authentication');
+      return;
     }
   });
 

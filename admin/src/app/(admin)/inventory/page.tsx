@@ -133,7 +133,7 @@ export default function InventoryPage() {
     } catch {
       // Fallback to old stock overview
       try {
-        const result = await inventoryService.getStockOverview({ page: stockPage, limit: LIMIT, search: stockSearch, status: stockStatus });
+        const result = await inventoryService.getStockOverview({ page: stockPage, limit: LIMIT, search: stockSearch, stockStatus });
         setStock(result.products || []);
         setStockTotalPages(result.totalPages || 1);
       } catch { toast.error('Failed to load stock'); }
@@ -528,9 +528,9 @@ export default function InventoryPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {forecasts.map((f, idx) => (
-                <div key={f._id || `forecast-${idx}` || `forecast-${idx}`} className="bg-card border border-border rounded-xl p-5 space-y-3">
+                <div key={f._id || (f as any).productId || `forecast-${idx}`} className="bg-card border border-border rounded-xl p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm">{(f as any).products?.name || (f as any).products?.name || (f as any).product?.name || '-'}</h4>
+                    <h4 className="font-medium text-sm">{(f as any).products?.name || (f as any).product?.name || (f as any).name || '-'}</h4>
                     {f.reorderRecommended && <Badge variant="outline" className="bg-red-50 text-red-700">Reorder</Badge>}
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">

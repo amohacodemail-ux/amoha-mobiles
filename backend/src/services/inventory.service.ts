@@ -164,18 +164,21 @@ class InventoryService {
   }
 
   async bulkUpdateStock(items: any[], userId: string) {
-    // Run stock updates in parallel for better throughput
-    const results = await Promise.allSettled(
-      items.map(async (item) => {
+    // Run stock updates SEQUENTIALLY to prevent concurrent reads of the same product stock
+    // from causing double-deduction or incorrect beforeQty snapshots.
+    const results: any[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      try {
         const result = await this.updateStock(
-          item.productId, item.quantity, item.type || 'adjustment', userId, item.notes, item.warehouseId
+          item.productId, item.quantity, item.type || 'adjustment', userId, item.notes, item.warehouseId,
         );
-        return { ...result, success: true };
-      }),
-    );
-    return results.map((r, i) =>
-      r.status === 'fulfilled' ? r.value : { productId: items[i].productId, success: false, error: (r.reason as Error).message },
-    );
+        results.push({ ...result, success: true });
+      } catch (err: any) {
+        results.push({ productId: item.productId, success: false, error: err.message });
+      }
+    }
+    return results;
   }
 
   // ==================== Movement Logs ====================
@@ -258,13 +261,14 @@ class InventoryService {
     for (const p of (products || [])) {
       const alertType = p.stock === 0 ? 'out_of_stock' : 'low_stock';
 
-      // Check existing unacknowledged alert
+      // Check existing unacknowledged alert (global scope only - warehouse_id IS NULL)
       const { data: existing } = await supabase
         .from('stock_alerts')
         .select('id')
         .eq('product_id', p.id)
         .eq('alert_type', alertType)
         .eq('is_acknowledged', false)
+        .is('warehouse_id', null)
         .maybeSingle();
 
       if (!existing) {
@@ -353,15 +357,20 @@ class InventoryService {
       }
     }
 
-    // Batch upsert all forecasts at once
+    // Batch upsert all forecasts at once using the real unique constraint
     if (upsertRows.length > 0) {
-      await supabase.from('inventory_forecasts').upsert(upsertRows, { onConflict: 'id' });
+      // Remove id from rows without existing records to let DB generate them
+      const rowsForUpsert = upsertRows.map(r => {
+        if (!r.id) { const { id: _drop, ...rest } = r; return rest; }
+        return r;
+      });
+      await supabase.from('inventory_forecasts').upsert(rowsForUpsert, { onConflict: 'product_id,forecast_date' });
     }
 
     return {
       totalProducts: allProducts.length,
       reorderRecommended: forecasts.length,
-      forecasts,
+      forecasts: upsertRows.map(r => ({ ...r, productId: r.product_id, name: allProducts.find(p => p.id === r.product_id)?.name || '' })),
     };
   }
 
@@ -443,13 +452,18 @@ class InventoryService {
     const alertType = currentStock === 0 ? 'out_of_stock' : 'low_stock';
     const threshold = alertType === 'out_of_stock' ? 0 : 10;
 
-    const { data: existing } = await supabase
+    let qb = supabase
       .from('stock_alerts')
       .select('id')
       .eq('product_id', productId)
       .eq('alert_type', alertType)
-      .eq('is_acknowledged', false)
-      .maybeSingle();
+      .eq('is_acknowledged', false);
+    if (warehouseId) {
+      qb = qb.eq('warehouse_id', warehouseId);
+    } else {
+      qb = qb.is('warehouse_id', null);
+    }
+    const { data: existing } = await qb.maybeSingle();
 
     if (!existing) {
       await supabase.from('stock_alerts').insert({

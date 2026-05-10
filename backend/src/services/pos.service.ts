@@ -1,6 +1,7 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
+import inventoryLedger from './inventory-ledger.service';
 import logger from '../utils/logger.util';
 
 class PosService {
@@ -8,7 +9,7 @@ class PosService {
     const orderInsert: any = {
       user_id: orderData.userId || null,
       order_number: this.generatePosOrderNumber(),
-      shipping_address: orderData.shippingAddress || null,
+      shipping_address: orderData.shippingAddress || {},
       billing_address: orderData.billingAddress || null,
       payment_method: orderData.paymentMethod || 'cash',
       payment_status: 'paid',
@@ -20,6 +21,15 @@ class PosService {
       coupon_code: orderData.couponCode || null,
       notes: orderData.notes || 'POS Order',
       status: 'delivered',
+      is_walk_in: true,
+      walk_in_customer_name: orderData.customerName || orderData.walkInCustomerName || null,
+      walk_in_customer_phone: orderData.customerPhone || orderData.walkInCustomerPhone || null,
+      walk_in_customer_email: orderData.customerEmail || orderData.walkInCustomerEmail || null,
+      pos_payment_method: orderData.posPaymentMethod || orderData.paymentMethod || 'cash',
+      pos_discount: orderData.posDiscount || orderData.discount || 0,
+      pos_discount_type: orderData.posDiscountType || 'fixed',
+      gst_amount: orderData.gstAmount || 0,
+      gst_rate: orderData.gstRate || 0,
     };
 
     const { data: order, error } = await supabase.from('orders').insert(orderInsert).select('*').single();
@@ -38,11 +48,32 @@ class PosService {
       }));
       await supabase.from('order_items').insert(items);
 
-      // Deduct stock
+      // Deduct stock via inventory ledger (keeps inventory table + products.stock in sync)
       for (const item of orderData.items) {
-        const { data: prod } = await supabase.from('products').select('stock').eq('id', item.productId).single();
-        if (prod) {
-          await supabase.from('products').update({ stock: Math.max(0, prod.stock - item.quantity) }).eq('id', item.productId);
+        try {
+          // For POS orders, items go directly to sold (no reserve step)
+          const inv = await inventoryLedger.getByProductId(item.productId);
+          if (inv) {
+            const qty = Math.min(item.quantity, inv.availableStock);
+            if (qty > 0) {
+              await inventoryLedger.removeStock(
+                item.productId,
+                qty,
+                `POS sale - order ${order.order_number}`,
+                adminId,
+              );
+            }
+          } else {
+            // No inventory record yet: fall back to direct product stock update
+            const { data: prod } = await supabase.from('products').select('stock').eq('id', item.productId).single();
+            if (prod) {
+              await supabase.from('products')
+                .update({ stock: Math.max(0, prod.stock - item.quantity) })
+                .eq('id', item.productId);
+            }
+          }
+        } catch (stockErr: any) {
+          logger.warn(`POS stock deduction failed for product ${item.productId}: ${stockErr.message}`);
         }
       }
     }

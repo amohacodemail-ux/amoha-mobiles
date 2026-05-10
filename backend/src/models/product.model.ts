@@ -41,6 +41,7 @@ export interface IProduct {
   slug: string;
   sku: string;
   barcode: string;
+  barcodeType?: 'EAN13' | 'EAN8' | 'UPCA' | 'CODE128' | 'CODE39';
   brand: string;
   category: string;
   description: string;
@@ -73,17 +74,6 @@ export function generateSku(): string {
   const ts = Date.now().toString(36).toUpperCase();
   const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `AMH-${ts}-${rand}`;
-}
-
-/** Generate EAN-13 barcode if not provided */
-export function generateBarcode(): string {
-  const randomPart = crypto.randomInt(0, 999999999).toString().padStart(9, '0');
-  const base = '200' + randomPart;
-  const digits = base.split('').map(Number);
-  let sum = 0;
-  for (let i = 0; i < 12; i++) sum += digits[i] * (i % 2 === 0 ? 1 : 3);
-  const check = (10 - (sum % 10)) % 10;
-  return base + check;
 }
 
 export const PRODUCT_TABLE = 'products';
