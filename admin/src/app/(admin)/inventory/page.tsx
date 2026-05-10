@@ -3,7 +3,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
   Package, Warehouse, ArrowDownUp, AlertTriangle, TrendingUp,
-  Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2, History,
+  Search, ChevronLeft, ChevronRight, Plus, Pencil, Trash2,
+  Download, ShieldAlert, RefreshCw, CheckCheck, IndianRupee,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
@@ -17,7 +18,7 @@ import { inventoryLedgerService } from '@/services/inventory-ledger.service';
 import { formatDate } from '@/lib/utils';
 import type {
   Warehouse as IWarehouse, WarehouseFormData, StockProduct, InventoryMovement,
-  StockAlert, InventoryForecast, InventoryDashboardStats,
+  StockAlert, InventoryForecast,
 } from '@/types';
 
 const LIMIT = 15;
@@ -100,6 +101,20 @@ export default function InventoryPage() {
   const [forecasts, setForecasts] = useState<InventoryForecast[]>([]);
   const [forecastLoading, setForecastLoading] = useState(false);
 
+  // Mark Damaged dialog
+  const [damagedOpen, setDamagedOpen] = useState(false);
+  const [damagedProduct, setDamagedProduct] = useState<any>(null);
+  const [damagedQty, setDamagedQty] = useState('');
+  const [damagedReason, setDamagedReason] = useState('');
+  const [markingDamaged, setMarkingDamaged] = useState(false);
+
+  // Audit log filters
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditAction, setAuditAction] = useState('');
+
+  // CSV export
+  const [exporting, setExporting] = useState(false);
+
   const loadStats = async () => {
     try {
       const data = await inventoryLedgerService.getDashboardStats();
@@ -164,12 +179,12 @@ export default function InventoryPage() {
   const loadAuditLogs = useCallback(async () => {
     setAuditLoading(true);
     try {
-      const result = await inventoryLedgerService.getAuditLog({ page: auditPage, limit: LIMIT });
+      const result = await inventoryLedgerService.getAuditLog({ page: auditPage, limit: LIMIT, action: auditAction });
       setAuditLogs(result.logs || []);
       setAuditTotalPages(result.totalPages || 1);
     } catch { toast.error('Failed to load audit logs'); }
     finally { setAuditLoading(false); }
-  }, [auditPage]);
+  }, [auditPage, auditAction]);
 
   const loadForecasts = useCallback(async () => {
     setForecastLoading(true);
@@ -268,6 +283,43 @@ export default function InventoryPage() {
     } catch { toast.error('Failed to acknowledge alert'); }
   };
 
+  const handleBulkAcknowledge = async () => {
+    const unacked = alerts.filter((a: any) => !a.isAcknowledged);
+    if (!unacked.length) return toast.error('No unacknowledged alerts');
+    try {
+      await Promise.all(unacked.map((a: any) => inventoryService.acknowledgeAlert(a._id)));
+      toast.success(`${unacked.length} alerts acknowledged`);
+      loadAlerts();
+      loadStats();
+    } catch { toast.error('Failed to bulk acknowledge'); }
+  };
+
+  const handleMarkDamaged = async () => {
+    if (!damagedProduct || !damagedQty) return toast.error('Quantity is required');
+    const qty = parseInt(damagedQty);
+    if (isNaN(qty) || qty <= 0) return toast.error('Enter a valid quantity');
+    setMarkingDamaged(true);
+    try {
+      const productId = damagedProduct.productId || damagedProduct._id;
+      await inventoryLedgerService.markDamaged(productId, qty, damagedReason);
+      toast.success(`${qty} units marked as damaged`);
+      setDamagedOpen(false);
+      setDamagedQty(''); setDamagedReason('');
+      loadStock(); loadStats();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to mark damaged');
+    } finally { setMarkingDamaged(false); }
+  };
+
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      await inventoryLedgerService.exportCsv();
+      toast.success('CSV downloaded');
+    } catch { toast.error('Failed to export CSV'); }
+    finally { setExporting(false); }
+  };
+
   const handleGenerateForecasts = async () => {
     try {
       await inventoryService.generateForecasts();
@@ -282,17 +334,16 @@ export default function InventoryPage() {
       render: (p) => (
         <div>
           <p className="font-medium text-foreground">{p.productName || p.name || '-'}</p>
-          <p className="text-xs text-muted-foreground">SKU: {p.sku || '-'}</p>
+          <p className="text-xs text-muted-foreground">SKU: {p.sku || '-'} · ₹{(p.sellingPrice ?? 0).toLocaleString()}</p>
         </div>
       ),
     },
     {
-      key: 'totalStock', header: 'Total',
-      render: (p) => <span className="font-mono font-medium">{p.totalStock ?? '-'}</span>,
-    },
-    {
       key: 'availableStock', header: 'Available',
-      render: (p) => <span className="font-mono font-medium text-green-700">{p.availableStock ?? p.stock ?? 0}</span>,
+      render: (p) => {
+        const avail = p.availableStock ?? p.stock ?? 0;
+        return <span className={`font-mono font-bold ${avail === 0 ? 'text-red-600' : avail <= 5 ? 'text-orange-600' : 'text-green-700'}`}>{avail}</span>;
+      },
     },
     {
       key: 'reservedStock', header: 'Reserved',
@@ -303,18 +354,32 @@ export default function InventoryPage() {
       render: (p) => <span className="font-mono text-blue-700">{p.soldStock ?? 0}</span>,
     },
     {
+      key: 'damagedStock', header: 'Damaged',
+      render: (p) => {
+        const dmg = p.damagedStock ?? 0;
+        return <span className={`font-mono ${dmg > 0 ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>{dmg}</span>;
+      },
+    },
+    {
       key: 'stockStatus', header: 'Status',
       render: (p) => {
-        const status = p.stockStatus || (p.availableStock === 0 ? 'out_of_stock' : p.availableStock <= 10 ? 'low' : 'in_stock');
+        const status = p.stockStatus || (p.availableStock === 0 ? 'out_of_stock' : p.availableStock <= 5 ? 'critical' : p.availableStock <= 10 ? 'low' : 'in_stock');
         return <Badge variant="outline" className={stockStatusColors[status] || ''}>{status.replace(/_/g, ' ')}</Badge>;
       },
     },
     {
       key: 'actions', header: '',
       render: (p) => (
-        <Button variant="outline" size="sm" onClick={() => openStockUpdate(p)}>
-          <ArrowDownUp className="h-3.5 w-3.5 mr-1" /> Update
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" onClick={() => openStockUpdate(p)} title="Update Stock">
+            <ArrowDownUp className="h-3.5 w-3.5 mr-1" /> Update
+          </Button>
+          <Button variant="outline" size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50"
+            onClick={() => { setDamagedProduct(p); setDamagedQty(''); setDamagedReason(''); setDamagedOpen(true); }}
+            title="Mark as Damaged">
+            <ShieldAlert className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -451,6 +516,10 @@ export default function InventoryPage() {
               <option value="critical">Critical</option>
               <option value="out_of_stock">Out of Stock</option>
             </select>
+            <Button variant="outline" onClick={loadStock} title="Refresh"><RefreshCw className="h-4 w-4" /></Button>
+            <Button variant="outline" onClick={handleExportCsv} disabled={exporting}>
+              <Download className="h-4 w-4 mr-2" />{exporting ? 'Exporting...' : 'Export CSV'}
+            </Button>
           </div>
           <DataTable columns={stockColumns} data={stock} loading={stockLoading} rowKey={(r) => r._id || r.inventoryId || r.productId || Math.random().toString()} />
           {stockTotalPages > 1 && (
@@ -490,6 +559,19 @@ export default function InventoryPage() {
       {/* Alerts Tab */}
       {tab === 'alerts' && (
         <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              {alerts.filter((a: any) => !a.isAcknowledged).length} unacknowledged alert(s)
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => inventoryService.checkAlerts().then(() => { toast.success('Alert check done'); loadAlerts(); })}>
+                <RefreshCw className="h-4 w-4 mr-2" /> Run Check
+              </Button>
+              <Button size="sm" onClick={handleBulkAcknowledge}>
+                <CheckCheck className="h-4 w-4 mr-2" /> Acknowledge All
+              </Button>
+            </div>
+          </div>
           <DataTable columns={alertColumns} data={alerts} loading={alertLoading} rowKey={(a) => (a as any)._id || Math.random().toString()} />
           {alertTotalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
@@ -504,6 +586,21 @@ export default function InventoryPage() {
       {/* Audit Log Tab */}
       {tab === 'audit' && (
         <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <select value={auditAction} onChange={e => { setAuditAction(e.target.value); setAuditPage(1); }}
+              className="px-3 py-2 border border-border rounded-lg text-sm bg-background">
+              <option value="">All Actions</option>
+              <option value="stock_added">Stock Added</option>
+              <option value="stock_removed">Stock Removed</option>
+              <option value="stock_adjusted">Stock Adjusted</option>
+              <option value="damaged">Damaged</option>
+              <option value="order_placed">Order Placed</option>
+              <option value="order_delivered">Order Delivered</option>
+              <option value="order_cancelled">Order Cancelled</option>
+              <option value="created">Created</option>
+            </select>
+            <Button variant="outline" onClick={() => { setAuditAction(''); setAuditPage(1); }} className="text-sm">Clear Filter</Button>
+          </div>
           <DataTable columns={auditColumns} data={auditLogs} loading={auditLoading} rowKey={(l) => l._id || Math.random().toString()} />
           {auditTotalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
@@ -646,6 +743,40 @@ export default function InventoryPage() {
         title="Delete Warehouse"
         description="Are you sure you want to delete this warehouse? Stock entries associated with it will need to be reassigned."
       />
+
+      {/* Mark Damaged Dialog */}
+      <Dialog open={damagedOpen} onOpenChange={setDamagedOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-orange-500" />
+              Mark as Damaged — {damagedProduct?.productName || damagedProduct?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-orange-50 text-orange-800 text-sm rounded-lg px-4 py-3">
+              Available stock: <span className="font-mono font-bold">{damagedProduct?.availableStock ?? 0}</span> units.
+              Damaged units will be deducted from available stock and tracked separately.
+            </div>
+            <div>
+              <label className="text-sm font-medium">Damaged Quantity *</label>
+              <Input type="number" value={damagedQty} onChange={e => setDamagedQty(e.target.value)}
+                min={1} max={damagedProduct?.availableStock ?? 0} placeholder="How many units are damaged?" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Reason / Notes</label>
+              <Input value={damagedReason} onChange={e => setDamagedReason(e.target.value)}
+                placeholder="e.g. Water damage, Broken screen, Defective batch" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDamagedOpen(false)}>Cancel</Button>
+            <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={handleMarkDamaged} disabled={markingDamaged}>
+              {markingDamaged ? 'Marking...' : 'Mark as Damaged'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

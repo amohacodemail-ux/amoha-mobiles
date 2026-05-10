@@ -347,6 +347,35 @@ class InventoryLedgerService {
     };
   }
 
+  async exportStockCsv(): Promise<string> {
+    const { data, error } = await supabase
+      .from('inventory_overview')
+      .select('*')
+      .order('available_stock', { ascending: true });
+    if (error) throw error;
+
+    const rows = (data || []).map(transformRow);
+    const header = 'Product,SKU,Brand,Category,Total,Available,Reserved,Sold,Damaged,Cost Price,Selling Price,Status,Last Restocked';
+    const lines = rows.map((r: any) =>
+      [
+        `"${(r.productName || '').replace(/"/g, '""')}"`,
+        r.sku || '',
+        `"${(r.brandName || '').replace(/"/g, '""')}"`,
+        `"${(r.categoryName || '').replace(/"/g, '""')}"`,
+        r.totalStock ?? 0,
+        r.availableStock ?? 0,
+        r.reservedStock ?? 0,
+        r.soldStock ?? 0,
+        r.damagedStock ?? 0,
+        r.costPrice ?? 0,
+        r.sellingPrice ?? 0,
+        r.stockStatus || '',
+        r.lastRestockedAt ? new Date(r.lastRestockedAt).toLocaleDateString('en-IN') : '',
+      ].join(',')
+    );
+    return [header, ...lines].join('\n');
+  }
+
   // ==================== Internals ====================
 
   private snapshot(inv: any) {

@@ -20,6 +20,9 @@ router.get('/dashboard', controller.getDashboardStats);
 router.get('/audit-log', controller.getAuditLog);
 router.get('/', controller.getAll);
 
+// CSV export
+router.get('/export/csv', controller.exportCsv);
+
 // Per-product operations
 router.get('/product/:productId', controller.getByProductId);
 router.post('/product/:productId/add', validate(addStockSchema), controller.addStock);

@@ -79,6 +79,18 @@ class InventoryLedgerController {
       next(error);
     }
   }
+
+  async exportCsv(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const csv = await inventoryLedger.exportStockCsv();
+      const filename = `stock-report-${new Date().toISOString().split('T')[0]}.csv`;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      res.send(csv);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new InventoryLedgerController();

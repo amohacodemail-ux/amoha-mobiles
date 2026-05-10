@@ -43,4 +43,13 @@ export const inventoryLedgerService = {
     const { data } = await apiClient.post(`/inventory-ledger/product/${productId}/damaged`, { quantity, notes });
     return data.data;
   },
+  exportCsv: async () => {
+    const res = await apiClient.get('/inventory-ledger/export/csv', { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `stock-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  },
 };
