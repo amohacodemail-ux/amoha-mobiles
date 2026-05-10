@@ -18,10 +18,21 @@ export const userService = {
     return data.data;
   },
   getAll: async (filters: Partial<TableFilters> = {}): Promise<UsersResponse> => {
-    const { data } = await apiClient.get<ApiResponse<UsersResponse>>(
+    const { data } = await apiClient.get<ApiResponse<any>>(
       `/admin/users?${buildQueryString(filters)}`,
     );
-    return data.data;
+    const raw = data.data;
+    const pagination = raw.pagination ?? {};
+    const users: User[] = (raw.users ?? []).map((u: any) => ({
+      ...u,
+      email: u.email?.endsWith('@noemail.local') ? '' : (u.email ?? ''),
+    }));
+    return {
+      users,
+      totalUsers: pagination.total ?? raw.totalUsers ?? 0,
+      totalPages: pagination.pages ?? raw.totalPages ?? 1,
+      currentPage: pagination.page ?? raw.currentPage ?? 1,
+    };
   },
   getById: async (id: string): Promise<User> => {
     const { data } = await apiClient.get<ApiResponse<User>>(`/admin/users/${id}`);

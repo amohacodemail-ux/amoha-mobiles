@@ -168,7 +168,8 @@ export default function UsersPage() {
   };
 
   const handleUserCreated = (u: User) => {
-    setUsers((prev) => [u as User, ...prev]);
+    const clean: User = { ...u, email: u.email?.endsWith('@noemail.local') ? '' : (u.email ?? '') };
+    setUsers((prev) => [clean, ...prev]);
     setTotalItems((n) => n + 1);
   };
 

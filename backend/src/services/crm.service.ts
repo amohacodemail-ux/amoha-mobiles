@@ -300,11 +300,15 @@ class CrmService {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      role: 'user',
+      isVerified: true,
+      isBlocked: false,
       createdAt: user.created_at,
       segment: 'new',
       totalOrders: 0,
       totalSpent: 0,
       notesCount: data.notes ? 1 : 0,
+      kyc: { status: 'not_submitted' },
     };
   }
 
