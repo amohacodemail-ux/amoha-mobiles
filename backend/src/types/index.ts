@@ -32,15 +32,17 @@ export type DiscountType =
   | "percentage"
   | "fixed";
 
+// RBAC Roles - Standardized for AMOHA Mobiles Admin System
 export type UserRole =
-  | "user"
-  | "admin"
-  | "digital_marketing"
-  | "sales"
-  | "marketing"
-  | "purchase_inventory"
-  | "logistics"
-  | "supplier";
+  | "user"           // Regular customer
+  | "admin"          // Full system access
+  | "sales"          // Sales operations: orders, billing, POS, returns, wallets
+  | "purchase"       // Purchase operations: products, inventory, suppliers, RFQ
+  | "marketing"      // Marketing operations: coupons, banners, reviews, CRM, campaigns
+  | "logistics"      // Logistics operations: order tracking, shipping
+  | "supplier"       // Supplier portal access
+  | "digital_marketing"  // Legacy - mapped to marketing
+  | "purchase_inventory"; // Legacy - mapped to purchase
 
 export interface PaginationQuery {
   page?: string;

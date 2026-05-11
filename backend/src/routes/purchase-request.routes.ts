@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { canAccessPurchase, canAccessAdminOnly } from '../middleware/role.middleware';
 import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
@@ -8,7 +8,7 @@ import { NotFoundError } from '../errors/app-error';
 import { AuthenticatedRequest } from '../types';
 
 const router = Router();
-router.use(authenticate, isAdmin);
+router.use(authenticate, canAccessPurchase);
 
 // ====== GET all purchase requests ======
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
@@ -248,7 +248,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // ====== DELETE purchase request ======
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', canAccessAdminOnly, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { error } = await supabase.from('purchase_requests').delete().eq('id', req.params.id);
     if (error) throw error;

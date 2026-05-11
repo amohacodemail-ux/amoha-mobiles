@@ -1,48 +1,58 @@
 'use client';
-import React, { useState, useTransition } from 'react';
-import Link from 'next/link';
+import React, { useMemo, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, Tags, Award, ShoppingCart,
   Users, Ticket, Image, Star, Settings, ChevronLeft,
-  ChevronRight, Smartphone, LogOut, Menu, X, Wrench, Mail, Bell,
+  ChevronRight, Smartphone, LogOut, X, Wrench, Mail, Bell,
   Eye, AlertCircle, Users2, Barcode, FileText, RotateCcw, Wallet, Activity,
-  Truck, UserCheck, Warehouse, ClipboardList, BarChart3, FileQuestion, ShoppingBag,
-  Receipt, IndianRupee,
+  Truck, Warehouse, ClipboardList, BarChart3, FileQuestion, ShoppingBag,
+  Receipt, IndianRupee, Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/auth.store';
+import { usePermissions, getRoleDisplayName, getRoleBadgeColor, type Module } from '@/hooks/usePermissions';
 
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/products', label: 'Products', icon: Package },
-  { href: '/categories', label: 'Categories', icon: Tags },
-  { href: '/brands', label: 'Brands', icon: Award },
-  { href: '/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/billing', label: 'Billing & Invoices', icon: IndianRupee },
-  { href: '/reports', label: 'Reports', icon: BarChart3 },
-  { href: '/users', label: 'Users', icon: Users },
-  { href: '/coupons', label: 'Coupons', icon: Ticket },
-  { href: '/banners', label: 'Banners', icon: Image },
-  { href: '/reviews', label: 'Reviews', icon: Star },
-  { href: '/service-requests', label: 'Service Requests', icon: Wrench },
-  { href: '/contact-messages', label: 'Contact Messages', icon: Mail },
-  { href: '/notifications', label: 'Notifications', icon: Bell },
-  { href: '/product-views', label: 'User Activity', icon: Eye },
-  { href: '/abandoned-carts', label: 'Abandoned Carts', icon: AlertCircle },
-  { href: '/crm', label: 'Customer Management', icon: Users2 },
-  { href: '/barcode', label: 'Counter POS Billing', icon: Receipt },
-  { href: '/returns', label: 'Returns', icon: RotateCcw },
-  { href: '/wallets', label: 'Wallets', icon: Wallet },
-  { href: '/activity-logs', label: 'Activity Logs', icon: Activity },
-  { href: '/suppliers', label: 'Suppliers', icon: Truck },
-  { href: '/supplier-entries', label: 'Supplier Entries', icon: ClipboardList },
-  { href: '/rfq', label: 'RFQ', icon: FileQuestion },
-  { href: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingBag },
-  { href: '/inventory', label: 'Inventory', icon: Warehouse },
-  { href: '/policies', label: 'Policies', icon: FileText },
-  { href: '/settings', label: 'Settings', icon: Settings },
+// Navigation item definition with module mapping
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  module: Module;
+}
+
+// All navigation items with their corresponding modules
+const ALL_NAV_ITEMS: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
+  { href: '/products', label: 'Products', icon: Package, module: 'products' },
+  { href: '/categories', label: 'Categories', icon: Tags, module: 'categories' },
+  { href: '/brands', label: 'Brands', icon: Award, module: 'brands' },
+  { href: '/orders', label: 'Orders', icon: ShoppingCart, module: 'orders' },
+  { href: '/billing', label: 'Billing & Invoices', icon: IndianRupee, module: 'billing' },
+  { href: '/reports', label: 'Reports', icon: BarChart3, module: 'reports' },
+  { href: '/users', label: 'Users', icon: Users, module: 'users' },
+  { href: '/admin-users', label: 'Admin Users', icon: Shield, module: 'users' },
+  { href: '/coupons', label: 'Coupons', icon: Ticket, module: 'coupons' },
+  { href: '/banners', label: 'Banners', icon: Image, module: 'banners' },
+  { href: '/reviews', label: 'Reviews', icon: Star, module: 'reviews' },
+  { href: '/service-requests', label: 'Service Requests', icon: Wrench, module: 'service_requests' },
+  { href: '/contact-messages', label: 'Contact Messages', icon: Mail, module: 'contact_messages' },
+  { href: '/notifications', label: 'Notifications', icon: Bell, module: 'notifications' },
+  { href: '/product-views', label: 'User Activity', icon: Eye, module: 'product_views' },
+  { href: '/abandoned-carts', label: 'Abandoned Carts', icon: AlertCircle, module: 'abandoned_carts' },
+  { href: '/crm', label: 'Customer Management', icon: Users2, module: 'crm' },
+  { href: '/barcode', label: 'Counter POS Billing', icon: Receipt, module: 'barcode_pos' },
+  { href: '/returns', label: 'Returns', icon: RotateCcw, module: 'returns' },
+  { href: '/wallets', label: 'Wallets', icon: Wallet, module: 'wallets' },
+  { href: '/activity-logs', label: 'Activity Logs', icon: Activity, module: 'activity_logs' },
+  { href: '/suppliers', label: 'Suppliers', icon: Truck, module: 'suppliers' },
+  { href: '/supplier-entries', label: 'Supplier Entries', icon: ClipboardList, module: 'supplier_entries' },
+  { href: '/rfq', label: 'RFQ', icon: FileQuestion, module: 'rfq' },
+  { href: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingBag, module: 'purchase_requests' },
+  { href: '/inventory', label: 'Inventory', icon: Warehouse, module: 'inventory' },
+  { href: '/policies', label: 'Policies', icon: FileText, module: 'policies' },
+  { href: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
 ];
 
 interface SidebarProps {
@@ -55,8 +65,53 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { clearUser } = useAuthStore();
+  const { clearUser, user } = useAuthStore();
+  const { canAccess, roleDisplayName, roleBadgeColor } = usePermissions();
   const [isPending, startTransition] = useTransition();
+
+  // Filter navigation items based on user permissions
+  const filteredNavItems = useMemo(() => {
+    return ALL_NAV_ITEMS.filter(item => canAccess(item.module));
+  }, [canAccess]);
+
+  // Group items by category for better organization (optional enhancement)
+  const navGroups = useMemo(() => {
+    const groups: { title?: string; items: NavItem[] }[] = [
+      { items: filteredNavItems.filter(i => i.module === 'dashboard') },
+      {
+        title: collapsed ? undefined : 'Sales',
+        items: filteredNavItems.filter(i =>
+          ['orders', 'billing', 'barcode_pos', 'returns', 'wallets'].includes(i.module)
+        ),
+      },
+      {
+        title: collapsed ? undefined : 'Purchase',
+        items: filteredNavItems.filter(i =>
+          ['products', 'categories', 'brands', 'inventory', 'suppliers', 'supplier_entries', 'rfq', 'purchase_requests'].includes(i.module)
+        ),
+      },
+      {
+        title: collapsed ? undefined : 'Marketing',
+        items: filteredNavItems.filter(i =>
+          ['coupons', 'banners', 'reviews', 'crm', 'contact_messages', 'product_views', 'abandoned_carts'].includes(i.module)
+        ),
+      },
+      {
+        title: collapsed ? undefined : 'Admin',
+        items: filteredNavItems.filter(i =>
+          ['users', 'service_requests', 'activity_logs', 'settings'].includes(i.module)
+        ),
+      },
+      {
+        title: collapsed ? undefined : 'General',
+        items: filteredNavItems.filter(i =>
+          ['reports', 'notifications', 'policies'].includes(i.module)
+        ),
+      },
+    ].filter(g => g.items.length > 0);
+
+    return groups;
+  }, [filteredNavItems, collapsed]);
 
   const handleLogout = () => {
     clearUser();
@@ -78,9 +133,19 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
           <Smartphone className="h-4 w-4 text-primary-foreground" />
         </div>
         {!collapsed && (
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-sidebar-foreground">Amoha</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Admin Panel</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Admin Panel</p>
+              {user && (
+                <span className={cn(
+                  'text-[9px] px-1.5 py-0.5 rounded border font-medium',
+                  roleBadgeColor
+                )}>
+                  {roleDisplayName}
+                </span>
+              )}
+            </div>
           </div>
         )}
         <button
@@ -96,30 +161,48 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
 
       {/* Nav */}
       <nav className="flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/');
-          return (
-            <button
-              key={href}
-              onClick={() => handleNavigation(href)}
-              disabled={isPending}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 w-full',
-                active
-                  ? 'bg-primary/15 text-primary border border-primary/20'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
-                collapsed && 'justify-center px-2',
-                isPending && 'opacity-50 cursor-wait',
-              )}
-            >
-              <Icon className={cn('flex-shrink-0', active ? 'text-primary' : 'text-muted-foreground', 'h-4 w-4')} />
-              {!collapsed && <span>{label}</span>}
-              {collapsed && (
-                <span className="sr-only">{label}</span>
-              )}
-            </button>
-          );
-        })}
+        {navGroups.map((group, groupIndex) => (
+          <div key={groupIndex} className={cn('mb-4', groupIndex > 0 && 'pt-2 border-t border-sidebar-border/50')}>
+            {group.title && !collapsed && (
+              <p className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                {group.title}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(href + '/');
+                return (
+                  <button
+                    key={href}
+                    onClick={() => handleNavigation(href)}
+                    disabled={isPending}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 w-full',
+                      active
+                        ? 'bg-primary/15 text-primary border border-primary/20'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
+                      collapsed && 'justify-center px-2',
+                      isPending && 'opacity-50 cursor-wait',
+                    )}
+                  >
+                    <Icon className={cn('flex-shrink-0', active ? 'text-primary' : 'text-muted-foreground', 'h-4 w-4')} />
+                    {!collapsed && <span className="truncate">{label}</span>}
+                    {collapsed && (
+                      <span className="sr-only">{label}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* No access message */}
+        {filteredNavItems.length === 0 && (
+          <div className="px-3 py-4 text-center">
+            <p className="text-xs text-muted-foreground">No modules accessible</p>
+          </div>
+        )}
       </nav>
 
       {/* Logout */}

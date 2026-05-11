@@ -8,6 +8,7 @@ import { transformUser, transformRow, flattenKycForDb } from '../utils/transform
 import logger from '../utils/logger.util';
 import env from '../config/env';
 import { v4 as uuidv4 } from 'uuid';
+import { UserRole } from '../types';
 
 class AuthService {
   async register(data: { name: string; email: string; phone: string; password: string }) {
@@ -133,6 +134,81 @@ class AuthService {
     await supabase.from('users').update({
       password: hashed, reset_password_token: null, reset_password_expiry: null,
     }).eq('id', user.id);
+  }
+
+  // RBAC - Create admin panel user with specific role
+  async createAdminUser(data: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: UserRole;
+  }) {
+    const { name, email, phone, password, role } = data;
+
+    // Check if email already exists
+    const { data: existingEmail } = await supabase
+      .from('users').select('id').eq('email', email.toLowerCase()).maybeSingle();
+    if (existingEmail) throw new ConflictError('Email already registered');
+
+    // Check if phone already exists
+    const { data: existingPhone } = await supabase
+      .from('users').select('id').eq('phone', phone).maybeSingle();
+    if (existingPhone) throw new ConflictError('Phone number already registered');
+
+    // Validate role is allowed for admin panel
+    const allowedRoles: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier'];
+    if (!allowedRoles.includes(role)) {
+      throw new BadRequestError(`Role must be one of: ${allowedRoles.join(', ')}`);
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert({
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        phone: phone.trim(),
+        password: hashedPassword,
+        role: role,
+        is_verified: true,
+      })
+      .select('*')
+      .single();
+
+    if (error) {
+      if (error.code === '23505') throw new ConflictError('User with this email or phone already exists');
+      logger.error('[AuthService] createAdminUser error:', error);
+      throw error;
+    }
+
+    return {
+      user: transformUser(user),
+      message: `Admin user created successfully with role: ${role}`,
+    };
+  }
+
+  // RBAC - Update user role
+  async updateUserRole(userId: string, newRole: UserRole) {
+    const allowedRoles: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'user'];
+    if (!allowedRoles.includes(newRole)) {
+      throw new BadRequestError(`Role must be one of: ${allowedRoles.join(', ')}`);
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({ role: newRole })
+      .eq('id', userId)
+      .select('*')
+      .single();
+
+    if (error || !user) throw new NotFoundError('User');
+
+    return {
+      user: transformUser(user),
+      message: `User role updated to: ${newRole}`,
+    };
   }
 }
 

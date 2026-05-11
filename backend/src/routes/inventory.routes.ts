@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import inventoryController from '../controllers/inventory.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { canAccessPurchase, canAccessAdminOnly } from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
 import {
   createWarehouseSchema,
@@ -12,35 +12,35 @@ import {
 
 const router = Router();
 
-// All inventory routes require admin access
-router.use(authenticate, isAdmin);
+// All inventory routes require purchase or admin access
+router.use(authenticate, canAccessPurchase);
 
 // Dashboard
-router.get('/dashboard', inventoryController.getDashboardStats);
+router.get('/dashboard', canAccessPurchase, inventoryController.getDashboardStats);
 
 // Forecasting
-router.get('/forecasts', inventoryController.getForecasts);
-router.post('/forecasts/generate', inventoryController.generateForecasts);
+router.get('/forecasts', canAccessPurchase, inventoryController.getForecasts);
+router.post('/forecasts/generate', canAccessPurchase, inventoryController.generateForecasts);
 
 // Alerts
-router.get('/alerts', inventoryController.getAlerts);
-router.post('/alerts/check', inventoryController.checkAlerts);
-router.put('/alerts/:id/acknowledge', inventoryController.acknowledgeAlert);
+router.get('/alerts', canAccessPurchase, inventoryController.getAlerts);
+router.post('/alerts/check', canAccessPurchase, inventoryController.checkAlerts);
+router.put('/alerts/:id/acknowledge', canAccessPurchase, inventoryController.acknowledgeAlert);
 
 // Movements
-router.get('/movements', inventoryController.getMovements);
+router.get('/movements', canAccessPurchase, inventoryController.getMovements);
 
 // Stock
-router.get('/stock', inventoryController.getStockOverview);
-router.post('/stock/update', validate(updateStockSchema), inventoryController.updateStock);
-router.post('/stock/bulk-update', validate(bulkUpdateStockSchema), inventoryController.bulkUpdateStock);
+router.get('/stock', canAccessPurchase, inventoryController.getStockOverview);
+router.post('/stock/update', canAccessPurchase, validate(updateStockSchema), inventoryController.updateStock);
+router.post('/stock/bulk-update', canAccessPurchase, validate(bulkUpdateStockSchema), inventoryController.bulkUpdateStock);
 
 // Warehouses
-router.get('/warehouses', inventoryController.getWarehouses);
-router.get('/warehouses/:id', inventoryController.getWarehouseById);
-router.get('/warehouses/:id/stock', inventoryController.getWarehouseStock);
-router.post('/warehouses', validate(createWarehouseSchema), inventoryController.createWarehouse);
-router.put('/warehouses/:id', validate(updateWarehouseSchema), inventoryController.updateWarehouse);
-router.delete('/warehouses/:id', inventoryController.deleteWarehouse);
+router.get('/warehouses', canAccessPurchase, inventoryController.getWarehouses);
+router.get('/warehouses/:id', canAccessPurchase, inventoryController.getWarehouseById);
+router.get('/warehouses/:id/stock', canAccessPurchase, inventoryController.getWarehouseStock);
+router.post('/warehouses', canAccessPurchase, validate(createWarehouseSchema), inventoryController.createWarehouse);
+router.put('/warehouses/:id', canAccessPurchase, validate(updateWarehouseSchema), inventoryController.updateWarehouse);
+router.delete('/warehouses/:id', canAccessAdminOnly, inventoryController.deleteWarehouse);
 
 export default router;

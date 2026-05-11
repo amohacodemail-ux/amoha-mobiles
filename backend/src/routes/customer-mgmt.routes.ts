@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import customerMgmtController from '../controllers/customer-mgmt.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { canAccessMarketing, canAccessAdminOnly } from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
 import {
   updateSegmentSchema,
@@ -13,36 +13,36 @@ import {
 
 const router = Router();
 
-// All routes require admin access
-router.use(authenticate, isAdmin);
+// All routes require marketing or admin access
+router.use(authenticate, canAccessMarketing);
 
 // Dashboard
 router.get('/dashboard', customerMgmtController.getDashboardStats);
 
-// Fraud detection
-router.get('/fraud-flags', customerMgmtController.getFraudFlags);
-router.post('/fraud-flags', validate(createFraudFlagSchema), customerMgmtController.createFraudFlag);
-router.post('/fraud-flags/:flagId/resolve', validate(resolveFraudFlagSchema), customerMgmtController.resolveFraudFlag);
-router.post('/fraud-detection/run', customerMgmtController.runFraudDetection);
+// Fraud detection - Admin only
+router.get('/fraud-flags', canAccessAdminOnly, customerMgmtController.getFraudFlags);
+router.post('/fraud-flags', canAccessAdminOnly, validate(createFraudFlagSchema), customerMgmtController.createFraudFlag);
+router.post('/fraud-flags/:flagId/resolve', canAccessAdminOnly, validate(resolveFraudFlagSchema), customerMgmtController.resolveFraudFlag);
+router.post('/fraud-detection/run', canAccessAdminOnly, customerMgmtController.runFraudDetection);
 
-// Auto-segmentation
-router.post('/auto-segment', customerMgmtController.autoSegment);
+// Auto-segmentation - Admin only
+router.post('/auto-segment', canAccessAdminOnly, customerMgmtController.autoSegment);
 
-// Customer CRUD / Detail
-router.get('/', customerMgmtController.getAll);
-router.get('/:id', customerMgmtController.getDetail);
-router.get('/:id/behavior', customerMgmtController.getBehaviorAnalytics);
+// Customer CRUD / Detail - Marketing & Admin
+router.get('/', canAccessMarketing, customerMgmtController.getAll);
+router.get('/:id', canAccessMarketing, customerMgmtController.getDetail);
+router.get('/:id/behavior', canAccessMarketing, customerMgmtController.getBehaviorAnalytics);
 
-// Segmentation
-router.put('/:id/segment', validate(updateSegmentSchema), customerMgmtController.updateSegment);
+// Segmentation - Marketing & Admin
+router.put('/:id/segment', canAccessMarketing, validate(updateSegmentSchema), customerMgmtController.updateSegment);
 
-// Tags
-router.post('/:id/tags', validate(addTagSchema), customerMgmtController.addTag);
-router.delete('/:id/tags/:tagId', customerMgmtController.removeTag);
+// Tags - Marketing & Admin
+router.post('/:id/tags', canAccessMarketing, validate(addTagSchema), customerMgmtController.addTag);
+router.delete('/:id/tags/:tagId', canAccessAdminOnly, customerMgmtController.removeTag);
 
-// Notes
-router.post('/:id/notes', validate(addNoteSchema), customerMgmtController.addNote);
-router.put('/notes/:noteId', customerMgmtController.updateNote);
-router.delete('/notes/:noteId', customerMgmtController.deleteNote);
+// Notes - Marketing & Admin
+router.post('/:id/notes', canAccessMarketing, validate(addNoteSchema), customerMgmtController.addNote);
+router.put('/notes/:noteId', canAccessMarketing, customerMgmtController.updateNote);
+router.delete('/notes/:noteId', canAccessAdminOnly, customerMgmtController.deleteNote);
 
 export default router;

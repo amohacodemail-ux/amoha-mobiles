@@ -1,37 +1,52 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { useAuthStore } from '@/store/auth.store';
 import { authService } from '@/services/auth.service';
+import { normalizeRole, type UserRole } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
+
+// Allowed roles for admin panel access
+const ALLOWED_ROLES: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'digital_marketing', 'purchase_inventory'];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [checking, setChecking] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
   const { isAuthenticated, user, setUser } = useAuthStore();
 
   useEffect(() => {
     const verify = async () => {
-      // Skip if already verified and user exists
-      if (isAuthenticated && user?.role === 'admin') {
-        setChecking(false);
-        return;
+      // Skip if already verified and user exists with valid role
+      if (isAuthenticated && user?.role) {
+        const normalizedRole = normalizeRole(user.role as UserRole);
+        if (ALLOWED_ROLES.includes(normalizedRole)) {
+          setChecking(false);
+          return;
+        }
       }
 
       if (!authService.isAuthenticated()) {
         router.replace('/login');
         return;
       }
+
       try {
         const profile = await authService.getProfile();
-        if (profile.role !== 'admin') {
-          router.replace('/login');
+        const normalizedRole = normalizeRole(profile.role as UserRole);
+
+        // Check if user has an allowed admin panel role
+        if (!ALLOWED_ROLES.includes(normalizedRole)) {
+          // User is authenticated but not authorized for admin panel
+          authService.logout();
+          router.replace('/login?error=unauthorized');
           return;
         }
+
         setUser(profile);
       } catch {
         router.replace('/login');
@@ -40,7 +55,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
     };
     verify();
-  }, []); // Only run once on mount
+  }, [pathname]); // Re-verify on route change
 
   if (checking) {
     return (

@@ -13,13 +13,25 @@ export interface PaginationMeta {
 }
 
 // ==================== Auth ====================
+// RBAC Roles - All allowed admin panel roles
+export type AdminRole =
+  | 'admin'
+  | 'sales'
+  | 'purchase'
+  | 'marketing'
+  | 'logistics'
+  | 'supplier'
+  | 'user'
+  | 'digital_marketing'
+  | 'purchase_inventory';
+
 export interface AdminUser {
   _id: string;
   name: string;
   email: string;
   phone: string;
   avatar?: string;
-  role: 'admin' | 'user' | 'supplier';
+  role: AdminRole;
   isVerified: boolean;
   createdAt: string;
 }
@@ -242,7 +254,7 @@ export interface User {
   email: string;
   phone: string;
   avatar?: string;
-  role: 'user' | 'admin' | 'supplier';
+  role: AdminRole;
   isVerified: boolean;
   isBlocked: boolean;
   totalOrders: number;

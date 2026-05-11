@@ -4,8 +4,8 @@ import Cookies from 'js-cookie';
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 const normalizeApiUrl = (value?: string) => {
-  // Use the backend URL directly in development
-  if (!value) return 'http://localhost:5001/api';
+  // Use relative path so Next.js rewrites proxy to the backend in development
+  if (!value) return '/api';
   return value.endsWith('/') ? value.slice(0, -1) : value;
 };
 

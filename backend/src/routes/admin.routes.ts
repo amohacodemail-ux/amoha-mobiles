@@ -11,7 +11,17 @@ import contactController from '../controllers/contact.controller';
 import settingsController from '../controllers/settings.controller';
 import notificationController from '../controllers/notification.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import {
+  canAccessAdminOnly,
+  canAccessSales,
+  canAccessPurchase,
+  canAccessMarketing,
+  canAccessLogistics,
+  canAccessDashboard,
+  canAccessReports,
+  canAccessNotifications,
+  isAdmin
+} from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
 import { createProductSchema, updateProductSchema } from '../validators/product.validator';
 import { updateOrderStatusSchema } from '../validators/order.validator';
@@ -27,18 +37,18 @@ import logger from '../utils/logger.util';
 
 const router = Router();
 
-// All admin routes require authentication + admin role
-router.use(authenticate, isAdmin);
+// Apply authentication to all admin routes
+router.use(authenticate);
 
-// ====== Dashboard ======
-router.get('/dashboard/stats', adminController.getDashboard);
-router.get('/dashboard/revenue', adminController.getMonthlyRevenue);
-router.get('/dashboard/top-products', adminController.getTopProducts);
-router.get('/dashboard/recent-orders', adminController.getRecentOrders);
-router.get('/sales-report', adminController.getSalesReport);
+// ====== Dashboard - Accessible by all internal roles ======
+router.get('/dashboard/stats', canAccessDashboard, adminController.getDashboard);
+router.get('/dashboard/revenue', canAccessDashboard, adminController.getMonthlyRevenue);
+router.get('/dashboard/top-products', canAccessDashboard, adminController.getTopProducts);
+router.get('/dashboard/recent-orders', canAccessDashboard, adminController.getRecentOrders);
+router.get('/sales-report', canAccessReports, adminController.getSalesReport);
 
-// ====== Report Downloads ======
-router.get('/reports/sales', async (req: Request, res: Response, next: NextFunction) => {
+// ====== Report Downloads - Admin, Sales, Purchase only ======
+router.get('/reports/sales', canAccessReports, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -107,7 +117,7 @@ router.get('/reports/sales', async (req: Request, res: Response, next: NextFunct
   }
 });
 
-router.get('/reports/inventory', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/reports/inventory', canAccessReports, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
 
@@ -155,13 +165,13 @@ router.get('/reports/inventory', async (_req: Request, res: Response, next: Next
   }
 });
 
-// ====== Products ======
-// Admin can see all products regardless of is_active; inject isActive=all to bypass the default filter
-router.get('/products', (req: Request, res: Response, next: NextFunction) => {
+// ====== Products - Purchase & Admin only ======
+// Purchase & Admin can see all products regardless of is_active; inject isActive=all to bypass the default filter
+router.get('/products', canAccessPurchase, (req: Request, res: Response, next: NextFunction) => {
   if (req.query.isActive === undefined) (req.query as any).isActive = 'all';
   productController.getAll(req, res, next);
 });
-router.get('/products/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/products/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const product = await productService.getProductById(req.params.id);
     sendSuccess(res, product, 'Product fetched');
@@ -169,14 +179,14 @@ router.get('/products/:id', async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 });
-router.post('/products', validate(createProductSchema), productController.create);
-router.put('/products/:id', validate(updateProductSchema), productController.update);
-router.delete('/products/:id', productController.delete);
-router.patch('/products/:id/stock', productController.updateStock);
+router.post('/products', canAccessPurchase, validate(createProductSchema), productController.create);
+router.put('/products/:id', canAccessPurchase, validate(updateProductSchema), productController.update);
+router.delete('/products/:id', canAccessAdminOnly, productController.delete);
+router.patch('/products/:id/stock', canAccessPurchase, productController.updateStock);
 
-// ====== Categories ======
-router.get('/categories', categoryController.getAllAdmin);
-router.get('/categories/:id', async (req: Request, res: Response, next: NextFunction) => {
+// ====== Categories - Purchase & Admin only ======
+router.get('/categories', canAccessPurchase, categoryController.getAllAdmin);
+router.get('/categories/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -188,13 +198,13 @@ router.get('/categories/:id', async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 });
-router.post('/categories', categoryController.create);
-router.put('/categories/:id', categoryController.update);
-router.delete('/categories/:id', categoryController.delete);
+router.post('/categories', canAccessPurchase, categoryController.create);
+router.put('/categories/:id', canAccessPurchase, categoryController.update);
+router.delete('/categories/:id', canAccessAdminOnly, categoryController.delete);
 
-// ====== Brands ======
-router.get('/brands', brandController.getAllAdmin);
-router.get('/brands/:id', async (req: Request, res: Response, next: NextFunction) => {
+// ====== Brands - Purchase & Admin only ======
+router.get('/brands', canAccessPurchase, brandController.getAllAdmin);
+router.get('/brands/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -206,13 +216,13 @@ router.get('/brands/:id', async (req: Request, res: Response, next: NextFunction
     next(error);
   }
 });
-router.post('/brands', brandController.create);
-router.put('/brands/:id', brandController.update);
-router.delete('/brands/:id', brandController.delete);
+router.post('/brands', canAccessPurchase, brandController.create);
+router.put('/brands/:id', canAccessPurchase, brandController.update);
+router.delete('/brands/:id', canAccessAdminOnly, brandController.delete);
 
-// ====== Orders ======
-router.get('/orders', orderController.getAllOrders);
-router.get('/orders/:id', async (req: Request, res: Response, next: NextFunction) => {
+// ====== Orders - Sales & Admin only ======
+router.get('/orders', canAccessSales, orderController.getAllOrders);
+router.get('/orders/:id', canAccessSales, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const order = await (await import('../services/order.service')).default.getById(req.params.id);
     sendSuccess(res, order, 'Order fetched');
@@ -220,7 +230,7 @@ router.get('/orders/:id', async (req: Request, res: Response, next: NextFunction
     next(error);
   }
 });
-router.get('/orders/:id/invoice', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/orders/:id/invoice', canAccessSales, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { generateInvoicePDF } = await import('../utils/invoice.util');
@@ -298,9 +308,9 @@ router.get('/orders/:id/invoice', async (req: Request, res: Response, next: Next
     next(error);
   }
 });
-router.patch('/orders/:id/status', validate(updateOrderStatusSchema), orderController.updateOrderStatus);
-router.delete('/orders/:id', orderController.deleteOrder);
-router.post('/orders/:id/refund', async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/orders/:id/status', canAccessSales, validate(updateOrderStatusSchema), orderController.updateOrderStatus);
+router.delete('/orders/:id', canAccessAdminOnly, orderController.deleteOrder);
+router.post('/orders/:id/refund', canAccessSales, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -334,22 +344,86 @@ router.post('/orders/:id/refund', async (req: Request, res: Response, next: Next
   }
 });
 
-// ====== Users ======
-router.get('/users', userController.getAllUsers);
-router.post('/users', userController.createUser);
-router.get('/users/:id', userController.getUserById);
-router.patch('/users/:id/block', userController.toggleBlock);
-router.delete('/users/:id', userController.deleteUser);
+// ====== Users - Admin only ======
+router.get('/users', canAccessAdminOnly, userController.getAllUsers);
+router.post('/users', canAccessAdminOnly, userController.createUser);
+router.get('/users/:id', canAccessAdminOnly, userController.getUserById);
+router.patch('/users/:id/block', canAccessAdminOnly, userController.toggleBlock);
+router.delete('/users/:id', canAccessAdminOnly, userController.deleteUser);
 
-// ====== Banners ======
-router.get('/banners', bannerController.getAllAdmin);
-router.post('/banners', bannerController.create);
-router.put('/banners/:id', bannerController.update);
-router.patch('/banners/:id/toggle', bannerController.toggleActive);
-router.delete('/banners/:id', bannerController.delete);
+// ====== RBAC - Admin User Management (Admin only) ======
+import { createAdminUserSchema, updateUserRoleSchema } from '../validators/auth.validator';
+import authService from '../services/auth.service';
 
-// ====== Coupons ======
-router.get('/coupons', async (_req: Request, res: Response, next: NextFunction) => {
+// Create admin panel user with specific role
+router.post('/admin-users', canAccessAdminOnly, validate(createAdminUserSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await authService.createAdminUser(req.body);
+    sendCreated(res, result.user, result.message);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update user role
+router.patch('/users/:id/role', canAccessAdminOnly, validate(updateUserRoleSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await authService.updateUserRole(req.params.id, req.body.role);
+    sendSuccess(res, result.user, result.message);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get all admin users (filtered by role)
+router.get('/admin-users', canAccessAdminOnly, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { role, search, page = '1', limit = '20' } = req.query;
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 20;
+    const offset = (pageNum - 1) * limitNum;
+
+    // Get admin panel roles only
+    const adminRoles = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier'];
+
+    let query = supabase
+      .from('users')
+      .select('id, name, email, phone, role, is_verified, is_blocked, created_at', { count: 'exact' })
+      .in('role', adminRoles)
+      .order('created_at', { ascending: false });
+
+    if (role) {
+      query = query.eq('role', role);
+    }
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+    }
+
+    const { data: users, error, count } = await query.range(offset, offset + limitNum - 1);
+    if (error) throw error;
+
+    sendSuccess(res, {
+      users: users || [],
+      total: count || 0,
+      totalPages: Math.ceil((count || 0) / limitNum),
+      currentPage: pageNum,
+    }, 'Admin users fetched');
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ====== Banners - Marketing & Admin only ======
+router.get('/banners', canAccessMarketing, bannerController.getAllAdmin);
+router.post('/banners', canAccessMarketing, bannerController.create);
+router.put('/banners/:id', canAccessMarketing, bannerController.update);
+router.patch('/banners/:id/toggle', canAccessMarketing, bannerController.toggleActive);
+router.delete('/banners/:id', canAccessAdminOnly, bannerController.delete);
+
+// ====== Coupons - Marketing & Admin only ======
+router.get('/coupons', canAccessMarketing, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const coupons = await couponService.getAll();
     sendSuccess(res, coupons, 'Coupons fetched');
@@ -357,7 +431,7 @@ router.get('/coupons', async (_req: Request, res: Response, next: NextFunction) 
     next(error);
   }
 });
-router.get('/coupons/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/coupons/:id', canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -369,7 +443,7 @@ router.get('/coupons/:id', async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 });
-router.post('/coupons', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/coupons', canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const coupon = await couponService.create(req.body);
     sendCreated(res, coupon, 'Coupon created');
@@ -377,7 +451,7 @@ router.post('/coupons', async (req: Request, res: Response, next: NextFunction) 
     next(error);
   }
 });
-router.put('/coupons/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/coupons/:id', canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const coupon = await couponService.update(req.params.id, req.body);
     sendSuccess(res, coupon, 'Coupon updated');
@@ -385,7 +459,7 @@ router.put('/coupons/:id', async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 });
-router.delete('/coupons/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/coupons/:id', canAccessAdminOnly, async (req: Request, res: Response, next: NextFunction) => {
   try {
     await couponService.delete(req.params.id);
     sendMessage(res, 'Coupon deleted');
@@ -394,8 +468,8 @@ router.delete('/coupons/:id', async (req: Request, res: Response, next: NextFunc
   }
 });
 
-// ====== Reviews ======
-router.get('/reviews', async (req: Request, res: Response, next: NextFunction) => {
+// ====== Reviews - Marketing & Admin only ======
+router.get('/reviews', canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -437,7 +511,7 @@ router.get('/reviews', async (req: Request, res: Response, next: NextFunction) =
     next(error);
   }
 });
-router.patch('/reviews/:id/status', async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/reviews/:id/status', canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -455,7 +529,7 @@ router.patch('/reviews/:id/status', async (req: Request, res: Response, next: Ne
     next(error);
   }
 });
-router.patch('/reviews/:id/approve', async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/reviews/:id/approve', canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -471,7 +545,7 @@ router.patch('/reviews/:id/approve', async (req: Request, res: Response, next: N
     next(error);
   }
 });
-router.delete('/reviews/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/reviews/:id', canAccessAdminOnly, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     // Get review to update product stats
@@ -491,21 +565,21 @@ router.delete('/reviews/:id', async (req: Request, res: Response, next: NextFunc
   }
 });
 
-// ====== Service Requests ======
-router.get('/service-requests', serviceRequestController.getAll);
-router.get('/service-requests/stats', serviceRequestController.getStats);
-router.get('/service-requests/:id', serviceRequestController.getById);
-router.patch('/service-requests/:id/status', serviceRequestController.updateStatus);
-router.delete('/service-requests/:id', serviceRequestController.delete);
+// ====== Service Requests - Admin only ======
+router.get('/service-requests', canAccessAdminOnly, serviceRequestController.getAll);
+router.get('/service-requests/stats', canAccessAdminOnly, serviceRequestController.getStats);
+router.get('/service-requests/:id', canAccessAdminOnly, serviceRequestController.getById);
+router.patch('/service-requests/:id/status', canAccessAdminOnly, serviceRequestController.updateStatus);
+router.delete('/service-requests/:id', canAccessAdminOnly, serviceRequestController.delete);
 
-// ====== Contact Messages ======
-router.get('/contact-messages', contactController.getAll);
-router.get('/contact-messages/unread-count', contactController.getUnreadCount);
-router.patch('/contact-messages/:id/read', contactController.markRead);
-router.delete('/contact-messages/:id', contactController.delete);
+// ====== Contact Messages - Marketing & Admin only ======
+router.get('/contact-messages', canAccessMarketing, contactController.getAll);
+router.get('/contact-messages/unread-count', canAccessMarketing, contactController.getUnreadCount);
+router.patch('/contact-messages/:id/read', canAccessMarketing, contactController.markRead);
+router.delete('/contact-messages/:id', canAccessAdminOnly, contactController.delete);
 
-// ====== Order Tracking (logistics) ======
-router.patch('/orders/:id/tracking', async (req: Request, res: Response, next: NextFunction) => {
+// ====== Order Tracking - Logistics, Sales & Admin only ======
+router.patch('/orders/:id/tracking', canAccessLogistics, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -525,54 +599,54 @@ router.patch('/orders/:id/tracking', async (req: Request, res: Response, next: N
   }
 });
 
-// ====== Site Settings ======
-router.get('/settings', settingsController.get);
-router.put('/settings', settingsController.update);
+// ====== Site Settings - Admin only ======
+router.get('/settings', canAccessAdminOnly, settingsController.get);
+router.put('/settings', canAccessAdminOnly, settingsController.update);
 
-// ====== Notifications ======
-router.get('/notifications', notificationController.getAll);
-router.get('/notifications/recent', notificationController.getRecent);
-router.get('/notifications/unread-count', notificationController.getUnreadCount);
-router.patch('/notifications/:id/read', notificationController.markRead);
-router.patch('/notifications/read-all', notificationController.markAllRead);
-router.delete('/notifications/clear', notificationController.clearAll);
-router.delete('/notifications/:id', notificationController.delete);
+// ====== Notifications - All internal roles ======
+router.get('/notifications', canAccessNotifications, notificationController.getAll);
+router.get('/notifications/recent', canAccessNotifications, notificationController.getRecent);
+router.get('/notifications/unread-count', canAccessNotifications, notificationController.getUnreadCount);
+router.patch('/notifications/:id/read', canAccessNotifications, notificationController.markRead);
+router.patch('/notifications/read-all', canAccessNotifications, notificationController.markAllRead);
+router.delete('/notifications/clear', canAccessAdminOnly, notificationController.clearAll);
+router.delete('/notifications/:id', canAccessNotifications, notificationController.delete);
 
-// ====== Product View Tracking (User Browsing Activity) ======
-router.get('/product-views', productViewController.getAll);
-router.get('/product-views/user-summary', productViewController.getUserSummary);
-router.get('/product-views/user/:userId', productViewController.getUserViews);
+// ====== Product View Tracking - Marketing & Admin only ======
+router.get('/product-views', canAccessMarketing, productViewController.getAll);
+router.get('/product-views/user-summary', canAccessMarketing, productViewController.getUserSummary);
+router.get('/product-views/user/:userId', canAccessMarketing, productViewController.getUserViews);
 
-// ====== Cart Abandonment ======
-router.get('/abandoned-carts', productViewController.getAbandonedCarts);
-router.get('/abandoned-carts/download', productViewController.downloadAbandonedCarts);
+// ====== Cart Abandonment - Marketing & Admin only ======
+router.get('/abandoned-carts', canAccessMarketing, productViewController.getAbandonedCarts);
+router.get('/abandoned-carts/download', canAccessMarketing, productViewController.downloadAbandonedCarts);
 
-// ====== Barcode / SKU ======
-router.get('/barcode/lookup/:code', barcodeController.lookup);
-router.get('/barcode/stock/:code', barcodeController.stockCheck);
-router.post('/barcode/bulk-lookup', barcodeController.bulkLookup);
-router.post('/barcode/regenerate/:productId', barcodeController.regenerate);
-router.post('/barcode/validate', barcodeController.validate);
-router.get('/barcode/types', barcodeController.getTypes);
-router.post('/barcode/bulk-generate', barcodeController.bulkGenerate);
-router.post('/barcode/migrate-to-code128', barcodeController.migrateToCode128);
+// ====== Barcode / SKU - Sales, Purchase & Admin only ======
+router.get('/barcode/lookup/:code', canAccessSales, barcodeController.lookup);
+router.get('/barcode/stock/:code', canAccessPurchase, barcodeController.stockCheck);
+router.post('/barcode/bulk-lookup', canAccessSales, barcodeController.bulkLookup);
+router.post('/barcode/regenerate/:productId', canAccessPurchase, barcodeController.regenerate);
+router.post('/barcode/validate', canAccessSales, barcodeController.validate);
+router.get('/barcode/types', canAccessPurchase, barcodeController.getTypes);
+router.post('/barcode/bulk-generate', canAccessPurchase, barcodeController.bulkGenerate);
+router.post('/barcode/migrate-to-code128', canAccessAdminOnly, barcodeController.migrateToCode128);
 
-// ====== POS / Counter Billing ======
-router.post('/pos/create-order', posController.createOrder);
-router.get('/pos/orders', posController.getOrders);
-router.get('/pos/today-stats', posController.getTodayStats);
-router.get('/pos/billing-info', posController.getBillingInfo);
+// ====== POS / Counter Billing - Sales & Admin only ======
+router.post('/pos/create-order', canAccessSales, posController.createOrder);
+router.get('/pos/orders', canAccessSales, posController.getOrders);
+router.get('/pos/today-stats', canAccessSales, posController.getTodayStats);
+router.get('/pos/billing-info', canAccessSales, posController.getBillingInfo);
 
-// ====== CRM ======
-router.get('/crm/customers', crmController.getCustomers);
-router.post('/crm/customers', crmController.createCustomer);
-router.get('/crm/customers/:customerId', crmController.getCustomerProfile);
-router.post('/crm/customers/:customerId/notes', crmController.addNote);
-router.delete('/crm/notes/:noteId', crmController.deleteNote);
-router.get('/crm/segments', crmController.getSegmentSummary);
+// ====== CRM - Marketing & Admin only ======
+router.get('/crm/customers', canAccessMarketing, crmController.getCustomers);
+router.post('/crm/customers', canAccessMarketing, crmController.createCustomer);
+router.get('/crm/customers/:customerId', canAccessMarketing, crmController.getCustomerProfile);
+router.post('/crm/customers/:customerId/notes', canAccessMarketing, crmController.addNote);
+router.delete('/crm/notes/:noteId', canAccessAdminOnly, crmController.deleteNote);
+router.get('/crm/segments', canAccessMarketing, crmController.getSegmentSummary);
 
 // ====== Sales & Order Reports ======
-router.get('/reports/orders', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/reports/orders', canAccessSales, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -637,7 +711,7 @@ router.get('/reports/orders', async (req: Request, res: Response, next: NextFunc
 });
 
 // ====== GST Report CSV ======
-router.get('/reports/gst-summary', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/reports/gst-summary', canAccessReports, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { startDate, endDate, period } = req.query as Record<string, string>;
@@ -706,7 +780,7 @@ router.get('/reports/gst-summary', async (req: Request, res: Response, next: Nex
   }
 });
 
-router.get('/reports/sales-summary', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/reports/sales-summary', canAccessReports, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { period, startDate, endDate } = req.query as Record<string, string>;

@@ -53,3 +53,25 @@ export const refreshTokenSchema = z.object({
     refreshToken: z.string().min(1, 'Refresh token is required'),
   }),
 });
+
+// RBAC - Admin user creation schema
+export const createAdminUserSchema = z.object({
+  body: z.object({
+    name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+    email: z.string().email('Invalid email address'),
+    phone: z.string().min(10, 'Phone must be at least 10 digits'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    role: z.enum(['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier'], {
+      errorMap: () => ({ message: 'Role must be one of: admin, sales, purchase, marketing, logistics, supplier' }),
+    }),
+  }),
+});
+
+// RBAC - Update user role schema
+export const updateUserRoleSchema = z.object({
+  body: z.object({
+    role: z.enum(['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'user'], {
+      errorMap: () => ({ message: 'Role must be one of: admin, sales, purchase, marketing, logistics, supplier, user' }),
+    }),
+  }),
+});

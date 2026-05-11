@@ -1,13 +1,21 @@
 import apiClient from '@/lib/api-client';
 import type { AuthResponse, LoginCredentials, AdminUser, ApiResponse } from '@/types';
 import Cookies from 'js-cookie';
+import { normalizeRole, type UserRole } from '@/lib/permissions';
+
+// Allowed roles for admin panel access
+const ALLOWED_ROLES: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'digital_marketing', 'purchase_inventory', 'supplier'];
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const { data } = await apiClient.post<AuthResponse>('/auth/login', credentials);
-    if (data.success && data.user.role !== 'admin') {
-      throw new Error('Access denied. Admin only.');
+
+    // Check if user has an allowed admin panel role
+    const userRole = normalizeRole(data.user.role as UserRole);
+    if (data.success && !ALLOWED_ROLES.includes(userRole)) {
+      throw new Error('Access denied. Admin panel access only.');
     }
+
     if (data.token) {
       Cookies.set('admin_token', data.token, { expires: 1, sameSite: 'lax' });
     }
