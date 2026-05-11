@@ -156,6 +156,34 @@ class InventoryLedgerService {
     }
   }
 
+  /** POS / immediate sale: available → sold directly (no reserve step). */
+  async markDirectSale(orderId: string, items: { productId: string; quantity: number }[], performedBy?: string) {
+    for (const item of items) {
+      const inv = await this.ensureRecord(item.productId);
+      const qty = Math.min(item.quantity, inv.availableStock);
+      if (qty <= 0) continue;
+
+      const before = this.snapshot(inv);
+      const newAvailable = inv.availableStock - qty;
+      const newTotal = inv.totalStock - qty;
+      const newSold = inv.soldStock + qty;
+
+      const { error: invErr } = await supabase.from('inventory').update({
+        available_stock: newAvailable,
+        total_stock: Math.max(0, newTotal),
+        sold_stock: newSold,
+        updated_at: new Date().toISOString(),
+      }).eq('id', inv._id);
+      if (invErr) logger.error(`[markDirectSale] inventory update error: ${invErr.message}`);
+      else logger.info(`[markDirectSale] inventory updated: id=${inv._id} avail=${newAvailable} sold=${newSold}`);
+
+      await supabase.from('products').update({ stock: newAvailable }).eq('id', item.productId);
+
+      const after = { ...before, availableStock: newAvailable, totalStock: Math.max(0, newTotal), soldStock: newSold };
+      await this.audit(inv._id, item.productId, 'order_delivered', qty, before, after, 'order', orderId, `POS sale - ${qty} units sold`, performedBy || null);
+    }
+  }
+
   // ==================== Manual stock operations ====================
 
   async addStock(productId: string, quantity: number, notes: string, performedBy: string) {

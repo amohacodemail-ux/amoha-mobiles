@@ -90,32 +90,17 @@ class PosController {
         { order_id: order.id, status: 'delivered', comment: `Counter sale - paid via ${paymentMethod}` },
       ]);
 
-      // Deduct stock via inventory ledger (keeps inventory table + products.stock in sync)
+      // Deduct stock via inventory ledger — available → sold directly (no reserve step for POS)
       const adminId = req.user!.userId;
-      for (const item of orderItems) {
-        try {
-          const inv = await inventoryLedger.getByProductId(item.product_id);
-          if (inv) {
-            const qty = Math.min(item.quantity, inv.availableStock);
-            if (qty > 0) {
-              await inventoryLedger.removeStock(
-                item.product_id, qty,
-                `POS sale - ${orderNumber}`,
-                adminId,
-              );
-            }
-          } else {
-            // Fallback: product has no ledger record yet
-            const { data: prod } = await supabase.from('products').select('stock').eq('id', item.product_id).single();
-            if (prod) {
-              await supabase.from('products')
-                .update({ stock: Math.max(0, prod.stock - item.quantity) })
-                .eq('id', item.product_id);
-            }
-          }
-        } catch (stockErr: any) {
-          logger.warn(`[POS] Stock deduction failed for ${item.product_id}: ${stockErr.message}`);
+      try {
+        const saleItems = orderItems
+          .filter((i: any) => i.product_id)
+          .map((i: any) => ({ productId: i.product_id, quantity: i.quantity }));
+        if (saleItems.length) {
+          await inventoryLedger.markDirectSale(order.id, saleItems, adminId);
         }
+      } catch (stockErr: any) {
+        logger.warn(`[POS] Stock deduction failed for order ${orderNumber}: ${stockErr.message}`);
       }
 
       notifyOrder(order.order_number, order.total, order.id);

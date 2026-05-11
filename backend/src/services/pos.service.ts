@@ -48,33 +48,16 @@ class PosService {
       }));
       await supabase.from('order_items').insert(items);
 
-      // Deduct stock via inventory ledger (keeps inventory table + products.stock in sync)
-      for (const item of orderData.items) {
-        try {
-          // For POS orders, items go directly to sold (no reserve step)
-          const inv = await inventoryLedger.getByProductId(item.productId);
-          if (inv) {
-            const qty = Math.min(item.quantity, inv.availableStock);
-            if (qty > 0) {
-              await inventoryLedger.removeStock(
-                item.productId,
-                qty,
-                `POS sale - order ${order.order_number}`,
-                adminId,
-              );
-            }
-          } else {
-            // No inventory record yet: fall back to direct product stock update
-            const { data: prod } = await supabase.from('products').select('stock').eq('id', item.productId).single();
-            if (prod) {
-              await supabase.from('products')
-                .update({ stock: Math.max(0, prod.stock - item.quantity) })
-                .eq('id', item.productId);
-            }
-          }
-        } catch (stockErr: any) {
-          logger.warn(`POS stock deduction failed for product ${item.productId}: ${stockErr.message}`);
+      // Deduct stock via inventory ledger — available → sold directly (no reserve step for POS)
+      try {
+        const saleItems = orderData.items
+          .filter((item: any) => item.productId)
+          .map((item: any) => ({ productId: item.productId, quantity: item.quantity }));
+        if (saleItems.length) {
+          await inventoryLedger.markDirectSale(order.id, saleItems, adminId);
         }
+      } catch (stockErr: any) {
+        logger.warn(`POS stock deduction failed for order ${order.order_number}: ${stockErr.message}`);
       }
     }
 
