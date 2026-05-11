@@ -4,6 +4,7 @@ export interface ISupplier {
   id?: string;
   name: string;
   code: string;
+  companyName?: string;
   email?: string;
   phone?: string;
   contactPerson?: string;

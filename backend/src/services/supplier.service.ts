@@ -21,16 +21,31 @@ class SupplierService {
 
   async getAll(query: any = {}) {
     const page = parseInt(query.page) || 1;
-    const limit = parseInt(query.limit) || 20;
+    const limit = Math.min(parseInt(query.limit) || 20, 100); // Max 100 per page
     const offset = (page - 1) * limit;
 
-    let qb = supabase.from('suppliers').select('*', { count: 'exact' });
+    // Use efficient column selection - exclude large text fields for list view
+    let qb = supabase
+      .from('suppliers')
+      .select(
+        'id, name, company_name, code, email, phone, status, reliability_score, avg_delivery_days, total_orders, on_time_deliveries, created_at, updated_at',
+        { count: 'exact' }
+      );
 
+    // Apply search filter on indexed fields
     if (query.search) {
-      qb = qb.or(`name.ilike.%${query.search}%,code.ilike.%${query.search}%,email.ilike.%${query.search}%`);
+      const searchTerm = query.search.trim();
+      qb = qb.or(
+        `name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`
+      );
     }
-    if (query.status) qb = qb.eq('status', query.status);
 
+    // Apply status filter
+    if (query.status) {
+      qb = qb.eq('status', query.status);
+    }
+
+    // Apply sorting
     const camelToSnake = (s: string) => s.replace(/[A-Z]/g, (l) => `_${l.toLowerCase()}`);
     const sortField = camelToSnake(query.sortBy || 'created_at');
     const sortAsc = query.sortOrder === 'asc';
@@ -66,30 +81,67 @@ class SupplierService {
   async create(data: any) {
     const code = data.code || generateSupplierCode();
     const email = this.normalizeEmail(data.email);
+    const phone = this.normalizePhone(data.phone);
     const password = typeof data.password === 'string' ? data.password.trim() : '';
+    const companyName = typeof data.companyName === 'string' ? data.companyName.trim() : '';
     const fallbackName = (typeof data.name === 'string' && data.name.trim())
       ? data.name.trim()
-      : (email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() || 'Supplier' : 'Supplier');
+      : (companyName || (email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() || 'Supplier' : 'Supplier'));
 
     if (password && !email) {
       throw new BadRequestError('Email is required when creating a supplier login');
     }
     if (!fallbackName) {
-      throw new BadRequestError('Supplier name or login email is required');
+      throw new BadRequestError('Supplier name, company name, or login email is required');
+    }
+
+    // Check for duplicate email
+    if (email) {
+      const existingByEmail = await this.findByEmail(email);
+      if (existingByEmail) {
+        throw new BadRequestError(`A supplier with email "${email}" already exists (${existingByEmail.name})`);
+      }
+    }
+
+    // Check for duplicate phone
+    if (phone) {
+      const existingByPhone = await this.findByPhone(phone);
+      if (existingByPhone) {
+        throw new BadRequestError(`A supplier with phone "${phone}" already exists (${existingByPhone.name})`);
+      }
     }
 
     const account = await this.syncSupplierUserAccount({
       name: fallbackName,
       email,
-      phone: data.phone,
+      phone,
       password,
     });
 
-    const dbData = toDbRow({ ...data, name: fallbackName, code, email: email || null });
+    const dbData = toDbRow({ 
+      ...data, 
+      name: fallbackName, 
+      companyName: companyName || fallbackName,
+      code, 
+      email: email || null,
+      phone: phone || null
+    });
     delete dbData.password;
 
     const { data: supplier, error } = await supabase.from('suppliers').insert(dbData).select('*').single();
-    if (error) throw error;
+    if (error) {
+      // Handle specific duplicate errors from database
+      if (error.code === '23505') {
+        if (error.message?.includes('email')) {
+          throw new BadRequestError('A supplier with this email already exists');
+        }
+        if (error.message?.includes('phone')) {
+          throw new BadRequestError('A supplier with this phone number already exists');
+        }
+        throw new BadRequestError('A supplier with these details already exists');
+      }
+      throw error;
+    }
 
     const result = transformRow(supplier);
     if (account) {
@@ -142,8 +194,53 @@ class SupplierService {
   }
 
   async delete(id: string) {
+    // Check for linked purchase orders
+    const { count: poCount, error: poError } = await supabase
+      .from('purchase_orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('supplier_id', id);
+    
+    if (poError) throw poError;
+    if (poCount && poCount > 0) {
+      throw new BadRequestError(`Cannot delete supplier: ${poCount} purchase order(s) linked. Archive or reassign first.`);
+    }
+
+    // Check for linked supplier products
+    const { count: spCount, error: spError } = await supabase
+      .from('supplier_products')
+      .select('*', { count: 'exact', head: true })
+      .eq('supplier_id', id);
+    
+    if (spError) throw spError;
+    if (spCount && spCount > 0) {
+      throw new BadRequestError(`Cannot delete supplier: ${spCount} product(s) linked. Remove product associations first.`);
+    }
+
+    // Check for supplier entries
+    const { count: entryCount, error: entryError } = await supabase
+      .from('supplier_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('supplier_id', id);
+    
+    if (entryError) throw entryError;
+    if (entryCount && entryCount > 0) {
+      throw new BadRequestError(`Cannot delete supplier: ${entryCount} supplier entry(s) linked.`);
+    }
+
+    // Also delete the associated user account if exists
+    const { data: supplier } = await supabase.from('suppliers').select('email').eq('id', id).maybeSingle();
+    if (supplier?.email) {
+      await supabase.from('users').delete().eq('email', supplier.email).eq('role', 'supplier');
+    }
+
+    // Delete the supplier
     const { error } = await supabase.from('suppliers').delete().eq('id', id);
-    if (error) throw error;
+    if (error) {
+      if (error.code === '23503') {
+        throw new BadRequestError('Cannot delete supplier: linked records exist. Please archive instead.');
+      }
+      throw error;
+    }
   }
 
   async getMyProfile(userId: string) {
@@ -429,6 +526,32 @@ class SupplierService {
   private normalizeEmail(email?: string) {
     if (typeof email !== 'string') return '';
     return email.trim().toLowerCase();
+  }
+
+  private normalizePhone(phone?: string): string {
+    if (typeof phone !== 'string') return '';
+    // Remove all non-numeric characters
+    return phone.replace(/[^0-9]/g, '');
+  }
+
+  private async findByEmail(email: string): Promise<any | null> {
+    if (!email) return null;
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name, email, phone')
+      .eq('email', email)
+      .maybeSingle();
+    return data;
+  }
+
+  private async findByPhone(phone: string): Promise<any | null> {
+    if (!phone) return null;
+    const { data } = await supabase
+      .from('suppliers')
+      .select('id, name, email, phone')
+      .eq('phone', phone)
+      .maybeSingle();
+    return data;
   }
 
   private async syncSupplierUserAccount(params: {

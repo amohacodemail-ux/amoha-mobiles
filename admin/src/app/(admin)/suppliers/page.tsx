@@ -56,9 +56,9 @@ export default function SuppliersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formData, setFormData] = useState<SupplierFormData>({
-    name: '', email: '', password: '', phone: '', contactPerson: '', addressLine1: '',
-    city: '', state: '', pincode: '', gstNumber: '', paymentTerms: 'Net 30',
-    status: 'active', notes: '',
+    name: '', companyName: '', email: '', password: '', phone: '', contactPerson: '', 
+    addressLine1: '', addressLine2: '', city: '', state: '', pincode: '', country: '',
+    gstNumber: '', paymentTerms: 'Net 30', status: 'active', notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -103,24 +103,29 @@ export default function SuppliersPage() {
 
   const openAdd = () => {
     setEditingSupplier(null);
-    setFormData({ name: '', email: '', password: '', phone: '', contactPerson: '', addressLine1: '', city: '', state: '', pincode: '', gstNumber: '', paymentTerms: 'Net 30', status: 'active', notes: '' });
+    setFormData({ name: '', companyName: '', email: '', password: '', phone: '', contactPerson: '', addressLine1: '', addressLine2: '', city: '', state: '', pincode: '', country: '', gstNumber: '', paymentTerms: 'Net 30', status: 'active', notes: '' });
     setFormOpen(true);
   };
 
   const openEdit = (s: Supplier) => {
     setEditingSupplier(s);
     setFormData({
-      name: s.name, email: s.email || '', password: '', phone: s.phone || '', contactPerson: s.contactPerson || '',
-      addressLine1: s.addressLine1 || '', city: s.city || '', state: s.state || '', pincode: s.pincode || '',
-      gstNumber: s.gstNumber || '', paymentTerms: s.paymentTerms || 'Net 30', status: s.status, notes: s.notes || '',
+      name: s.name, companyName: s.companyName || '', email: s.email || '', password: '', phone: s.phone || '', contactPerson: s.contactPerson || '',
+      addressLine1: s.addressLine1 || '', addressLine2: s.addressLine2 || '', city: s.city || '', state: s.state || '', pincode: s.pincode || '',
+      country: s.country || '', gstNumber: s.gstNumber || '', paymentTerms: s.paymentTerms || 'Net 30', status: s.status, notes: s.notes || '',
     });
     setFormOpen(true);
   };
 
   const handleSubmitForm = async () => {
-    if (!formData.name?.trim() && !formData.email?.trim()) return toast.error('Enter either a supplier name or login email');
+    if (!formData.name?.trim() && !formData.companyName?.trim() && !formData.email?.trim()) {
+      return toast.error('Enter at least one: supplier name, company name, or login email');
+    }
     if (formData.password && !formData.email) return toast.error('Email is required for supplier login');
     if (formData.password && formData.password.length < 6) return toast.error('Password must be at least 6 characters');
+    if (formData.phone && formData.phone.replace(/\D/g, '').length < 10) {
+      return toast.error('Phone number must be at least 10 digits');
+    }
     setSubmitting(true);
     try {
       if (editingSupplier) {
@@ -133,7 +138,10 @@ export default function SuppliersPage() {
       setFormOpen(false);
       loadSuppliers();
       loadStats();
-    } catch { toast.error('Failed to save supplier'); }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'Failed to save supplier';
+      toast.error(message);
+    }
     finally { setSubmitting(false); }
   };
 
@@ -146,7 +154,10 @@ export default function SuppliersPage() {
       setDeleteId(null);
       loadSuppliers();
       loadStats();
-    } catch { toast.error('Failed to delete supplier'); }
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || 'Failed to delete supplier';
+      toast.error(message);
+    }
     finally { setDeleting(false); }
   };
 
@@ -176,13 +187,23 @@ export default function SuppliersPage() {
       key: 'name', header: 'Supplier', sortable: true,
       render: (s) => (
         <div>
-          <p className="font-medium text-foreground">{s.name}</p>
+          <p className="font-medium text-foreground">{s.companyName || s.name}</p>
           <p className="text-xs text-muted-foreground">{s.code}</p>
+          {s.name !== s.companyName && s.companyName && (
+            <p className="text-xs text-muted-foreground">Contact: {s.name}</p>
+          )}
         </div>
       ),
     },
-    { key: 'contactPerson', header: 'Contact', render: (s) => <span className="text-sm">{s.contactPerson || '-'}</span> },
-    { key: 'phone', header: 'Phone', render: (s) => <span className="text-sm">{s.phone || '-'}</span> },
+    {
+      key: 'contactInfo', header: 'Contact',
+      render: (s) => (
+        <div className="text-sm">
+          <p>{s.phone || '-'}</p>
+          {s.email && <p className="text-xs text-muted-foreground">{s.email}</p>}
+        </div>
+      ),
+    },
     {
       key: 'reliabilityScore', header: 'Reliability',
       render: (s) => (
@@ -333,74 +354,162 @@ export default function SuppliersPage() {
 
       {/* Supplier Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingSupplier ? 'Edit Supplier' : 'Add Supplier'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium">Supplier Name</label>
-              <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Optional if you only want to create login access" />
-            </div>
+            {/* Basic Info */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium">Login Email / ID</label>
-                <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="supplier@example.com" />
+                <label className="text-sm font-medium">Company Name <span className="text-red-500">*</span></label>
+                <Input 
+                  value={formData.companyName} 
+                  onChange={e => setFormData({ ...formData, companyName: e.target.value })} 
+                  placeholder="Company/Business Name" 
+                />
               </div>
               <div>
-                <label className="text-sm font-medium">Phone</label>
-                <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                <label className="text-sm font-medium">Contact Person</label>
+                <Input 
+                  value={formData.name} 
+                  onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                  placeholder="Primary contact name" 
+                />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">Password</label>
-              <Input type="password" value={formData.password || ''} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder={editingSupplier ? 'Leave blank to keep existing password' : 'Set supplier login password'} />
-              <p className="text-xs text-muted-foreground mt-1">You can create only login access here. The supplier can sign in later and complete the remaining details by themselves.</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Contact Person</label>
-              <Input value={formData.contactPerson} onChange={e => setFormData({ ...formData, contactPerson: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Address</label>
-              <Input value={formData.addressLine1} onChange={e => setFormData({ ...formData, addressLine1: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="text-sm font-medium">City</label>
-                <Input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">State</label>
-                <Input value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Pincode</label>
-                <Input value={formData.pincode} onChange={e => setFormData({ ...formData, pincode: e.target.value })} />
-              </div>
-            </div>
+
+            {/* Contact Info */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium">GST Number</label>
-                <Input value={formData.gstNumber} onChange={e => setFormData({ ...formData, gstNumber: e.target.value })} />
+                <label className="text-sm font-medium">Email</label>
+                <Input 
+                  type="email" 
+                  value={formData.email} 
+                  onChange={e => setFormData({ ...formData, email: e.target.value })} 
+                  placeholder="supplier@example.com" 
+                />
               </div>
               <div>
-                <label className="text-sm font-medium">Payment Terms</label>
-                <Input value={formData.paymentTerms} onChange={e => setFormData({ ...formData, paymentTerms: e.target.value })} />
+                <label className="text-sm font-medium">Phone <span className="text-red-500">*</span></label>
+                <Input 
+                  value={formData.phone} 
+                  onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })} 
+                  placeholder="10-digit mobile number"
+                  maxLength={15}
+                />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">Status</label>
-              <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background">
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="blacklisted">Blacklisted</option>
-              </select>
+
+            {/* Password (only for new suppliers or when editing) */}
+            {!editingSupplier && (
+              <div>
+                <label className="text-sm font-medium">Login Password</label>
+                <Input 
+                  type="password" 
+                  value={formData.password || ''} 
+                  onChange={e => setFormData({ ...formData, password: e.target.value })} 
+                  placeholder="Min 6 characters (required for supplier portal access)" 
+                />
+                <p className="text-xs text-muted-foreground mt-1">Password required for supplier portal login</p>
+              </div>
+            )}
+
+            {/* Address */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium mb-2">Address</h4>
+              <div className="space-y-3">
+                <Input 
+                  value={formData.addressLine1} 
+                  onChange={e => setFormData({ ...formData, addressLine1: e.target.value })} 
+                  placeholder="Address Line 1" 
+                />
+                <Input 
+                  value={formData.addressLine2} 
+                  onChange={e => setFormData({ ...formData, addressLine2: e.target.value })} 
+                  placeholder="Address Line 2 (optional)" 
+                />
+                <div className="grid grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">City</label>
+                    <Input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">State</label>
+                    <Input value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Pincode</label>
+                    <Input 
+                      value={formData.pincode} 
+                      onChange={e => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })} 
+                      maxLength={6}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Country</label>
+                    <Input value={formData.country} onChange={e => setFormData({ ...formData, country: e.target.value })} placeholder="India" />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
+
+            {/* Business Details */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-medium mb-2">Business Details</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">GST Number</label>
+                  <Input 
+                    value={formData.gstNumber} 
+                    onChange={e => setFormData({ ...formData, gstNumber: e.target.value.toUpperCase() })} 
+                    placeholder="22AAAAA0000A1Z5" 
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Payment Terms</label>
+                  <select 
+                    value={formData.paymentTerms} 
+                    onChange={e => setFormData({ ...formData, paymentTerms: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
+                  >
+                    <option value="Net 15">Net 15</option>
+                    <option value="Net 30">Net 30</option>
+                    <option value="Net 45">Net 45</option>
+                    <option value="Net 60">Net 60</option>
+                    <option value="Immediate">Immediate</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="border-t pt-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Status</label>
+                  <select 
+                    value={formData.status} 
+                    onChange={e => setFormData({ ...formData, status: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="blacklisted">Blacklisted</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="border-t pt-4">
               <label className="text-sm font-medium">Notes</label>
-              <Textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows={3} />
+              <Textarea 
+                value={formData.notes} 
+                onChange={e => setFormData({ ...formData, notes: e.target.value })} 
+                rows={3}
+                placeholder="Additional notes about this supplier"
+              />
             </div>
           </div>
           <DialogFooter>

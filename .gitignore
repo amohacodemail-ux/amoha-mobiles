@@ -34,3 +34,9 @@ Thumbs.db
 coverage/
 *.tsbuildinfo
 nul
+
+# deployment tokens (security)
+DEPLOYMENT_GUIDE.md
+deploy-*.ps1
+*.token
+secrets/

@@ -10,6 +10,7 @@ import { supplierPortalService } from '@/services/supplier-portal.service';
 
 const emptyProfile = {
   name: '',
+  companyName: '',
   contactPerson: '',
   phone: '',
   addressLine1: '',
@@ -163,17 +164,27 @@ export default function SupplierProfilePage() {
                 <input value={profile.loginEmail || user.email || ''} disabled className="glass-input py-3 text-sm opacity-80" />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-500">Supplier Name</label>
-                <input value={profile.name || ''} onChange={(e) => setProfile({ ...profile, name: e.target.value })} className="glass-input py-3 text-sm" />
+                <label className="mb-1.5 block text-xs font-medium text-gray-500">Company / Business Name</label>
+                <input value={profile.companyName || ''} onChange={(e) => setProfile({ ...profile, companyName: e.target.value })} className="glass-input py-3 text-sm" placeholder="Your business name" />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-gray-500">Contact Person</label>
-                  <input value={profile.contactPerson || ''} onChange={(e) => setProfile({ ...profile, contactPerson: e.target.value })} className="glass-input py-3 text-sm" />
+                  <input value={profile.name || ''} onChange={(e) => setProfile({ ...profile, name: e.target.value })} className="glass-input py-3 text-sm" placeholder="Primary contact name" />
                 </div>
                 <div>
+                  <label className="mb-1.5 block text-xs font-medium text-gray-500">Alternate Contact</label>
+                  <input value={profile.contactPerson || ''} onChange={(e) => setProfile({ ...profile, contactPerson: e.target.value })} className="glass-input py-3 text-sm" placeholder="Secondary contact (optional)" />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
                   <label className="mb-1.5 block text-xs font-medium text-gray-500">Phone</label>
-                  <input value={profile.phone || ''} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className="glass-input py-3 text-sm" />
+                  <input value={profile.phone || ''} onChange={(e) => setProfile({ ...profile, phone: e.target.value.replace(/\D/g, '') })} className="glass-input py-3 text-sm" placeholder="10-digit mobile number" maxLength={15} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-gray-500">Country</label>
+                  <input value={profile.country || 'India'} onChange={(e) => setProfile({ ...profile, country: e.target.value })} className="glass-input py-3 text-sm" />
                 </div>
               </div>
               <div>

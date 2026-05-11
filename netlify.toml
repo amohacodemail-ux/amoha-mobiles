@@ -1,0 +1,17 @@
+[build]
+  command = "cd admin && npm install && npm run build"
+  publish = "admin/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://amoha-backend.onrender.com/api/:splat"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"

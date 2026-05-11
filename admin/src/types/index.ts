@@ -482,6 +482,7 @@ export interface Supplier {
   _id: string;
   name: string;
   code: string;
+  companyName?: string;
   email?: string;
   phone?: string;
   contactPerson?: string;
@@ -523,15 +524,18 @@ export interface SupplierProduct {
 
 export interface SupplierFormData {
   name: string;
+  companyName?: string;
   code?: string;
   email?: string;
   password?: string;
   phone?: string;
   contactPerson?: string;
   addressLine1?: string;
+  addressLine2?: string;
   city?: string;
   state?: string;
   pincode?: string;
+  country?: string;
   gstNumber?: string;
   panNumber?: string;
   paymentTerms?: string;
