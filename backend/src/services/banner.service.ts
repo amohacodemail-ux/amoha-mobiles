@@ -1,6 +1,8 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError } from '../errors/app-error';
+import activityLog from './activity-log.service';
+import logger from '../utils/logger.util';
 
 /** Maps DB sort_order → order for frontend/admin compatibility */
 function normalizeBanner(row: any): any {
@@ -54,9 +56,39 @@ class BannerService {
     return normalizeBanner(data);
   }
 
-  async deleteBanner(id: string) {
+  async deleteBanner(id: string, adminId?: string, ipAddress?: string) {
+    // Fetch banner details for audit log
+    const { data: banner, error: fetchError } = await supabase
+      .from('banners')
+      .select('id, title, position')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!banner) throw new NotFoundError('Banner');
+
     const { error } = await supabase.from('banners').delete().eq('id', id);
     if (error) throw error;
+
+    // Audit log the deletion
+    await activityLog.log({
+      adminId,
+      action: 'DELETE_BANNER',
+      entity: 'banner',
+      entityId: id,
+      details: {
+        title: banner.title,
+        position: banner.position
+      },
+      ipAddress
+    });
+
+    logger.info(`[DELETE] Banner ${id} (${banner.title}) deleted by admin ${adminId}`);
+
+    return {
+      message: 'Banner deleted successfully',
+      bannerId: id,
+      title: banner.title
+    };
   }
 
   // Controller aliases
@@ -64,7 +96,7 @@ class BannerService {
   async getAllAdmin(query?: any) { return this.getBanners({ ...query }); }
   async create(data: any) { return this.createBanner(data); }
   async update(id: string, data: any) { return this.updateBanner(id, data); }
-  async delete(id: string) { return this.deleteBanner(id); }
+  async delete(id: string, adminId?: string, ipAddress?: string) { return this.deleteBanner(id, adminId, ipAddress); }
   async toggleActive(id: string, isActive: boolean) { return this.updateBanner(id, { isActive }); }
 }
 

@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
+import { ConfirmModal } from '@/components/shared/confirm-modal';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import { Pagination } from '@/components/shared/pagination';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { barcodeService, BarcodeProduct } from '@/services/barcode.service';
 import { BarcodeVisual } from '@/components/shared/barcode-visual';
 import { posService, type PosBillingInfo, type PosTodayStats, type PosOrderResult } from '@/services/pos.service';
+import { orderService } from '@/services/order.service';
 import { productService } from '@/services/product.service';
 import { formatCurrency, getInitials } from '@/lib/utils';
 import type { Product } from '@/types';
@@ -89,6 +92,13 @@ export default function BarcodePage() {
   const [labelW, setLabelW] = useState(62);   // mm
   const [labelH, setLabelH] = useState(34);   // mm
 
+  // Delete order state
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const [deleteInvoiceNumber, setDeleteInvoiceNumber] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
+
+  const { canDelete } = useModulePermissions(MODULES.BARCODE_POS);
+
   // Track whether user has explicitly toggled GST (so billingInfo load won't override it)
   const userToggledGst = useRef(false);
 
@@ -143,6 +153,32 @@ export default function BarcodePage() {
     if (activeView === 'history') loadPosOrders();
   }, [activeView, loadPosOrders]);
   useEffect(() => { setPosPage(1); }, [posSearch]);
+
+  // Delete handlers
+  const openDelete = (order: any) => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete orders');
+      return;
+    }
+    setDeleteOrderId(order._id);
+    setDeleteInvoiceNumber(order.invoiceNumber || order.orderNumber || 'this order');
+  };
+
+  const handleDelete = async () => {
+    if (!deleteOrderId) return;
+    setDeleting(true);
+    try {
+      await orderService.deleteOrder(deleteOrderId);
+      toast.success('Order deleted successfully');
+      setDeleteOrderId(null);
+      setPosOrders((prev) => prev.filter((o) => o._id !== deleteOrderId));
+      setPosTotalItems((prev) => Math.max(0, prev - 1));
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to delete order');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Camera
 
@@ -910,6 +946,11 @@ export default function BarcodePage() {
                           invoiceNumber: order.invoiceNumber || order.orderNumber,
                         });
                       }}><Printer className="h-3.5 w-3.5 mr-1" />Print</Button>
+                      {canDelete && (
+                        <Button variant="outline" size="sm" className="hover:border-destructive hover:text-destructive" onClick={() => openDelete(order)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1027,6 +1068,16 @@ export default function BarcodePage() {
           <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={totalItems} pageSize={LIMIT} />
         </>
       )}
+
+      <ConfirmModal
+        open={!!deleteOrderId}
+        onClose={() => setDeleteOrderId(null)}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title="Delete POS Order?"
+        description={`Are you sure you want to delete order "${deleteInvoiceNumber}"? This action cannot be undone.`}
+        confirmLabel="Delete Order"
+      />
     </div>
   );
 }

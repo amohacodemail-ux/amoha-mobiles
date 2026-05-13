@@ -1,6 +1,8 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
+import activityLog from './activity-log.service';
+import logger from '../utils/logger.util';
 
 class CategoryService {
   async getCategories(query: any = {}) {
@@ -74,7 +76,16 @@ class CategoryService {
     return transformRow(data);
   }
 
-  async deleteCategory(id: string) {
+  async deleteCategory(id: string, adminId?: string, ipAddress?: string) {
+    // Fetch category details for audit log
+    const { data: category, error: fetchError } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!category) throw new NotFoundError('Category');
+
     // Check for linked products before attempting delete
     const { count, error: countError } = await supabase
       .from('products')
@@ -88,7 +99,23 @@ class CategoryService {
     }
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) throw error;
-    return { message: 'Category deleted successfully' };
+
+    // Audit log the deletion
+    await activityLog.log({
+      adminId,
+      action: 'DELETE_CATEGORY',
+      entity: 'category',
+      entityId: id,
+      details: {
+        categoryName: category.name,
+        linkedProducts: count || 0
+      },
+      ipAddress
+    });
+
+    logger.info(`[DELETE] Category ${id} (${category.name}) deleted by admin ${adminId}`);
+
+    return { message: 'Category deleted successfully', categoryId: id, categoryName: category.name };
   }
 
   async getCategoryBySlug(slug: string) {
@@ -107,7 +134,7 @@ class CategoryService {
   async getBySlug(slug: string) { return this.getCategoryBySlug(slug); }
   async create(data: any) { return this.createCategory(data); }
   async update(id: string, data: any) { return this.updateCategory(id, data); }
-  async delete(id: string) { return this.deleteCategory(id); }
+  async delete(id: string, adminId?: string, ipAddress?: string) { return this.deleteCategory(id, adminId, ipAddress); }
 }
 
 export default new CategoryService();

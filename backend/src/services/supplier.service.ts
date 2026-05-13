@@ -2,6 +2,7 @@ import supabase from '../config/supabase';
 import { transformRow, toDbRow, transformUser } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import logger from '../utils/logger.util';
+import activityLog from './activity-log.service';
 import crypto from 'crypto';
 import { hashPassword } from '../utils/password.util';
 
@@ -193,7 +194,16 @@ class SupplierService {
     return result;
   }
 
-  async delete(id: string) {
+  async delete(id: string, adminId?: string, ipAddress?: string) {
+    // Fetch supplier details for audit log
+    const { data: supplier, error: fetchError } = await supabase
+      .from('suppliers')
+      .select('id, name, company_name, email')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!supplier) throw new NotFoundError('Supplier');
+
     // Check for linked purchase orders
     const { count: poCount, error: poError } = await supabase
       .from('purchase_orders')
@@ -228,7 +238,6 @@ class SupplierService {
     }
 
     // Also delete the associated user account if exists
-    const { data: supplier } = await supabase.from('suppliers').select('email').eq('id', id).maybeSingle();
     if (supplier?.email) {
       await supabase.from('users').delete().eq('email', supplier.email).eq('role', 'supplier');
     }
@@ -241,6 +250,32 @@ class SupplierService {
       }
       throw error;
     }
+
+    // Audit log the deletion
+    await activityLog.log({
+      adminId,
+      action: 'DELETE_SUPPLIER',
+      entity: 'supplier',
+      entityId: id,
+      details: {
+        supplierName: supplier.name,
+        companyName: supplier.company_name,
+        linkedRecords: {
+          purchaseOrders: poCount || 0,
+          supplierProducts: spCount || 0,
+          supplierEntries: entryCount || 0
+        }
+      },
+      ipAddress
+    });
+
+    logger.info(`[DELETE] Supplier ${id} (${supplier.name}) deleted by admin ${adminId}`);
+
+    return {
+      message: 'Supplier deleted successfully',
+      supplierId: id,
+      supplierName: supplier.name
+    };
   }
 
   async getMyProfile(userId: string) {

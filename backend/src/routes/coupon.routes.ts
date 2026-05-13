@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import couponService from '../services/coupon.service';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { canAccessMarketing } from '../middleware/role.middleware';
 import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
+import { AuthenticatedRequest } from '../types';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.post('/validate', async (req: Request, res: Response, next: NextFunction)
 });
 
 // Admin routes
-router.get('/', authenticate, isAdmin, async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', authenticate, canAccessMarketing, async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const coupons = await couponService.getAll();
     sendSuccess(res, coupons, 'Coupons fetched');
@@ -28,7 +29,7 @@ router.get('/', authenticate, isAdmin, async (_req: Request, res: Response, next
   }
 });
 
-router.post('/', authenticate, isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', authenticate, canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const coupon = await couponService.create(req.body);
     sendCreated(res, coupon, 'Coupon created');
@@ -37,7 +38,7 @@ router.post('/', authenticate, isAdmin, async (req: Request, res: Response, next
   }
 });
 
-router.put('/:id', authenticate, isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', authenticate, canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const coupon = await couponService.update(req.params.id, req.body);
     sendSuccess(res, coupon, 'Coupon updated');
@@ -46,10 +47,11 @@ router.put('/:id', authenticate, isAdmin, async (req: Request, res: Response, ne
   }
 });
 
-router.delete('/:id', authenticate, isAdmin, async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', authenticate, canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await couponService.delete(req.params.id);
-    sendMessage(res, 'Coupon deleted');
+    const adminId = (req as AuthenticatedRequest).user?.userId;
+    const result = await couponService.delete(req.params.id, adminId, req.ip);
+    sendMessage(res, result?.message || 'Coupon deleted');
   } catch (error) {
     next(error);
   }

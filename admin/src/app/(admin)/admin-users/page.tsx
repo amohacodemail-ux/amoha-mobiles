@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Search, UserCog, Shield, Loader2 } from 'lucide-react';
+import { Plus, Search, UserCog, Shield, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePermissions, getRoleBadgeColor, getRoleDisplayName, type UserRole } from '@/hooks/usePermissions';
+import { ConfirmModal } from '@/components/shared/confirm-modal';
 import apiClient from '@/lib/api-client';
 
 interface AdminUser {
@@ -30,6 +31,11 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('');
   const [message, setMessage] = useState('');
+
+  // Delete state
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deleteUserName, setDeleteUserName] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
 
   // Redirect if not admin
   useEffect(() => {
@@ -72,6 +78,26 @@ export default function AdminUsersPage() {
       fetchUsers();
     } catch (error) {
       setMessage('Failed to update user role');
+    }
+  };
+
+  const openDelete = (user: AdminUser) => {
+    setDeleteUserId(user.id);
+    setDeleteUserName(user.name);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteUserId) return;
+    setDeleting(true);
+    try {
+      await apiClient.delete(`/admin/users/${deleteUserId}`);
+      setMessage('User deleted successfully');
+      setDeleteUserId(null);
+      setUsers((prev) => prev.filter((u) => u.id !== deleteUserId));
+    } catch (error: any) {
+      setMessage(error?.response?.data?.message || 'Failed to delete user');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -184,6 +210,14 @@ export default function AdminUsersPage() {
                       <option value="logistics">Logistics</option>
                       <option value="supplier">Supplier</option>
                     </select>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="hover:border-destructive hover:text-destructive"
+                      onClick={() => openDelete(user)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -229,6 +263,16 @@ export default function AdminUsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={!!deleteUserId}
+        onClose={() => setDeleteUserId(null)}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title="Delete Employee?"
+        description={`Are you sure you want to delete "${deleteUserName}"? This action cannot be undone and will permanently remove the user.`}
+        confirmLabel="Delete Employee"
+      />
     </div>
   );
 }

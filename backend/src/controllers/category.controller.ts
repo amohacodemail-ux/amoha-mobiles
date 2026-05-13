@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import categoryService from '../services/category.service';
 import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
+import { AuthenticatedRequest } from '../types';
 
 class CategoryController {
   async getAll(req: Request, res: Response, next: NextFunction) {
@@ -51,7 +52,8 @@ class CategoryController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await categoryService.delete(req.params.id);
+      const adminId = (req as AuthenticatedRequest).user?.userId;
+      const result = await categoryService.delete(req.params.id, adminId, req.ip);
       sendMessage(res, result?.message || 'Category deleted');
     } catch (error) {
       next(error);

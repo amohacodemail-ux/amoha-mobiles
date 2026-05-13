@@ -2,10 +2,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import {
+import { 
   IndianRupee, FileText, Download, Search, RefreshCw,
   TrendingUp, ShoppingCart, Percent, Tag,
-  BarChart3, Calendar, Store, Globe, Receipt,
+  BarChart3, Calendar, Store, Globe, Receipt, Trash2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
@@ -14,6 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { billingService, type BillingSummary, type BillingOrder, type BillingPeriod } from '@/services/billing.service';
+import { orderService } from '@/services/order.service';
+import { ConfirmModal } from '@/components/shared/confirm-modal';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -105,6 +108,11 @@ export default function BillingPage() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [gstDownloading, setGstDownloading] = useState(false);
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+  const [deleteOrderNumber, setDeleteOrderNumber] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
+
+  const { canDelete } = useModulePermissions(MODULES.BILLING);
 
   const summaryParams = useCallback(() => {
     if (period === 'custom') {
@@ -192,6 +200,31 @@ export default function BillingPage() {
       toast.error('Failed to download GST report — try the Sales Report instead');
     } finally {
       setGstDownloading(false);
+    }
+  };
+
+  const openDelete = (order: BillingOrder) => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete orders');
+      return;
+    }
+    setDeleteOrderId(order._id || order.id || '');
+    setDeleteOrderNumber(order.invoiceNumber || order.orderNumber || 'this order');
+  };
+
+  const handleDelete = async () => {
+    if (!deleteOrderId) return;
+    setDeleting(true);
+    try {
+      await orderService.deleteOrder(deleteOrderId);
+      toast.success('Order deleted successfully');
+      setDeleteOrderId(null);
+      setOrders((prev) => prev.filter((o) => (o._id || o.id) !== deleteOrderId));
+      setTotalOrders((prev) => Math.max(0, prev - 1));
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to delete order');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -406,18 +439,30 @@ export default function BillingPage() {
                             {formatCurrency(amount)}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDownloadInvoice(order)}
-                              disabled={downloadingId === id}
-                            >
-                              {downloadingId === id
-                                ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                : <Download className="h-3.5 w-3.5" />
-                              }
-                              <span className="ml-1.5 hidden xl:inline">Invoice</span>
-                            </Button>
+                            <div className="flex items-center gap-2 justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownloadInvoice(order)}
+                                disabled={downloadingId === id}
+                              >
+                                {downloadingId === id
+                                  ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                  : <Download className="h-3.5 w-3.5" />
+                                }
+                                <span className="ml-1.5 hidden xl:inline">Invoice</span>
+                              </Button>
+                              {canDelete && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="hover:border-destructive hover:text-destructive"
+                                  onClick={() => openDelete(order)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -472,7 +517,6 @@ export default function BillingPage() {
               </div>
             </>
           )}
-        </CardContent>
 
         {totalPages > 1 && (
           <div className="px-4 py-4 border-t">
@@ -485,7 +529,18 @@ export default function BillingPage() {
             />
           </div>
         )}
-      </Card>
+      </CardContent>
+    </Card>
+
+      <ConfirmModal
+        open={!!deleteOrderId}
+        onClose={() => setDeleteOrderId(null)}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title="Delete Order?"
+        description={`Are you sure you want to delete order "${deleteOrderNumber}"? This action cannot be undone.`}
+        confirmLabel="Delete Order"
+      />
 
       {/* GST Summary card */}
       {summary && totalGstAmount > 0 && (

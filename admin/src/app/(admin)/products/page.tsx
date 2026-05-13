@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { productService } from '@/services/product.service';
 import { formatCurrency, formatDate, safeImageSrc } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import type { Product } from '@/types';
 
 const LIMIT = 10;
@@ -28,7 +29,10 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const { canDelete, canCreate } = useModulePermissions(MODULES.PRODUCTS);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -51,14 +55,24 @@ export default function ProductsPage() {
     else { setSortBy(key); setSortOrder('asc'); }
   };
 
+  const openDelete = (product: Product) => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete products');
+      return;
+    }
+    setDeleteId(product._id);
+    setDeleteProduct(product);
+  };
+
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || !deleteProduct) return;
     setDeleting(true);
     const removedId = deleteId;
     try {
       await productService.delete(removedId);
       toast.success('Product deleted successfully');
       setDeleteId(null);
+      setDeleteProduct(null);
       setProducts((prev) => prev.filter((p) => p._id !== removedId));
       setTotalItems((prev) => Math.max(0, prev - 1));
     } catch (error: any) {
@@ -106,9 +120,11 @@ export default function ProductsPage() {
           <Link href={`/products/${p._id}/edit`}>
             <Button variant="outline" size="icon-sm"><Pencil className="h-3.5 w-3.5" /></Button>
           </Link>
-          <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => setDeleteId(p._id)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {canDelete && (
+            <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => openDelete(p)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -117,7 +133,9 @@ export default function ProductsPage() {
   return (
     <div>
       <PageHeader title="Products" description={`${totalItems} total products`}>
-        <Link href="/products/add"><Button><Plus className="h-4 w-4" />Add Product</Button></Link>
+        {canCreate && (
+          <Link href="/products/add"><Button><Plus className="h-4 w-4" />Add Product</Button></Link>
+        )}
       </PageHeader>
 
       <DataTable
@@ -138,11 +156,13 @@ export default function ProductsPage() {
 
       <ConfirmModal
         open={!!deleteId}
-        onClose={() => setDeleteId(null)}
+        onClose={() => { setDeleteId(null); setDeleteProduct(null); }}
         onConfirm={handleDelete}
         loading={deleting}
         title="Delete Product?"
-        description="This will permanently delete the product and cannot be undone."
+        description={deleteProduct
+          ? `Are you sure you want to delete "${deleteProduct.name}"? This action cannot be undone. Products linked to orders cannot be deleted.`
+          : "This will permanently delete the product and cannot be undone."}
         confirmLabel="Delete Product"
       />
     </div>

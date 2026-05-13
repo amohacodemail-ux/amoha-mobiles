@@ -1,6 +1,8 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
+import activityLog from './activity-log.service';
+import logger from '../utils/logger.util';
 
 class CouponService {
   async getCoupons(query: any = {}) {
@@ -50,9 +52,40 @@ class CouponService {
     return transformRow(data);
   }
 
-  async deleteCoupon(id: string) {
+  async deleteCoupon(id: string, adminId?: string, ipAddress?: string) {
+    // Fetch coupon details for audit log
+    const { data: coupon, error: fetchError } = await supabase
+      .from('coupons')
+      .select('id, code, discount, discount_type')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!coupon) throw new NotFoundError('Coupon');
+
     const { error } = await supabase.from('coupons').delete().eq('id', id);
     if (error) throw error;
+
+    // Audit log the deletion
+    await activityLog.log({
+      adminId,
+      action: 'DELETE_COUPON',
+      entity: 'coupon',
+      entityId: id,
+      details: {
+        code: coupon.code,
+        discount: coupon.discount,
+        discountType: coupon.discount_type
+      },
+      ipAddress
+    });
+
+    logger.info(`[DELETE] Coupon ${id} (${coupon.code}) deleted by admin ${adminId}`);
+
+    return {
+      message: 'Coupon deleted successfully',
+      couponId: id,
+      code: coupon.code
+    };
   }
 
   async validateCoupon(code: string, cartTotal: number) {
@@ -89,7 +122,7 @@ class CouponService {
   async getAll(query?: any) { return this.getCoupons(query); }
   async create(data: any) { return this.createCoupon(data); }
   async update(id: string, data: any) { return this.updateCoupon(id, data); }
-  async delete(id: string) { return this.deleteCoupon(id); }
+  async delete(id: string, adminId?: string, ipAddress?: string) { return this.deleteCoupon(id, adminId, ipAddress); }
   async validate(code: string, cartTotal: number) { return this.validateCoupon(code, cartTotal); }
 }
 

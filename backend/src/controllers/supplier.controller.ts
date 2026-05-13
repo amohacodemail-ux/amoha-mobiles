@@ -65,8 +65,9 @@ class SupplierController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      await supplierService.delete(req.params.id);
-      sendMessage(res, 'Supplier deleted');
+      const adminId = (req as AuthenticatedRequest).user?.userId;
+      const result = await supplierService.delete(req.params.id, adminId, req.ip);
+      sendMessage(res, result?.message || 'Supplier deleted');
     } catch (error) {
       next(error);
     }

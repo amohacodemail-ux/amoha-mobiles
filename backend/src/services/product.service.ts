@@ -4,6 +4,7 @@ import { generateSku } from '../models/product.model';
 import { generateProductBarcode, isBarcodeExists, validateBarcode, BarcodeType } from '../utils/barcode.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import logger from '../utils/logger.util';
+import activityLog from './activity-log.service';
 
 /** Normalise a transformed product row so the frontend gets the shape it expects. */
 function normalizeProduct(p: any): any {
@@ -310,10 +311,10 @@ class ProductService {
     return transformRow(product);
   }
 
-  async deleteProduct(productId: string) {
+  async deleteProduct(productId: string, adminId?: string, ipAddress?: string) {
     const { data: product, error: fetchError } = await supabase
       .from('products')
-      .select('id, name')
+      .select('id, name, sku, stock')
       .eq('id', productId)
       .maybeSingle();
 
@@ -352,9 +353,28 @@ class ProductService {
     const { error } = await supabase.from('products').delete().eq('id', productId);
 
     if (!error) {
+      // Audit log the deletion
+      await activityLog.log({
+        adminId,
+        action: 'DELETE_PRODUCT',
+        entity: 'product',
+        entityId: productId,
+        details: {
+          productName: product.name,
+          sku: product.sku,
+          stock: product.stock,
+          reason: 'Hard delete with FK cleanup'
+        },
+        ipAddress
+      });
+
+      logger.info(`[DELETE] Product ${productId} (${product.name}) deleted by admin ${adminId}`);
+
       return {
         mode: 'deleted' as const,
         message: 'Product deleted successfully',
+        productId,
+        productName: product.name
       };
     }
 
@@ -583,7 +603,7 @@ class ProductService {
   async getByCategory(categoryId: string, query?: any) { return this.getProductsByCategory(categoryId, query); }
   async create(data: any) { return this.createProduct(data); }
   async update(id: string, data: any) { return this.updateProduct(id, data); }
-  async delete(id: string) { return this.deleteProduct(id); }
+  async delete(id: string, adminId?: string, ipAddress?: string) { return this.deleteProduct(id, adminId, ipAddress); }
   async getTrending(limit: number = 10) {
     const { data, error } = await supabase.from('products').select('*').eq('is_active', true).order('view_count', { ascending: false }).limit(limit);
     if (error) throw error;

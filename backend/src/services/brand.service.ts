@@ -1,6 +1,8 @@
 ﻿import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
+import activityLog from './activity-log.service';
+import logger from '../utils/logger.util';
 
 class BrandService {
   async getBrands(query: any = {}) {
@@ -46,7 +48,16 @@ class BrandService {
     return transformRow(data);
   }
 
-  async deleteBrand(id: string) {
+  async deleteBrand(id: string, adminId?: string, ipAddress?: string) {
+    // Fetch brand details for audit log
+    const { data: brand, error: fetchError } = await supabase
+      .from('brands')
+      .select('id, name')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!brand) throw new NotFoundError('Brand');
+
     // Check for linked products before attempting delete
     const { count, error: countError } = await supabase
       .from('products')
@@ -60,7 +71,23 @@ class BrandService {
     }
     const { error } = await supabase.from('brands').delete().eq('id', id);
     if (error) throw error;
-    return { message: 'Brand deleted successfully' };
+
+    // Audit log the deletion
+    await activityLog.log({
+      adminId,
+      action: 'DELETE_BRAND',
+      entity: 'brand',
+      entityId: id,
+      details: {
+        brandName: brand.name,
+        linkedProducts: count || 0
+      },
+      ipAddress
+    });
+
+    logger.info(`[DELETE] Brand ${id} (${brand.name}) deleted by admin ${adminId}`);
+
+    return { message: 'Brand deleted successfully', brandId: id, brandName: brand.name };
   }
 
   // Controller aliases
@@ -69,7 +96,7 @@ class BrandService {
   async getBySlug(slug: string) { return this.getBrandById(slug); }
   async create(data: any) { return this.createBrand(data); }
   async update(id: string, data: any) { return this.updateBrand(id, data); }
-  async delete(id: string) { return this.deleteBrand(id); }
+  async delete(id: string, adminId?: string, ipAddress?: string) { return this.deleteBrand(id, adminId, ipAddress); }
 }
 
 export default new BrandService();

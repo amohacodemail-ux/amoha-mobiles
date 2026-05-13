@@ -111,8 +111,8 @@ class ProductController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await productService.delete(req.params.id);
-      activityLogService.log({ adminId: (req as AuthenticatedRequest).user?.userId, action: 'delete', entity: 'product', entityId: req.params.id, details: `Deleted product`, ipAddress: req.ip }).catch(() => {});
+      const adminId = (req as AuthenticatedRequest).user?.userId;
+      const result = await productService.delete(req.params.id, adminId, req.ip);
       sendMessage(res, result?.message || 'Product deleted');
     } catch (error) {
       next(error);

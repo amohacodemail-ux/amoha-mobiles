@@ -55,9 +55,9 @@ class BannerController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      await bannerService.delete(req.params.id);
-      activityLogService.log({ adminId: (req as AuthenticatedRequest).user?.userId, action: 'delete', entity: 'banner', entityId: req.params.id, details: 'Deleted banner', ipAddress: req.ip }).catch(() => {});
-      sendMessage(res, 'Banner deleted');
+      const adminId = (req as AuthenticatedRequest).user?.userId;
+      const result = await bannerService.delete(req.params.id, adminId, req.ip);
+      sendMessage(res, result?.message || 'Banner deleted');
     } catch (error) {
       next(error);
     }

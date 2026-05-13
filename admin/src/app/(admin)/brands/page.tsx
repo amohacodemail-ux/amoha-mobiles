@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { brandService } from '@/services/brand.service';
 import { ImageUploader } from '@/components/shared/image-uploader';
 import { formatDate } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import type { Brand } from '@/types';
 
 const schema = z.object({
@@ -34,7 +35,10 @@ export default function BrandsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteBrand, setDeleteBrand] = useState<Brand | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const { canDelete, canCreate, canEdit } = useModulePermissions(MODULES.BRANDS);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -70,12 +74,29 @@ export default function BrandsPage() {
     } catch (err: any) { toast.error(err?.response?.data?.message ?? 'Failed to save brand'); }
   };
 
+  const openDelete = (brand: Brand) => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete brands');
+      return;
+    }
+    setDeleteId(brand._id);
+    setDeleteBrand(brand);
+  };
+
   const handleDelete = async () => {
-    if (!deleteId) return;
+    if (!deleteId || !deleteBrand) return;
     setDeleting(true);
-    try { await brandService.delete(deleteId); toast.success('Brand deleted'); setDeleteId(null); load(); }
-    catch (err: any) { toast.error(err?.response?.data?.message ?? 'Delete failed'); }
-    finally { setDeleting(false); }
+    try {
+      await brandService.delete(deleteId);
+      toast.success('Brand deleted');
+      setDeleteId(null);
+      setDeleteBrand(null);
+      load();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filtered = brands.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
@@ -101,8 +122,12 @@ export default function BrandsPage() {
       key: 'actions', header: 'Actions',
       render: (b) => (
         <div className="flex gap-2">
-          <Button variant="outline" size="icon-sm" onClick={() => openEdit(b)}><Pencil className="h-3.5 w-3.5" /></Button>
-          <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => setDeleteId(b._id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+          {canEdit && (
+            <Button variant="outline" size="icon-sm" onClick={() => openEdit(b)}><Pencil className="h-3.5 w-3.5" /></Button>
+          )}
+          {canDelete && (
+            <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => openDelete(b)}><Trash2 className="h-3.5 w-3.5" /></Button>
+          )}
         </div>
       ),
     },
@@ -111,7 +136,9 @@ export default function BrandsPage() {
   return (
     <div>
       <PageHeader title="Brands" description={`${brands.length} total brands`}>
-        <Button onClick={openAdd}><Plus className="h-4 w-4" />Add Brand</Button>
+        {canCreate && (
+          <Button onClick={openAdd}><Plus className="h-4 w-4" />Add Brand</Button>
+        )}
       </PageHeader>
 
       <DataTable columns={columns} data={filtered} loading={loading} searchValue={search} onSearchChange={setSearch} searchPlaceholder="Search brands..." rowKey={(b) => b._id} />
@@ -135,7 +162,17 @@ export default function BrandsPage() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmModal open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} loading={deleting} title="Delete Brand?" description="This may affect products associated with this brand." confirmLabel="Delete" />
+      <ConfirmModal
+        open={!!deleteId}
+        onClose={() => { setDeleteId(null); setDeleteBrand(null); }}
+        onConfirm={handleDelete}
+        loading={deleting}
+        title="Delete Brand?"
+        description={deleteBrand
+          ? `Are you sure you want to delete "${deleteBrand.name}"? Brands linked to products cannot be deleted.`
+          : "This may affect products associated with this brand."}
+        confirmLabel="Delete"
+      />
     </div>
   );
 }

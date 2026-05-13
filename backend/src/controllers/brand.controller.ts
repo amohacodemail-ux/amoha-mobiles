@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import brandService from '../services/brand.service';
 import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
+import { AuthenticatedRequest } from '../types';
 
 class BrandController {
   async getAll(_req: Request, res: Response, next: NextFunction) {
@@ -50,7 +51,8 @@ class BrandController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await brandService.delete(req.params.id);
+      const adminId = (req as AuthenticatedRequest).user?.userId;
+      const result = await brandService.delete(req.params.id, adminId, req.ip);
       sendMessage(res, result?.message || 'Brand deleted');
     } catch (error) {
       next(error);

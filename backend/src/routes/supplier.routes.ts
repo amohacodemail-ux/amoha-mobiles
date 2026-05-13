@@ -37,11 +37,11 @@ router.get('/', canAccessPurchase, supplierController.getAll);
 router.get('/:id', canAccessPurchase, supplierController.getById);
 router.post('/', canAccessPurchase, validate(createSupplierSchema), supplierController.create);
 router.put('/:id', canAccessPurchase, validate(updateSupplierSchema), supplierController.update);
-router.delete('/:id', canAccessAdminOnly, supplierController.delete);
+router.delete('/:id', canAccessPurchase, supplierController.delete);
 
 // Supplier Products
 router.get('/:id/products', canAccessPurchase, supplierController.getSupplierProducts);
 router.post('/:id/products', canAccessPurchase, validate(assignProductSchema), supplierController.assignProduct);
-router.delete('/:id/products/:productId', canAccessAdminOnly, supplierController.removeProduct);
+router.delete('/:id/products/:productId', canAccessPurchase, supplierController.removeProduct);
 
 export default router;
