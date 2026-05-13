@@ -87,22 +87,31 @@ class UserController {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
-      // If force delete, remove associated records first
+      // If force delete, remove ALL associated records first
       if (forceDelete) {
-        // Get cancelled order IDs for this user
-        const { data: cancelledOrders } = await supabase
+        // Get ALL order IDs for this user (any status)
+        const { data: userOrders } = await supabase
           .from('orders')
           .select('id')
-          .eq('user_id', targetUserId)
-          .eq('status', 'cancelled');
+          .eq('user_id', targetUserId);
         
-        const orderIds = cancelledOrders?.map(o => o.id) || [];
+        const orderIds = userOrders?.map(o => o.id) || [];
         
         if (orderIds.length > 0) {
-          // Delete order items and history for cancelled orders
+          // Delete order items and history for ALL orders
           await supabase.from('order_items').delete().in('order_id', orderIds);
           await supabase.from('order_status_history').delete().in('order_id', orderIds);
+          await supabase.from('payment_transactions').delete().in('order_id', orderIds);
+          await supabase.from('returns').delete().in('order_id', orderIds);
           await supabase.from('orders').delete().in('id', orderIds);
+        }
+        
+        // Delete user's service requests
+        const { data: serviceRequests } = await supabase.from('service_requests').select('id').eq('user_id', targetUserId);
+        const serviceRequestIds = serviceRequests?.map(s => s.id) || [];
+        if (serviceRequestIds.length > 0) {
+          await supabase.from('service_request_items').delete().in('service_request_id', serviceRequestIds);
+          await supabase.from('service_requests').delete().in('id', serviceRequestIds);
         }
         
         // Delete user's addresses
@@ -114,8 +123,29 @@ class UserController {
         // Delete user's wishlist
         await supabase.from('wishlists').delete().eq('user_id', targetUserId);
         
-        // Delete user's wallet transactions (but keep wallet record for audit)
+        // Delete user's wallet transactions and wallet
         await supabase.from('wallet_transactions').delete().eq('user_id', targetUserId);
+        await supabase.from('wallets').delete().eq('user_id', targetUserId);
+        
+        // Delete user's activity logs
+        await supabase.from('activity_logs').delete().eq('user_id', targetUserId);
+        
+        // Delete user's KYC documents
+        await supabase.from('kyc_documents').delete().eq('user_id', targetUserId);
+        
+        // Delete user's notifications
+        await supabase.from('notifications').delete().eq('user_id', targetUserId);
+        
+        // Delete user's reviews
+        await supabase.from('reviews').delete().eq('user_id', targetUserId);
+        
+        // Delete user's contact/support tickets
+        const { data: supportTickets } = await supabase.from('support_tickets').select('id').eq('user_id', targetUserId);
+        const supportTicketIds = supportTickets?.map(t => t.id) || [];
+        if (supportTicketIds.length > 0) {
+          await supabase.from('support_ticket_responses').delete().in('ticket_id', supportTicketIds);
+          await supabase.from('support_tickets').delete().in('id', supportTicketIds);
+        }
       }
 
       await userService.deleteUser(targetUserId);
