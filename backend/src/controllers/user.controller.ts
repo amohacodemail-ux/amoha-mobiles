@@ -195,17 +195,24 @@ class UserController {
     } catch (error: any) {
       // Handle foreign key constraint errors
       if (error.code === '23503') {
-        console.error('Foreign key constraint error:', error.message, error.details);
+        console.error('Foreign key constraint error:', error.message, error.details, error.table);
         return res.status(400).json({
           success: false,
-          message: `Cannot delete user: ${error.message || 'they have associated records'}. Details: ${error.details || 'unknown constraint'}`
+          message: `Cannot delete user: foreign key constraint on table "${error.table || 'unknown'}". ${error.message || ''}`
         });
       }
-      // Log any other errors
-      console.error('Delete user error:', error);
+      // Log any other errors with full details
+      console.error('Delete user error:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        stack: error.stack
+      });
       return res.status(400).json({
         success: false,
-        message: error.message || 'Failed to delete user'
+        message: error.message || 'Failed to delete user',
+        code: error.code || 'UNKNOWN_ERROR'
       });
     }
   }
