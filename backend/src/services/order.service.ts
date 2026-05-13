@@ -371,6 +371,41 @@ class OrderService {
     const order = await this.getOrderById(orderId);
     return { order, statusHistory: (data || []).map(transformRow) };
   }
+
+  async delete(orderId: string, adminId?: string, ipAddress?: string) {
+    // Check if order exists
+    const { data: order, error: findError } = await supabase.from('orders').select('id, status, order_number').eq('id', orderId).maybeSingle();
+    if (findError) throw findError;
+    if (!order) throw new Error('Order not found');
+
+    // Only allow deleting cancelled orders
+    if (order.status !== 'cancelled') {
+      throw new Error('Only cancelled orders can be deleted');
+    }
+
+    // Delete related records first (to avoid foreign key constraints)
+    await supabase.from('order_items').delete().eq('order_id', orderId);
+    await supabase.from('order_status_history').delete().eq('order_id', orderId);
+
+    // Delete the order
+    const { error: deleteError } = await supabase.from('orders').delete().eq('id', orderId);
+    if (deleteError) throw deleteError;
+
+    // Log the deletion
+    if (adminId) {
+      const { default: activityLog } = await import('./activity-log.service');
+      activityLog.log({
+        adminId,
+        action: 'delete',
+        entity: 'order',
+        entityId: orderId,
+        details: `Deleted cancelled order ${order.order_number}`,
+        ipAddress
+      }).catch(() => {});
+    }
+
+    return { message: 'Order deleted successfully', orderId };
+  }
 }
 
 export default new OrderService();

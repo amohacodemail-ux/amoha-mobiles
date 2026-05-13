@@ -7,6 +7,7 @@ import { AuthenticatedRequest } from '../types';
 import { sendSuccess, sendMessage } from '../utils/response.util';
 import { notifyKyc } from '../utils/notify';
 import { sendKycStatusEmail } from '../utils/email.util';
+import activityLog from '../services/activity-log.service';
 
 class UserController {
   async getAddresses(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -70,9 +71,44 @@ class UserController {
 
   async deleteUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      await userService.deleteUser(req.params.id);
-      sendMessage(res, 'User deleted');
-    } catch (error) { next(error); }
+      const targetUserId = req.params.id;
+      const currentUserId = req.user?.userId;
+
+      // Prevent self-deletion
+      if (targetUserId === currentUserId) {
+        return res.status(400).json({ success: false, message: 'You cannot delete your own account' });
+      }
+
+      // Check if user exists first
+      const { data: user, error: findError } = await supabase.from('users').select('id, email').eq('id', targetUserId).maybeSingle();
+      if (findError) throw findError;
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      await userService.deleteUser(targetUserId);
+
+      // Log the deletion
+      activityLog.log({
+        adminId: currentUserId,
+        action: 'delete',
+        entity: 'user',
+        entityId: targetUserId,
+        details: `Deleted user ${user.email}`,
+        ipAddress: req.ip
+      }).catch(() => {});
+
+      sendMessage(res, 'User deleted successfully');
+    } catch (error: any) {
+      // Handle foreign key constraint errors
+      if (error.code === '23503') {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot delete user: they have associated records (orders, addresses, etc.). Please reassign or delete those first.'
+        });
+      }
+      next(error);
+    }
   }
 
   async submitKyc(req: AuthenticatedRequest, res: Response, next: NextFunction) {
