@@ -222,7 +222,9 @@ export default function BillingPage() {
       setOrders((prev) => prev.filter((o) => (o._id || o.id) !== deleteOrderId));
       setTotalOrders((prev) => Math.max(0, prev - 1));
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to delete order');
+      const errorMsg = error?.response?.data?.message || 'Failed to delete order';
+      alert('Delete failed: ' + errorMsg + '\n\nStatus: ' + error?.response?.status);
+      toast.error(errorMsg);
     } finally {
       setDeleting(false);
     }
