@@ -90,6 +90,9 @@ class QaService {
     if (data) await supabase.from('qa_answers').update({ upvotes: (data.upvotes || 0) + 1 }).eq('id', answerId);
   }
   async deleteQuestion(questionId: string, _userId?: string, _isAdmin?: boolean) {
+    // Delete linked answers first
+    await supabase.from('qa_answers').delete().eq('question_id', questionId);
+    // Then delete the question
     const { error } = await supabase.from('product_qa').delete().eq('id', questionId);
     if (error) throw error;
   }

@@ -250,7 +250,11 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 // ====== DELETE purchase request ======
 router.delete('/:id', canAccessAdminOnly, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { error } = await supabase.from('purchase_requests').delete().eq('id', req.params.id);
+    const prId = req.params.id;
+    // Delete linked purchase request items first
+    await supabase.from('purchase_request_items').delete().eq('purchase_request_id', prId);
+    // Then delete the purchase request
+    const { error } = await supabase.from('purchase_requests').delete().eq('id', prId);
     if (error) throw error;
     sendMessage(res, 'Purchase request deleted');
   } catch (error) {
