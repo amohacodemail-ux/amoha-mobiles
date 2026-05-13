@@ -48,6 +48,9 @@ class ServiceRequestService {
   }
 
   async deleteServiceRequest(id: string) {
+    // Delete linked service request items first
+    await supabase.from('service_request_items').delete().eq('service_request_id', id);
+    // Then delete the service request
     const { error } = await supabase.from('service_requests').delete().eq('id', id);
     if (error) throw error;
   }

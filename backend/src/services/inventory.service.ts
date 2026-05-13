@@ -41,6 +41,17 @@ class InventoryService {
   }
 
   async deleteWarehouse(id: string) {
+    // Check for linked inventory/stock entries
+    const { count, error: countError } = await supabase
+      .from('inventory')
+      .select('*', { count: 'exact', head: true })
+      .eq('warehouse_id', id);
+    
+    if (countError) throw countError;
+    if (count && count > 0) {
+      throw new Error(`Cannot delete warehouse: ${count} inventory item(s) linked. Reassign or delete inventory first.`);
+    }
+    
     const { error } = await supabase.from('warehouses').delete().eq('id', id);
     if (error) throw error;
   }
