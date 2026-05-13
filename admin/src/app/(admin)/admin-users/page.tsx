@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePermissions, getRoleBadgeColor, getRoleDisplayName, type UserRole } from '@/hooks/usePermissions';
 import { ConfirmModal } from '@/components/shared/confirm-modal';
 import apiClient from '@/lib/api-client';
+import Cookies from 'js-cookie';
 
 interface AdminUser {
   id: string;
@@ -90,11 +91,15 @@ export default function AdminUsersPage() {
     if (!deleteUserId) return;
     setDeleting(true);
     try {
+      console.log('Deleting user:', deleteUserId);
+      console.log('Token exists:', !!Cookies.get('admin_token'));
       await apiClient.delete(`/admin/users/${deleteUserId}`);
       setMessage('User deleted successfully');
       setDeleteUserId(null);
       setUsers((prev) => prev.filter((u) => u.id !== deleteUserId));
     } catch (error: any) {
+      console.error('Delete error:', error);
+      console.error('Error response:', error?.response?.data);
       setMessage(error?.response?.data?.message || 'Failed to delete user');
     } finally {
       setDeleting(false);
