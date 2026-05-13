@@ -177,6 +177,12 @@ class UserController {
         
         // Delete user's RFQs
         await supabase.from('rfqs').delete().eq('created_by', targetUserId);
+        
+        // Delete user's inventory audit logs
+        await supabase.from('inventory_audit_log').delete().eq('performed_by', targetUserId);
+        
+        // Delete user's inventory ledger entries
+        await supabase.from('inventory_ledger').delete().eq('created_by', targetUserId);
       }
 
       await userService.deleteUser(targetUserId);
