@@ -17,6 +17,7 @@ import {
   DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface AdminUser {
   id: string;
@@ -102,7 +103,7 @@ export default function AdminUsersPage() {
     try {
       console.log('Deleting user:', deleteUserId, 'Force:', forceDelete);
       await apiClient.delete(`/admin/users/${deleteUserId}?force=${forceDelete}`);
-      setMessage('User deleted successfully');
+      toast.success(`User "${deleteUserName}" deleted successfully`);
       setDeleteUserId(null);
       setDeleteError(null);
       setUsers((prev) => prev.filter((u) => u.id !== deleteUserId));

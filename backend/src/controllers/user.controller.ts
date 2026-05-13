@@ -80,11 +80,19 @@ class UserController {
         return res.status(400).json({ success: false, message: 'You cannot delete your own account' });
       }
 
-      // Check if user exists first
-      const { data: user, error: findError } = await supabase.from('users').select('id, email').eq('id', targetUserId).maybeSingle();
+      // Check if user exists and get their role
+      const { data: user, error: findError } = await supabase.from('users').select('id, email, role').eq('id', targetUserId).maybeSingle();
       if (findError) throw findError;
       if (!user) {
         return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      // Prevent deleting the last admin
+      if (user.role === 'admin') {
+        const { count: adminCount } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'admin');
+        if (adminCount && adminCount <= 1) {
+          return res.status(400).json({ success: false, message: 'Cannot delete the last admin user. Please create another admin first.' });
+        }
       }
 
       // If force delete, remove ALL associated records first
