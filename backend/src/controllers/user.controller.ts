@@ -183,6 +183,30 @@ class UserController {
         
         // Delete user's inventory ledger entries
         await supabase.from('inventory_ledger').delete().eq('created_by', targetUserId);
+        
+        // Delete user's cart
+        await supabase.from('carts').delete().eq('user_id', targetUserId);
+        
+        // Delete user's CRM notes
+        await supabase.from('crm_notes').delete().eq('user_id', targetUserId);
+        
+        // Delete user's customer notes
+        await supabase.from('customer_notes').delete().eq('user_id', targetUserId);
+        
+        // Delete user's customer tags
+        await supabase.from('customer_tags').delete().eq('user_id', targetUserId);
+        
+        // Delete user's product views
+        await supabase.from('product_views').delete().eq('user_id', targetUserId);
+        
+        // Delete user's QA questions and answers
+        const { data: userQuestions } = await supabase.from('product_qa').select('id').eq('user_id', targetUserId);
+        const questionIds = userQuestions?.map(q => q.id) || [];
+        if (questionIds.length > 0) {
+          await supabase.from('qa_answers').delete().in('question_id', questionIds);
+          await supabase.from('product_qa').delete().in('id', questionIds);
+        }
+        await supabase.from('qa_answers').delete().eq('user_id', targetUserId);
       }
 
       await userService.deleteUser(targetUserId);
