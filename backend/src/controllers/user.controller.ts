@@ -73,6 +73,7 @@ class UserController {
     try {
       const targetUserId = req.params.id;
       const currentUserId = req.user?.userId;
+      const forceDelete = req.query.force === 'true';
 
       // Prevent self-deletion
       if (targetUserId === currentUserId) {
@@ -86,6 +87,37 @@ class UserController {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
 
+      // If force delete, remove associated records first
+      if (forceDelete) {
+        // Get cancelled order IDs for this user
+        const { data: cancelledOrders } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('user_id', targetUserId)
+          .eq('status', 'cancelled');
+        
+        const orderIds = cancelledOrders?.map(o => o.id) || [];
+        
+        if (orderIds.length > 0) {
+          // Delete order items and history for cancelled orders
+          await supabase.from('order_items').delete().in('order_id', orderIds);
+          await supabase.from('order_status_history').delete().in('order_id', orderIds);
+          await supabase.from('orders').delete().in('id', orderIds);
+        }
+        
+        // Delete user's addresses
+        await supabase.from('addresses').delete().eq('user_id', targetUserId);
+        
+        // Delete user's cart items
+        await supabase.from('cart_items').delete().eq('user_id', targetUserId);
+        
+        // Delete user's wishlist
+        await supabase.from('wishlists').delete().eq('user_id', targetUserId);
+        
+        // Delete user's wallet transactions (but keep wallet record for audit)
+        await supabase.from('wallet_transactions').delete().eq('user_id', targetUserId);
+      }
+
       await userService.deleteUser(targetUserId);
 
       // Log the deletion
@@ -94,11 +126,11 @@ class UserController {
         action: 'delete',
         entity: 'user',
         entityId: targetUserId,
-        details: `Deleted user ${user.email}`,
+        details: `Deleted user ${user.email}${forceDelete ? ' (force delete - removed associated records)' : ''}`,
         ipAddress: req.ip
       }).catch(() => {});
 
-      sendMessage(res, 'User deleted successfully');
+      sendMessage(res, forceDelete ? 'User and associated records deleted successfully' : 'User deleted successfully');
     } catch (error: any) {
       // Handle foreign key constraint errors
       if (error.code === '23503') {

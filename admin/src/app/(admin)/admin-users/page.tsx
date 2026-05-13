@@ -12,6 +12,11 @@ import { usePermissions, getRoleBadgeColor, getRoleDisplayName, type UserRole } 
 import { ConfirmModal } from '@/components/shared/confirm-modal';
 import apiClient from '@/lib/api-client';
 import Cookies from 'js-cookie';
+import {
+  Dialog, DialogContent, DialogDescription,
+  DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { AlertTriangle } from 'lucide-react';
 
 interface AdminUser {
   id: string;
@@ -37,6 +42,8 @@ export default function AdminUsersPage() {
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [deleteUserName, setDeleteUserName] = useState<string>('');
   const [deleting, setDeleting] = useState(false);
+  const [forceDelete, setForceDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -85,23 +92,24 @@ export default function AdminUsersPage() {
   const openDelete = (user: AdminUser) => {
     setDeleteUserId(user.id);
     setDeleteUserName(user.name);
+    setForceDelete(false);
+    setDeleteError(null);
   };
 
   const handleDelete = async () => {
     if (!deleteUserId) return;
     setDeleting(true);
     try {
-      console.log('Deleting user:', deleteUserId);
-      console.log('Token exists:', !!Cookies.get('admin_token'));
-      await apiClient.delete(`/admin/users/${deleteUserId}`);
+      console.log('Deleting user:', deleteUserId, 'Force:', forceDelete);
+      await apiClient.delete(`/admin/users/${deleteUserId}?force=${forceDelete}`);
       setMessage('User deleted successfully');
       setDeleteUserId(null);
+      setDeleteError(null);
       setUsers((prev) => prev.filter((u) => u.id !== deleteUserId));
     } catch (error: any) {
       console.error('Delete error:', error);
       const errorMsg = error?.response?.data?.message || 'Failed to delete user';
-      alert('Delete failed: ' + errorMsg); // Temporary alert to see exact error
-      setMessage(errorMsg);
+      setDeleteError(errorMsg);
     } finally {
       setDeleting(false);
     }
@@ -270,15 +278,55 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
 
-      <ConfirmModal
-        open={!!deleteUserId}
-        onClose={() => setDeleteUserId(null)}
-        onConfirm={handleDelete}
-        loading={deleting}
-        title="Delete Employee?"
-        description={`Are you sure you want to delete "${deleteUserName}"? This action cannot be undone and will permanently remove the user.`}
-        confirmLabel="Delete Employee"
-      />
+      {/* Custom Delete Dialog with Force Delete Option */}
+      <Dialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-destructive/15">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <DialogTitle>Delete Employee?</DialogTitle>
+            </div>
+            <DialogDescription className="mt-2">
+              Are you sure you want to delete &quot;{deleteUserName}&quot;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                <strong>Warning:</strong> {deleteError}
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="forceDelete"
+                  checked={forceDelete}
+                  onChange={(e) => setForceDelete(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-destructive focus:ring-destructive"
+                />
+                <label htmlFor="forceDelete" className="text-sm text-gray-700 cursor-pointer">
+                  Force delete - also remove all linked orders and addresses
+                </label>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteUserId(null)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete Employee'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
