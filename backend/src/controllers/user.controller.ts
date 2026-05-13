@@ -146,6 +146,29 @@ class UserController {
           await supabase.from('support_ticket_responses').delete().in('ticket_id', supportTicketIds);
           await supabase.from('support_tickets').delete().in('id', supportTicketIds);
         }
+        
+        // Delete user's supplier entries (and clear inventory references)
+        const { data: supplierEntries } = await supabase.from('supplier_entries').select('id').eq('created_by', targetUserId);
+        const supplierEntryIds = supplierEntries?.map(e => e.id) || [];
+        if (supplierEntryIds.length > 0) {
+          // First clear the foreign key references in inventory
+          await supabase.from('inventory').update({ supplier_entry_id: null }).in('supplier_entry_id', supplierEntryIds);
+          // Also clear in inventory_ledger if exists
+          await supabase.from('inventory_ledger').update({ supplier_entry_id: null }).in('supplier_entry_id', supplierEntryIds);
+          // Then delete the supplier entries
+          await supabase.from('supplier_entries').delete().in('id', supplierEntryIds);
+        }
+        
+        // Delete user's purchase requests
+        const { data: purchaseRequests } = await supabase.from('purchase_requests').select('id').eq('created_by', targetUserId);
+        const purchaseRequestIds = purchaseRequests?.map(r => r.id) || [];
+        if (purchaseRequestIds.length > 0) {
+          await supabase.from('purchase_request_items').delete().in('purchase_request_id', purchaseRequestIds);
+          await supabase.from('purchase_requests').delete().in('id', purchaseRequestIds);
+        }
+        
+        // Delete user's RFQs
+        await supabase.from('rfqs').delete().eq('created_by', targetUserId);
       }
 
       await userService.deleteUser(targetUserId);
