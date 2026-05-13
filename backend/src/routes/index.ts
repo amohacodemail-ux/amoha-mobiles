@@ -26,8 +26,12 @@ import supplierEntryRoutes from './supplier-entry.routes';
 import inventoryLedgerRoutes from './inventory-ledger.routes';
 import rfqRoutes from './rfq.routes';
 import purchaseRequestRoutes from './purchase-request.routes';
+import healthRoutes from './health.routes';
 
 const router = Router();
+
+// Health check (no auth required)
+router.use('/health', healthRoutes);
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
