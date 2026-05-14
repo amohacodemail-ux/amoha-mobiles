@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'Mobile Repair Services in Coimbatore – Amohamobiles Idikarai',
@@ -58,8 +57,7 @@ const faqJsonLd = {
 export default function ServicesLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <Script
-        id="faq-schema"
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
