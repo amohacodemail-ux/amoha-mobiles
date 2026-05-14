@@ -3,7 +3,15 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Contact Amohamobiles – Mobile Shop in Idikarai, Coimbatore',
   description: 'Contact Amohamobiles in Idikarai, Coimbatore. Call, visit or message us for product enquiries, repairs & support. Mon–Sat 10AM–8PM.',
-  keywords: ['contact amohamobiles coimbatore', 'mobile shop phone number coimbatore', 'amohamobiles address idikarai', 'mobile store contact coimbatore'],
+  keywords: [
+    'contact amohamobiles coimbatore', 'mobile shop phone number coimbatore',
+    'amohamobiles address idikarai', 'mobile store contact coimbatore',
+    'amohamobiles therveethi idikarai', 'mobile shop address coimbatore',
+    'mobile store near idikarai', 'amoha mobiles phone number',
+    'visit mobile shop coimbatore', 'mobile shop location coimbatore',
+    'mobile shop open now coimbatore', 'mobile shop timing coimbatore',
+    'whatsapp mobile shop coimbatore', 'mobile shop directions coimbatore',
+  ],
   openGraph: {
     title: 'Contact Amohamobiles – Mobile Shop in Idikarai, Coimbatore',
     description: 'Contact Amohamobiles in Idikarai, Coimbatore for product enquiries, repairs & support. Mon–Sat 10AM–8PM.',

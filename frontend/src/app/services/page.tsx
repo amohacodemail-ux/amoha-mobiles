@@ -156,6 +156,44 @@ export default function ServicesPage() {
         </div>
       </div>
 
+      {/* FAQ Section – Local SEO / Featured Snippets */}
+      <div className="page-container pb-10 sm:pb-14">
+        <div className="rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.01] p-6 sm:p-8">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">
+            Frequently Asked Questions – Mobile Repair in Coimbatore
+          </h2>
+          <div className="space-y-5">
+            {[
+              {
+                q: 'Where is the best mobile repair shop in Coimbatore?',
+                a: 'Amohamobiles at Therveethi, Idikarai, Coimbatore is one of the best mobile repair shops in Coimbatore. We offer screen replacement, battery change, charging port repair, water damage repair and more with genuine parts and warranty.',
+              },
+              {
+                q: 'How much does mobile screen replacement cost in Coimbatore?',
+                a: 'Screen replacement at Amohamobiles, Coimbatore starts from ₹799 depending on the device model. We use genuine or high-quality OEM parts for Samsung, iPhone, OnePlus, Xiaomi, Realme and all major brands.',
+              },
+              {
+                q: 'Do you repair iPhones in Coimbatore?',
+                a: 'Yes, Amohamobiles provides professional iPhone repair services in Coimbatore. We repair all iPhone models – screen, battery, charging port, back glass and more at competitive prices with warranty.',
+              },
+              {
+                q: 'How long does mobile repair take at your Coimbatore shop?',
+                a: 'Most repairs at our Idikarai, Coimbatore store are completed within 30 minutes to 2 hours. Complex repairs like motherboard or water damage may take 1–2 days. Walk in Monday to Saturday, 10AM–8PM.',
+              },
+              {
+                q: 'Do you offer home pickup for mobile repair in Coimbatore?',
+                a: 'Yes, Amohamobiles offers doorstep mobile repair service and pickup across Coimbatore – Idikarai, Gandhipuram, RS Puram, Saravanampatti, Peelamedu and nearby areas. Contact us on WhatsApp at +91 63801 23183.',
+              },
+            ].map(({ q, a }) => (
+              <div key={q} className="border-b border-gray-100 dark:border-white/[0.05] pb-5 last:border-0 last:pb-0">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{q}</h3>
+                <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Request Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

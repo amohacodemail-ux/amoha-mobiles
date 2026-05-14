@@ -40,13 +40,13 @@ export default function AboutPage() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">Our Story</h2>
           <div className="mt-6 space-y-4 text-sm leading-relaxed text-gray-600 dark:text-gray-400 sm:text-base sm:leading-relaxed">
             <p>
-              {siteName} started as a small mobile shop in Idikarai, Coimbatore with a simple goal: to offer genuine products at fair prices with honest advice. Over the years, we have grown into the most trusted mobile store in Coimbatore for thousands of customers.
+              {siteName} started as a small mobile shop in <strong>Idikarai, Coimbatore</strong> with a simple goal: to offer genuine products at fair prices with honest advice. Over the years, we have grown into the most trusted mobile store in Coimbatore for thousands of customers across Gandhipuram, RS Puram, Saravanampatti, Peelamedu, Singanallur, and the wider Tamil Nadu region.
             </p>
             <p>
-              Whether you are looking for the latest flagship smartphone, a budget-friendly option, quality accessories, or professional phone repair in Coimbatore &mdash; we have you covered. Our team of certified technicians and knowledgeable staff ensures you always get the best experience.
+              Whether you are looking for the latest flagship smartphone &mdash; <strong>Samsung, Apple iPhone, OnePlus, Xiaomi, Realme, Vivo, Oppo, Nothing Phone</strong> &mdash; a budget-friendly option under ₹10,000, quality accessories, or professional <strong>phone repair in Coimbatore</strong>, we have you covered. Our team of certified technicians and knowledgeable staff ensures you always get the best experience.
             </p>
             <p>
-              With our online store, customers across Coimbatore and Tamil Nadu can shop from the comfort of their homes. Every product comes with brand warranty, and our dedicated support team is just a call away.
+              Located at <strong>Therveethi, Idikarai, Coimbatore – 641020</strong>, we are the go-to mobile shop for customers looking for the best mobile deals in Coimbatore. With our online store, customers across Tamil Nadu can shop from the comfort of their homes. Every product comes with brand warranty, and our dedicated support team is just a call or <Link href="/contact" className="text-primary-500 hover:underline">WhatsApp</Link> away.
             </p>
           </div>
         </div>

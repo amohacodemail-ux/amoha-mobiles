@@ -529,10 +529,13 @@ export default function HomePage() {
         <div className="page-container">
           <div className="rounded-2xl bg-gradient-to-br from-primary-50 to-white border border-primary-100 dark:from-primary-950/30 dark:to-surface-50 dark:border-primary-900/30 p-6 sm:p-8">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">
-              Amohamobiles – Your Trusted Mobile Shop in Idikarai, Coimbatore
+              Amohamobiles – #1 Mobile Shop in Idikarai, Coimbatore
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400 max-w-3xl">
-              Looking for the best mobile shop in Coimbatore? Amohamobiles in Idikarai is your one-stop destination for the latest smartphones, mobile accessories, and expert phone repair services. We stock Samsung, Apple iPhone, OnePlus, Xiaomi, Realme, and more at the most competitive prices in Coimbatore, Tamil Nadu.
+              Looking for the <strong>best mobile shop in Coimbatore</strong>? Amohamobiles in <strong>Idikarai, Coimbatore</strong> is your one-stop destination for the latest smartphones, mobile accessories, and expert phone repair services. We stock <strong>Samsung, Apple iPhone, OnePlus, Xiaomi, Realme, Vivo, Oppo</strong>, and more at the most competitive prices in Coimbatore, Tamil Nadu.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400 max-w-3xl">
+              Conveniently located at <strong>Therveethi, Idikarai</strong>, we serve customers from <strong>Gandhipuram, RS Puram, Saravanampatti, Peelamedu, Singanallur, Kavundampalayam, Kalapatti</strong> and all across Coimbatore. Open Monday to Saturday, 10AM – 8PM. Visit us or <Link href="/contact" className="text-primary-500 hover:underline">contact us</Link> today.
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Link href="/products" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
@@ -553,7 +556,18 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              {['Mobile Shop in Coimbatore', 'Mobile Shop in Idikarai', 'Phone Repair Coimbatore', 'Buy Smartphones Coimbatore', 'Mobile Accessories Coimbatore'].map((tag) => (
+              {[
+                'Mobile Shop in Coimbatore',
+                'Mobile Shop in Idikarai',
+                'Phone Repair Coimbatore',
+                'Buy Smartphones Coimbatore',
+                'Mobile Accessories Coimbatore',
+                'Samsung Shop Coimbatore',
+                'iPhone Shop Coimbatore',
+                '5G Phones Coimbatore',
+                'Budget Mobiles Coimbatore',
+                'OnePlus Coimbatore',
+              ].map((tag) => (
                 <span key={tag} className="rounded-full bg-primary-50 border border-primary-100 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/20 dark:border-primary-800/30 dark:text-primary-300">
                   {tag}
                 </span>
