@@ -115,10 +115,10 @@ export default function ServicesPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.15),transparent_50%)]" />
         <div className="page-container relative py-12 sm:py-16 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
-            What We <span className="text-primary-500 dark:text-primary-400">Offer</span>
+            Mobile Repair Services in <span className="text-primary-500 dark:text-primary-400">Coimbatore</span>
           </h1>
           <p className="mt-3 text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-            Professional mobile repair services by certified technicians. Fast turnaround, genuine parts, and warranty on all repairs.
+            Professional mobile repair services in Idikarai, Coimbatore by certified technicians. Fast turnaround, genuine parts, and warranty on all repairs.
           </p>
         </div>
       </div>

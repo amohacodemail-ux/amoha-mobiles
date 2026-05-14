@@ -100,10 +100,10 @@ export default function CategoryPage() {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
-              {category?.name || 'Category'}
+              {category?.name ? `${category.name} Mobiles in Coimbatore` : 'Category'}
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              {category?.description || `${totalProducts} product${totalProducts !== 1 ? 's' : ''} found`}
+              {category?.description || `${totalProducts} product${totalProducts !== 1 ? 's' : ''} found in Coimbatore`}
             </p>
           </div>
         </div>

@@ -54,21 +54,31 @@ export async function generateMetadata({
     maximumFractionDigits: 0,
   }).format(product.price);
 
-  const title = `${product.name} – Buy at ${price}`;
+  const title = `Buy ${product.name} in Coimbatore – ${price} | Amohamobiles`;
   const description =
     product.shortDescription ||
     product.description ||
-    `Buy ${product.name} online at AMOHA Mobiles. ${product.brand} smartphone with ${product.specifications?.ram || ''} RAM, ${product.specifications?.storage || ''} storage.`;
+    `Buy ${product.name} at best price in Coimbatore. ${product.brand} smartphone available at Amohamobiles, Idikarai – genuine warranty, fast delivery.`;
+
+  const imageAlt = `${product.name} – Buy at Amohamobiles Coimbatore`;
 
   return {
     title,
     description,
+    keywords: [
+      `${product.name} coimbatore`,
+      `buy ${product.name} idikarai`,
+      `${product.brand} phones coimbatore`,
+      `${product.name} price coimbatore`,
+      `${product.name} amohamobiles`,
+    ],
     openGraph: {
       title,
       description,
       type: 'website',
+      siteName: 'Amohamobiles',
       images: product.images?.[0]
-        ? [{ url: product.images[0], width: 800, height: 800, alt: product.name }]
+        ? [{ url: product.images[0], width: 800, height: 800, alt: imageAlt }]
         : [],
     },
     twitter: {
@@ -78,7 +88,7 @@ export async function generateMetadata({
       images: product.images?.[0] ? [product.images[0]] : [],
     },
     alternates: {
-      canonical: `/product/${slug}`,
+      canonical: `https://amohamobiles.com/product/${slug}`,
     },
   };
 }
@@ -91,7 +101,7 @@ export default async function ProductPage({
   const { slug } = await params;
   const product = await getProduct(slug);
 
-  const jsonLd = product
+  const productJsonLd = product
     ? {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -105,10 +115,27 @@ export default async function ProductPage({
           url: `https://amohamobiles.com/product/${slug}`,
           priceCurrency: 'INR',
           price: product.price,
+          priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           availability: product.inStock
             ? 'https://schema.org/InStock'
             : 'https://schema.org/OutOfStock',
-          seller: { '@type': 'Organization', name: 'AMOHA Mobiles' },
+          seller: {
+            '@type': 'LocalBusiness',
+            name: 'Amohamobiles',
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: 'Therveethi, Idikarai',
+              addressLocality: 'Coimbatore',
+              addressRegion: 'Tamil Nadu',
+              addressCountry: 'IN',
+            },
+          },
+          areaServed: 'Coimbatore',
+          shippingDetails: {
+            '@type': 'OfferShippingDetails',
+            shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+            shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'INR' },
+          },
         },
         ...(product.ratings > 0 && product.numReviews > 0
           ? {
@@ -124,14 +151,28 @@ export default async function ProductPage({
       }
     : null;
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://amohamobiles.com' },
+      { '@type': 'ListItem', position: 2, name: 'Products', item: 'https://amohamobiles.com/products' },
+      { '@type': 'ListItem', position: 3, name: product?.name || 'Product', item: `https://amohamobiles.com/product/${slug}` },
+    ],
+  };
+
   return (
     <>
-      {jsonLd && (
+      {productJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
         />
       )}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <ProductDetailClient />
     </>
   );

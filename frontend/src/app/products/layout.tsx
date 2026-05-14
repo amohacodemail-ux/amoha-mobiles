@@ -1,12 +1,14 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'All Smartphones & Mobiles',
-  description: 'Browse our complete collection of smartphones. Filter by brand, price, RAM, storage & more. Samsung, Apple, OnePlus, Xiaomi at best prices with warranty.',
+  title: 'Buy Smartphones & Mobiles in Coimbatore – Amohamobiles',
+  description: 'Buy latest smartphones in Coimbatore at Amohamobiles. Samsung, Apple iPhone, OnePlus, Xiaomi, Realme & more – best prices, genuine warranty. Serving Idikarai & Coimbatore.',
+  keywords: ['buy smartphones coimbatore', 'mobile phones coimbatore', 'best smartphones idikarai', 'Samsung mobiles coimbatore', 'iPhone coimbatore shop', 'OnePlus coimbatore', 'Xiaomi phones coimbatore', 'budget smartphones coimbatore', '5G phones coimbatore', 'mobile phones with warranty coimbatore'],
   openGraph: {
-    title: 'All Smartphones & Mobiles | AMOHA Mobiles',
-    description: 'Browse our complete collection of smartphones at best prices.',
+    title: 'Buy Smartphones & Mobiles in Coimbatore – Amohamobiles',
+    description: 'Buy Samsung, iPhone, OnePlus, Xiaomi & more at Amohamobiles Coimbatore. Best prices, genuine warranty, fast delivery.',
   },
+  alternates: { canonical: 'https://amohamobiles.com/products' },
 };
 
 export default function ProductsLayout({ children }: { children: React.ReactNode }) {

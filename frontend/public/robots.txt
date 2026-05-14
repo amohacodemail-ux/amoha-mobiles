@@ -4,5 +4,20 @@ Disallow: /api/
 Disallow: /profile/
 Disallow: /checkout/
 Disallow: /order-success/
+Disallow: /orders/
+Disallow: /wallet/
+Disallow: /returns/
+Disallow: /supplier/
+Disallow: /reset-password/
+Disallow: /forgot-password/
+
+# Allow important SEO pages
+Allow: /products
+Allow: /product/
+Allow: /categories
+Allow: /about
+Allow: /contact
+Allow: /services
+Allow: /search
 
 Sitemap: https://amohamobiles.com/sitemap.xml

@@ -26,10 +26,10 @@ export default function AboutPage() {
       <section className="relative overflow-hidden border-b border-gray-100 bg-gradient-to-br from-primary-50 via-white to-accent-50 dark:border-white/5 dark:from-primary-950/50 dark:via-[var(--background)] dark:to-accent-950/30">
         <div className="page-container py-16 text-center sm:py-20 lg:py-24">
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl lg:text-5xl">
-            About {siteName}
+            About {siteName} &ndash; Mobile Shop in Idikarai, Coimbatore
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-gray-600 dark:text-gray-400 sm:text-lg">
-            Your trusted neighbourhood mobile store &mdash; now online. We sell genuine smartphones, accessories, and provide expert repair services all under one roof.
+            Your trusted mobile shop in Idikarai, Coimbatore &mdash; now online. We sell genuine smartphones, accessories, and provide expert repair services in Tamil Nadu.
           </p>
         </div>
       </section>
@@ -40,13 +40,13 @@ export default function AboutPage() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">Our Story</h2>
           <div className="mt-6 space-y-4 text-sm leading-relaxed text-gray-600 dark:text-gray-400 sm:text-base sm:leading-relaxed">
             <p>
-              {siteName} started as a small mobile shop with a simple goal: to offer genuine products at fair prices with honest advice. Over the years, we have grown into a trusted destination for thousands of customers who rely on us for their mobile needs.
+              {siteName} started as a small mobile shop in Idikarai, Coimbatore with a simple goal: to offer genuine products at fair prices with honest advice. Over the years, we have grown into the most trusted mobile store in Coimbatore for thousands of customers.
             </p>
             <p>
-              Whether you are looking for the latest flagship smartphone, a budget-friendly option, quality accessories, or professional repair services &mdash; we have you covered. Our team of trained technicians and knowledgeable staff ensures you always get the best experience.
+              Whether you are looking for the latest flagship smartphone, a budget-friendly option, quality accessories, or professional phone repair in Coimbatore &mdash; we have you covered. Our team of certified technicians and knowledgeable staff ensures you always get the best experience.
             </p>
             <p>
-              With our online store, we have made it easier than ever to shop from the comfort of your home. Every product comes with brand warranty, and our dedicated support team is just a call away.
+              With our online store, customers across Coimbatore and Tamil Nadu can shop from the comfort of their homes. Every product comes with brand warranty, and our dedicated support team is just a call away.
             </p>
           </div>
         </div>

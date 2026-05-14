@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker, HiOutlineClock } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker, HiOutlineClock, HiOutlineChat } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { contactService, type ContactFormData } from '@/services/service.service';
 import { useSettingsStore } from '@/store/settings.store';
@@ -17,8 +17,8 @@ export default function ContactPage() {
 
   const siteName = settings?.siteName || 'AMOHA Mobiles';
   const contactEmail = settings?.contactEmail || 'support@amoha.in';
-  const contactPhone = settings?.contactPhone || '+91 98765 43210';
-  const storeAddress = settings?.address || 'Tamil Nadu, India';
+  const contactPhone = settings?.contactPhone || '+91 63801 23183';
+  const storeAddress = settings?.address || 'Therveethi, Idikarai, Coimbatore, Tamil Nadu 641020';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -50,10 +50,10 @@ export default function ContactPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.15),transparent_50%)]" />
         <div className="page-container relative py-12 sm:py-16 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
-            Contact <span className="text-primary-500 dark:text-primary-400">Us</span>
+            Contact <span className="text-primary-500 dark:text-primary-400">Amohamobiles</span>
           </h1>
           <p className="mt-3 text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-            Have a question or need help? Reach out to us and we&apos;ll respond as quickly as possible.
+            Visit our mobile shop in Idikarai, Coimbatore or reach out online. We&apos;re here to help with product queries, repairs, and orders.
           </p>
         </div>
       </div>
@@ -119,7 +119,39 @@ export default function ContactPage() {
                     <HiOutlineClock className="h-4 w-4 flex-shrink-0 text-primary-400" />
                     <span>Mon - Sat: 10:00 AM – 8:00 PM</span>
                   </div>
+                  <a
+                    href={`https://wa.me/${contactPhone.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 text-sm text-green-600 dark:text-green-400 hover:text-green-500 transition-colors font-medium"
+                  >
+                    <HiOutlineChat className="h-4 w-4 flex-shrink-0" />
+                    <span>Chat on WhatsApp</span>
+                  </a>
+                  <a
+                    href="https://maps.google.com/?q=Idikarai,Coimbatore,Tamil+Nadu"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 text-sm text-primary-500 dark:text-primary-400 hover:text-primary-600 transition-colors"
+                  >
+                    <HiOutlineLocationMarker className="h-4 w-4 flex-shrink-0" />
+                    <span>View on Google Maps</span>
+                  </a>
                 </div>
+              </div>
+
+              {/* Google Maps Embed */}
+              <div className="overflow-hidden rounded-lg border border-gray-100 dark:border-white/[0.06]">
+                <iframe
+                  title="Amohamobiles location – Idikarai, Coimbatore"
+                  src="https://maps.google.com/maps?q=Idikarai,Coimbatore,Tamil+Nadu&t=&z=14&ie=UTF8&iwloc=&output=embed"
+                  width="100%"
+                  height="200"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
               </div>
             </div>
 

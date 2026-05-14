@@ -1,15 +1,16 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker, HiOutlineChat } from 'react-icons/hi';
 import { useSettingsStore } from '@/store/settings.store';
 
 const footerLinks = {
   shop: [
     { label: 'All Mobiles', href: '/products' },
-    { label: 'Featured', href: '/products?sort=popular' },
+    { label: 'Featured Deals', href: '/products?sort=popular' },
     { label: 'New Arrivals', href: '/products?sort=newest' },
     { label: 'Repair Services', href: '/services' },
+    { label: 'Shop in Coimbatore', href: '/products' },
   ],
   account: [
     { label: 'My Profile', href: '/profile' },
@@ -32,8 +33,8 @@ export default function Footer() {
   const { settings } = useSettingsStore();
   const siteName = settings?.siteName || 'AMOHA Mobiles';
   const contactEmail = settings?.contactEmail || 'support@amoha.in';
-  const contactPhone = settings?.contactPhone || '+91 98765 43210';
-  const address = settings?.address || 'Mumbai, India';
+  const contactPhone = settings?.contactPhone || '+91 63801 23183';
+  const address = settings?.address || 'Therveethi, Idikarai, Coimbatore, Tamil Nadu';
 
   return (
     <footer className="border-t border-gray-200 bg-gray-50 dark:border-white/5 dark:bg-surface-50">
@@ -58,7 +59,7 @@ export default function Footer() {
               <span className="text-lg font-bold text-gray-900 dark:text-white">{siteName}</span>
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-              Your trusted destination for smartphones, accessories, and repairs with secure payments, clear policies, and dependable delivery across India.
+              Amohamobiles – your trusted mobile shop in Idikarai, Coimbatore. Buy latest smartphones, accessories & get expert phone repairs at the best prices in Tamil Nadu.
             </p>
             <div className="mt-5 space-y-2.5">
               <a href={`mailto:${contactEmail}`} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 transition-colors hover:text-primary-500 dark:hover:text-primary-400 break-all">
@@ -69,10 +70,24 @@ export default function Footer() {
                 <HiOutlinePhone className="h-4 w-4 flex-shrink-0" />
                 {contactPhone}
               </a>
-              <span className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <HiOutlineLocationMarker className="h-4 w-4 flex-shrink-0" />
-                {address}
-              </span>
+              <a
+                href={`https://wa.me/${contactPhone.replace(/[^0-9]/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 transition-colors hover:text-green-500"
+              >
+                <HiOutlineChat className="h-4 w-4 flex-shrink-0" />
+                WhatsApp Us
+              </a>
+              <a
+              href="https://maps.google.com/?q=Idikarai,Coimbatore,Tamil+Nadu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
+            >
+              <HiOutlineLocationMarker className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span>{address}</span>
+            </a>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               {footerHighlights.map((item) => (
@@ -158,7 +173,9 @@ export default function Footer() {
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Accepted payments: UPI, Visa, Mastercard, RuPay, net banking, EMI, COD, and selected international cards.
             </p>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Powered by Next.js</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Mobile Shop in Idikarai, Coimbatore, Tamil Nadu
+            </span>
           </div>
         </div>
       </div>

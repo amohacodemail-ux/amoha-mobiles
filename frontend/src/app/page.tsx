@@ -146,6 +146,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[var(--background)]">
+      {/* SEO H1 - visually hidden but indexable */}
+      <h1 className="sr-only">Amohamobiles – Best Mobile Shop in Idikarai, Coimbatore | Smartphones, Accessories & Repairs</h1>
+
       {/* Hero Banner */}
       <section className="bg-gray-50 dark:bg-surface-50">
         <div className="page-container py-3 sm:py-5 lg:py-6">
@@ -190,7 +193,7 @@ export default function HomePage() {
                   <Image
                     key={banners[activeBanner]?._id || activeBanner}
                     src={getSafeImage(banners[activeBanner]?.image, PLACEHOLDER_BANNER)}
-                    alt={banners[activeBanner]?.title || 'Banner'}
+                    alt={banners[activeBanner]?.title ? `${banners[activeBanner].title} – Amohamobiles Coimbatore` : 'Amohamobiles – Best Mobile Shop in Idikarai, Coimbatore'}
                     fill
                     priority
                    
@@ -520,6 +523,45 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Local SEO Trust Section */}
+      <section className="py-8 sm:py-10 border-t border-gray-50 dark:border-white/5">
+        <div className="page-container">
+          <div className="rounded-2xl bg-gradient-to-br from-primary-50 to-white border border-primary-100 dark:from-primary-950/30 dark:to-surface-50 dark:border-primary-900/30 p-6 sm:p-8">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">
+              Amohamobiles – Your Trusted Mobile Shop in Idikarai, Coimbatore
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400 max-w-3xl">
+              Looking for the best mobile shop in Coimbatore? Amohamobiles in Idikarai is your one-stop destination for the latest smartphones, mobile accessories, and expert phone repair services. We stock Samsung, Apple iPhone, OnePlus, Xiaomi, Realme, and more at the most competitive prices in Coimbatore, Tamil Nadu.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Link href="/products" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
+                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">500+</span>
+                <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Phones in Stock</span>
+              </Link>
+              <Link href="/services" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
+                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">15+</span>
+                <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Repair Services</span>
+              </Link>
+              <Link href="/contact" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
+                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">⭐ 4.8</span>
+                <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Customer Rating</span>
+              </Link>
+              <Link href="/about" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
+                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">✓</span>
+                <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Warranty Assured</span>
+              </Link>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {['Mobile Shop in Coimbatore', 'Mobile Shop in Idikarai', 'Phone Repair Coimbatore', 'Buy Smartphones Coimbatore', 'Mobile Accessories Coimbatore'].map((tag) => (
+                <span key={tag} className="rounded-full bg-primary-50 border border-primary-100 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/20 dark:border-primary-800/30 dark:text-primary-300">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Popup Modal */}
       {showPopup && settings?.popup?.isActive && (
