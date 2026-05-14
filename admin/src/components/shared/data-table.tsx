@@ -67,29 +67,29 @@ export function DataTable<T>({
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-border overflow-hidden">
+      <div className="rounded-xl border border-border overflow-hidden bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-secondary/40">
+              <tr className="border-b border-border bg-muted/50">
                 {columns.map((col) => (
                   <th
                     key={col.key}
                     className={cn(
-                      'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground',
-                      col.sortable && 'cursor-pointer select-none hover:text-foreground',
+                      'px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+                      col.sortable && 'cursor-pointer select-none hover:text-foreground transition-colors duration-150',
                       col.className,
                     )}
                     onClick={() => col.sortable && onSort?.(col.key)}
                   >
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       {col.header}
                       {col.sortable && (
-                        <span className="text-muted-foreground/50">
+                        <span className="text-muted-foreground/60 transition-colors duration-150">
                           {sortBy === col.key ? (
-                            sortOrder === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            sortOrder === 'asc' ? <ChevronUp className="h-3.5 w-3.5 text-primary" /> : <ChevronDown className="h-3.5 w-3.5 text-primary" />
                           ) : (
-                            <ChevronsUpDown className="h-3 w-3" />
+                            <ChevronsUpDown className="h-3.5 w-3.5" />
                           )}
                         </span>
                       )}
@@ -104,16 +104,22 @@ export function DataTable<T>({
                 : safeData.length === 0
                 ? (
                   <tr>
-                    <td colSpan={columns.length} className="px-4 py-16 text-center text-muted-foreground">
-                      {emptyMessage}
+                    <td colSpan={columns.length}>
+                      <div className="flex flex-col items-center justify-center py-16 px-4">
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                          <Search className="h-5 w-5 text-muted-foreground/60" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground mb-1">{emptyMessage}</p>
+                        <p className="text-xs text-muted-foreground">Try adjusting your search or filters</p>
+                      </div>
                     </td>
                   </tr>
                 )
                 : safeData.map((row) => (
                   <React.Fragment key={rowKey(row)}>
-                    <tr className="hover:bg-secondary/20 transition-colors">
+                    <tr className="hover:bg-muted/40 transition-colors duration-150 group">
                       {columns.map((col) => (
-                        <td key={col.key} className={cn('px-4 py-3 text-foreground', col.className)}>
+                        <td key={col.key} className={cn('px-4 py-3.5 text-foreground', col.className)}>
                           {col.render
                             ? col.render(row)
                             : String((row as Record<string, unknown>)[col.key] ?? '')}

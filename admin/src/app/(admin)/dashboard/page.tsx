@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { dashboardService } from '@/services/dashboard.service';
-import { formatCurrency, formatDate, getOrderStatusColor, safeImageSrc } from '@/lib/utils';
+import { formatCurrency, formatDate, getOrderStatusColor, safeImageSrc, cn } from '@/lib/utils';
 import type { DashboardStats, RevenueData, TopProduct, RecentOrder } from '@/types';
 import Image from 'next/image';
 import Cookies from 'js-cookie';
@@ -101,34 +101,38 @@ export default function DashboardPage() {
       </PageHeader>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-8">
         <StatCard
           title="Total Revenue"
-          value={loading ? '...' : formatCurrency(stats?.totalRevenue ?? 0)}
+          value={formatCurrency(stats?.totalRevenue ?? 0)}
           growth={stats?.revenueGrowth}
           icon={<DollarSign className="h-5 w-5" />}
           iconColor="text-blue-600 dark:text-blue-400"
+          loading={loading}
         />
         <StatCard
           title="Total Orders"
-          value={loading ? '...' : String(stats?.totalOrders ?? 0)}
+          value={String(stats?.totalOrders ?? 0)}
           growth={stats?.ordersGrowth}
           icon={<ShoppingCart className="h-5 w-5" />}
-          iconColor="text-green-600 dark:text-green-400"
+          iconColor="text-emerald-600 dark:text-emerald-400"
+          loading={loading}
         />
         <StatCard
           title="Total Products"
-          value={loading ? '...' : String(stats?.totalProducts ?? 0)}
+          value={String(stats?.totalProducts ?? 0)}
           growth={stats?.productsGrowth}
           icon={<Package className="h-5 w-5" />}
-          iconColor="text-purple-600 dark:text-purple-400"
+          iconColor="text-violet-600 dark:text-violet-400"
+          loading={loading}
         />
         <StatCard
           title="Total Users"
-          value={loading ? '...' : String(stats?.totalUsers ?? 0)}
+          value={String(stats?.totalUsers ?? 0)}
           growth={stats?.usersGrowth}
           icon={<Users className="h-5 w-5" />}
-          iconColor="text-orange-600 dark:text-orange-400"
+          iconColor="text-amber-600 dark:text-amber-400"
+          loading={loading}
         />
       </div>
 
@@ -178,14 +182,16 @@ export default function DashboardPage() {
 
       {/* Recent Orders */}
       <Card>
-        <CardHeader><CardTitle>Recent Orders</CardTitle></CardHeader>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg font-semibold">Recent Orders</CardTitle>
+        </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-6 px-6">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border">
+                <tr className="border-b border-border bg-muted/30">
                   {['Order', 'Customer', 'Amount', 'Status', 'Date'].map((h) => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground first:pl-0 last:pr-0">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -194,25 +200,47 @@ export default function DashboardPage() {
                   ? Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
                       {Array.from({ length: 5 }).map((_, j) => (
-                        <td key={j} className="px-3 py-3"><div className="h-4 shimmer rounded" /></td>
+                        <td key={j} className="px-4 py-3.5 first:pl-0 last:pr-0"><div className="h-4 w-full max-w-[120px] shimmer rounded" /></td>
                       ))}
                     </tr>
                   ))
-                  : recentOrders.map((o) => (
-                    <tr key={o._id} className="hover:bg-secondary/20 transition-colors">
-                      <td className="px-3 py-3 font-mono text-xs text-primary">#{o.orderNumber}</td>
-                      <td className="px-3 py-3">
-                        <p className="font-medium text-foreground">{o.user?.name || 'Unknown'}</p>
+                  : recentOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <div className="flex flex-col items-center justify-center py-12">
+                          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                            <ShoppingCart className="h-5 w-5 text-muted-foreground/50" />
+                          </div>
+                          <p className="text-sm font-medium text-foreground mb-1">No recent orders</p>
+                          <p className="text-xs text-muted-foreground">Orders will appear here when customers make purchases</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : recentOrders.map((o) => (
+                    <tr key={o._id} className="hover:bg-muted/30 transition-colors duration-150 group">
+                      <td className="px-4 py-3.5 first:pl-0">
+                        <span className="font-mono text-xs text-primary font-medium">#{o.orderNumber}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <p className="font-medium text-foreground text-sm">{o.user?.name || 'Unknown'}</p>
                         <p className="text-xs text-muted-foreground">{o.user?.email || ''}</p>
                       </td>
-                      <td className="px-3 py-3 font-semibold">{formatCurrency(o.totalAmount)}</td>
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getOrderStatusColor(o.orderStatus)}`}>
+                      <td className="px-4 py-3.5">
+                        <span className="font-semibold text-foreground">{formatCurrency(o.totalAmount)}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={cn(
+                          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                          getOrderStatusColor(o.orderStatus)
+                        )}>
                           {(o.orderStatus || 'pending').replace(/_/g, ' ')}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />{formatDate(o.createdAt)}
+                      <td className="px-4 py-3.5 last:pr-0">
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                          <Clock className="h-3.5 w-3.5" />
+                          {formatDate(o.createdAt)}
+                        </div>
                       </td>
                     </tr>
                   ))

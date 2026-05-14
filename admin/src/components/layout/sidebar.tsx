@@ -177,15 +177,22 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
                     onClick={() => handleNavigation(href)}
                     disabled={isPending}
                     className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 w-full',
+                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 w-full relative overflow-hidden',
                       active
-                        ? 'bg-primary/15 text-primary border border-primary/20'
+                        ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground',
                       collapsed && 'justify-center px-2',
-                      isPending && 'opacity-50 cursor-wait',
+                      isPending && 'opacity-60 cursor-wait',
                     )}
                   >
-                    <Icon className={cn('flex-shrink-0', active ? 'text-primary' : 'text-muted-foreground', 'h-4 w-4')} />
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary rounded-r-full" />
+                    )}
+                    <Icon className={cn(
+                      'flex-shrink-0 transition-colors duration-200',
+                      active ? 'text-primary' : 'text-muted-foreground',
+                      'h-4 w-4'
+                    )} />
                     {!collapsed && <span className="truncate">{label}</span>}
                     {collapsed && (
                       <span className="sr-only">{label}</span>

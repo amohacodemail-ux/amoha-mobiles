@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, Bell, ShoppingCart, Mail, Wrench, Shield, Star, AlertTriangle, Info, CheckCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
-import { getInitials } from '@/lib/utils';
+import { getInitials, cn } from '@/lib/utils';
 import { ThemeToggle } from './theme-toggle';
 import { notificationService, type Notification } from '@/services/notification.service';
 
@@ -127,57 +127,72 @@ export function Header({ onMobileMenuOpen, collapsed }: HeaderProps) {
         </button>
 
         {open && (
-          <div className="absolute right-0 top-full mt-2 w-80 md:w-96 rounded-xl border border-border bg-background shadow-lg overflow-hidden z-50">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="absolute right-0 top-full mt-2 w-80 md:w-96 rounded-xl border border-border bg-background shadow-xl overflow-hidden z-50 animate-scale-in origin-top-right">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
               <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
-                  <button onClick={handleMarkAllRead} className="text-xs text-primary hover:underline flex items-center gap-1">
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 px-2 py-1 rounded-md hover:bg-primary/10 transition-colors"
+                  >
                     <CheckCheck className="h-3 w-3" />Mark all read
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="max-h-80 overflow-y-auto divide-y divide-border">
+            <div className="max-h-80 overflow-y-auto">
               {safeNotifications.length === 0 ? (
-                <div className="py-8 text-center">
-                  <Bell className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                  <p className="text-sm text-muted-foreground">No notifications yet</p>
+                <div className="py-10 text-center">
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                    <Bell className="h-6 w-6 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground mb-1">No notifications yet</p>
+                  <p className="text-xs text-muted-foreground">We'll notify you when something arrives</p>
                 </div>
               ) : (
-                safeNotifications.map((n) => {
-                  const Icon = typeIcons[n.type] || Info;
-                  const color = typeColors[n.type] || typeColors.system;
-                  return (
-                    <button
-                      key={n._id}
-                      onClick={() => handleNotificationClick(n)}
-                      className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-secondary/50 transition-colors ${
-                        !n.isRead ? 'bg-primary/5' : ''
-                      }`}
-                    >
-                      <div className={`p-1.5 rounded-full shrink-0 ${color}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-xs font-medium truncate ${!n.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>{n.title}</span>
-                          {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
+                <div className="divide-y divide-border">
+                  {safeNotifications.map((n, index) => {
+                    const Icon = typeIcons[n.type] || Info;
+                    const color = typeColors[n.type] || typeColors.system;
+                    return (
+                      <button
+                        key={n._id}
+                        onClick={() => handleNotificationClick(n)}
+                        className={cn(
+                          'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/50 transition-all duration-150',
+                          !n.isRead && 'bg-primary/[0.03]'
+                        )}
+                        style={{ animationDelay: `${index * 30}ms` }}
+                      >
+                        <div className={cn('p-2 rounded-full shrink-0', color)}>
+                          <Icon className="h-3.5 w-3.5" />
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">{n.message}</p>
-                        <span className="text-[10px] text-muted-foreground">{formatTime(n.createdAt)}</span>
-                      </div>
-                    </button>
-                  );
-                })
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              'text-xs font-medium truncate',
+                              !n.isRead ? 'text-foreground' : 'text-muted-foreground'
+                            )}>
+                              {n.title}
+                            </span>
+                            {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 animate-pulse" />}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
+                          <span className="text-[10px] text-muted-foreground mt-1 block">{formatTime(n.createdAt)}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
-            <div className="border-t border-border px-4 py-2.5">
+            <div className="border-t border-border px-4 py-3 bg-muted/30">
               <button
                 onClick={() => { setOpen(false); router.push('/notifications'); }}
-                className="w-full text-center text-xs font-medium text-primary hover:underline"
+                className="w-full text-center text-xs font-medium text-primary hover:text-primary/80 py-1 rounded-md hover:bg-primary/10 transition-colors"
               >
                 View all notifications
               </button>
