@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'Amohamobiles - Best Mobile Shop in Idikarai, Coimbatore | Smartphones & Accessories',
+    default: 'Amohamobiles – Best Mobile Shop in Coimbatore & Idikarai',
     template: '%s | Amohamobiles Coimbatore',
   },
   description:
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     locale: 'en_IN',
     siteName: 'Amohamobiles',
     url: 'https://amohamobiles.com',
-    title: 'Amohamobiles - Best Mobile Shop in Idikarai, Coimbatore',
+    title: 'Amohamobiles – Best Mobile Shop in Coimbatore & Idikarai',
     description: 'Buy latest smartphones & accessories at Amohamobiles – trusted mobile shop in Idikarai, Coimbatore. Best prices, warranty & expert service.',
     images: [
       {
@@ -78,7 +78,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     site: '@amohamobiles',
-    title: 'Amohamobiles - Best Mobile Shop in Idikarai, Coimbatore',
+    title: 'Amohamobiles – Best Mobile Shop in Coimbatore & Idikarai',
     description: 'Buy latest smartphones & accessories at Amohamobiles – trusted mobile shop in Idikarai, Coimbatore.',
     images: ['https://amohamobiles.com/images/og-image.svg'],
   },

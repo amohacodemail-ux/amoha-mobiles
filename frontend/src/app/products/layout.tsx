@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Buy Smartphones & Mobiles in Coimbatore – Amohamobiles',
-  description: 'Buy latest smartphones in Coimbatore at Amohamobiles. Samsung, Apple iPhone, OnePlus, Xiaomi, Realme & more – best prices, genuine warranty. Serving Idikarai & Coimbatore.',
+  description: 'Buy smartphones in Coimbatore at Amohamobiles. Samsung, iPhone, OnePlus, Xiaomi & more – best prices, genuine warranty. Serving Idikarai & Coimbatore.',
   keywords: ['buy smartphones coimbatore', 'mobile phones coimbatore', 'best smartphones idikarai', 'Samsung mobiles coimbatore', 'iPhone coimbatore shop', 'OnePlus coimbatore', 'Xiaomi phones coimbatore', 'budget smartphones coimbatore', '5G phones coimbatore', 'mobile phones with warranty coimbatore'],
   openGraph: {
     title: 'Buy Smartphones & Mobiles in Coimbatore – Amohamobiles',

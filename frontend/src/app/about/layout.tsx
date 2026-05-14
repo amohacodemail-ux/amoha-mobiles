@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'About Amohamobiles – Trusted Mobile Shop in Idikarai, Coimbatore',
-  description: 'Learn about Amohamobiles – the most trusted mobile shop in Idikarai, Coimbatore. Genuine smartphones, accessories, and expert repairs since day one. Visit us in Coimbatore.',
+  description: 'Learn about Amohamobiles – the most trusted mobile shop in Idikarai, Coimbatore. Genuine smartphones, accessories & expert repairs at best prices.',
   keywords: ['about amohamobiles', 'mobile shop coimbatore history', 'trusted mobile store idikarai', 'best mobile shop coimbatore about'],
   openGraph: {
     title: 'About Amohamobiles – Trusted Mobile Shop in Idikarai, Coimbatore',

@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Mobile Repair Services in Coimbatore – Amohamobiles Idikarai',
-  description: 'Professional mobile repair services in Coimbatore at Amohamobiles, Idikarai. Screen replacement, battery change, charging port repair & more. Fast turnaround, genuine parts, warranty on all repairs.',
+  description: 'Professional mobile repair in Coimbatore at Amohamobiles, Idikarai. Screen, battery, charging port & more. Fast turnaround, genuine parts & warranty.',
   keywords: ['mobile repair coimbatore', 'phone repair idikarai', 'screen replacement coimbatore', 'battery replacement mobile coimbatore', 'mobile service centre idikarai', 'phone repair shop coimbatore', 'mobile repair near me coimbatore'],
   openGraph: {
     title: 'Mobile Repair Services in Coimbatore – Amohamobiles Idikarai',
