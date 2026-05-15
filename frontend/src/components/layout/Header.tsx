@@ -75,7 +75,7 @@ export default function Header() {
             )}
             <div className="hidden sm:block">
               <span className="text-lg font-bold text-slate-900 dark:text-white">{siteName}</span>
-              <p className="text-[11px] -mt-1 font-medium italic text-slate-400 dark:text-slate-500">{tagline.split(' ').map((w, i) => i === tagline.split(' ').length - 1 ? <span key={i} className="text-accent-500 dark:text-accent-400">{w}</span> : w + ' ')}</p>
+              <p className="text-[11px] -mt-1 font-medium italic text-slate-500 dark:text-slate-300">{tagline.split(' ').map((w, i) => i === tagline.split(' ').length - 1 ? <span key={i} className="text-accent-500 dark:text-accent-400">{w}</span> : w + ' ')}</p>
             </div>
           </Link>
 
