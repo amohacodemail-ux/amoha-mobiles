@@ -492,14 +492,14 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Recommended sizes info */}
-                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                    <div className="rounded-lg bg-slate-50 dark:bg-surface-100 border border-slate-200 dark:border-white/[0.08] p-3 text-xs text-slate-600 dark:text-slate-400 space-y-1">
                       <p className="font-semibold">Recommended Image Sizes:</p>
                       <ul className="list-disc list-inside space-y-0.5">
                         <li><strong>Banner 1 (Tall Left):</strong> 600 x 800 px (portrait 3:4)</li>
                         <li><strong>Banner 2 (Wide Top Right):</strong> 1200 x 400 px (landscape 3:1)</li>
                         <li><strong>Banners 3 &amp; 4 (Bottom):</strong> 600 x 450 px (landscape 4:3)</li>
                       </ul>
-                      <p className="text-blue-600 dark:text-blue-400">Images will be cropped to fill &mdash; center your subject in the image.</p>
+                      <p className="text-slate-500 dark:text-slate-400">Images will be cropped to fill &mdash; center your subject in the image.</p>
                     </div>
                     {/* Visual layout preview */}
                     <div className="grid grid-cols-3 grid-rows-2 gap-2 p-3 bg-secondary/30 rounded-lg text-xs text-center text-muted-foreground" style={{ minHeight: '120px' }}>

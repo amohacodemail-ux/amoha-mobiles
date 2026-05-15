@@ -223,7 +223,7 @@ export default function SupplierEntriesPage() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Entries" value={stats.total} icon={ClipboardList} color="bg-blue-500" />
+          <StatCard title="Total Entries" value={stats.total} icon={ClipboardList} color="bg-slate-600" />
           <StatCard title="Pending" value={stats.pending} icon={Clock} color="bg-yellow-500" />
           <StatCard title="Converted" value={stats.converted} icon={Package} color="bg-green-500" />
           <StatCard title="Rejected" value={stats.rejected} icon={XCircle} color="bg-red-500" />
@@ -329,7 +329,7 @@ export default function SupplierEntriesPage() {
               <label className="text-sm font-medium">Thumbnail URL</label>
               <Input value={convertForm.thumbnail} onChange={e => setConvertForm({ ...convertForm, thumbnail: e.target.value })} placeholder="https://..." />
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-700 dark:bg-surface-100 dark:border-white/[0.08] dark:text-slate-300">
               A product will be created with <strong>{convertEntry?.quantity}</strong> units of stock.
               An inventory record will be auto-created with full stock tracking.
             </div>

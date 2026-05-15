@@ -48,7 +48,7 @@ interface OrdersData {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  placed: 'bg-blue-100 text-blue-700',
+  placed: 'bg-cyan-100 text-cyan-700',
   confirmed: 'bg-cyan-100 text-cyan-700',
   processing: 'bg-yellow-100 text-yellow-700',
   shipped: 'bg-purple-100 text-purple-700',
@@ -145,7 +145,7 @@ export default function ReportsPage() {
 
   const stats = [
     { label: 'Total Revenue', value: fmt(summary?.totalRevenue ?? 0), icon: DollarSign, color: 'text-green-600' },
-    { label: 'Total Orders', value: String(summary?.totalOrders ?? 0), icon: ShoppingCart, color: 'text-blue-600' },
+    { label: 'Total Orders', value: String(summary?.totalOrders ?? 0), icon: ShoppingCart, color: 'text-cyan-600' },
     { label: 'Avg Order Value', value: fmt(summary?.avgOrderValue ?? 0), icon: TrendingUp, color: 'text-purple-600' },
     { label: 'Total Discounts', value: fmt(summary?.totalDiscount ?? 0), icon: BarChart3, color: 'text-orange-600' },
   ];
@@ -206,7 +206,7 @@ export default function ReportsPage() {
           <h3 className="text-sm font-semibold mb-3 text-foreground">Order Source Breakdown</h3>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-500 inline-block" />
+              <span className="h-2.5 w-2.5 rounded-full bg-cyan-500 inline-block" />
               <span className="text-sm text-muted-foreground">Online Orders:</span>
               <span className="text-sm font-semibold text-foreground">{summary.onlineOrders}</span>
             </div>
@@ -293,7 +293,7 @@ export default function ReportsPage() {
                       <div className="text-xs text-muted-foreground">{order.customer?.phone || order.customer?.email || ''}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${order.source === 'POS' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${order.source === 'POS' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
                         {order.source}
                       </span>
                     </td>

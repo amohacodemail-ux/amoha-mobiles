@@ -47,7 +47,7 @@ const nextConfig = {
     const configuredBase = configuredApi ? configuredApi.replace(/\/api$/, '') : '';
     const apiTarget = configuredBase
       ? configuredBase.replace('https://amoha-backend.onrender.com', 'https://amoha-backend-v2.onrender.com')
-      : (process.env.VERCEL ? 'https://amoha-backend-v2.onrender.com' : 'http://localhost:5001');
+      : (process.env.VERCEL ? 'https://amoha-backend-v2.onrender.com' : 'http://localhost:10000');
     return [
       {
         source: '/api/:path*',

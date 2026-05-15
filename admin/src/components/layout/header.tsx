@@ -18,7 +18,7 @@ const typeIcons: Record<string, React.ElementType> = {
 };
 
 const typeColors: Record<string, string> = {
-  order: 'text-blue-500 bg-blue-500/10',
+  order: 'text-cyan-600 bg-cyan-500/10',
   contact: 'text-green-500 bg-green-500/10',
   service_request: 'text-orange-500 bg-orange-500/10',
   kyc: 'text-purple-500 bg-purple-500/10',

@@ -46,11 +46,11 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 
 function getReturnStatusColor(status: ReturnStatus): string {
   const map: Record<ReturnStatus, string> = {
-    requested: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    requested: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30',
     approved: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30',
     rejected: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30',
     pickup_scheduled: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
-    picked_up: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+    picked_up: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30',
     received: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30',
     inspected: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
     refund_initiated: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30',
@@ -192,7 +192,7 @@ export default function ReturnsPage() {
             <p className="text-2xl font-bold">{stats.pending}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center gap-2 text-blue-600 text-xs font-medium mb-1">
+            <div className="flex items-center gap-2 text-cyan-600 text-xs font-medium mb-1">
               <RotateCcw className="h-3.5 w-3.5" /> In Progress
             </div>
             <p className="text-2xl font-bold">{stats.inProgress}</p>

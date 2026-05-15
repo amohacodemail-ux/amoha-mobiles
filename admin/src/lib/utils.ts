@@ -64,8 +64,8 @@ export function formatNumber(num: number): string {
 
 export function getOrderStatusColor(status: OrderStatus): string {
   const map: Record<OrderStatus, string> = {
-    placed: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
-    confirmed: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+    placed: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30',
+    confirmed: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30',
     processing: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30',
     shipped: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
     out_for_delivery: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
@@ -81,7 +81,7 @@ export function getPaymentStatusColor(status: PaymentStatus): string {
     pending: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30',
     paid: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30',
     failed: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30',
-    refunded: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    refunded: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30',
   };
   return map[status] ?? 'bg-muted text-muted-foreground';
 }

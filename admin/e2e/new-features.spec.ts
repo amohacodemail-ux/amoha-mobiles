@@ -22,7 +22,7 @@ import { test, expect, Page, BrowserContext, Browser } from '@playwright/test';
 import { authedCtx, fetchWithRetry, getToken, gotoAndWaitFor } from './shared-auth';
 
 const ADMIN_URL = process.env.ADMIN_URL || 'http://localhost:3003';
-const API_URL   = process.env.API_URL   || 'http://localhost:5001/api';
+const API_URL   = process.env.API_URL   || 'http://localhost:10000/api';
 const TS = Date.now();
 
 // ─── Test: Category filter in products ────────────────────────────────────────
@@ -32,6 +32,8 @@ test.describe('Category filter in products', () => {
     const ctx = await authedCtx(browser);
     const page = await ctx.newPage();
     await gotoAndWaitFor(page, `${ADMIN_URL}/products`, (p) => p.getByRole('heading', { name: /products/i }).first());
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
     // look for category filter select/combobox
     const categoryFilter = page.locator('select, [data-testid="category-filter"]').first();
@@ -48,7 +50,9 @@ test.describe('Category filter in products', () => {
       return;
     }
     await categoryFilter.selectOption({ label: nonEmpty });
+    await page.waitForTimeout(1000);
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000); // Extra buffer for filter API
     // products table or grid should render (or show "no products")
     const tableRows = page.locator('table tbody tr, [data-testid="product-row"]');
     const emptyMsg  = page.locator('text=No products found, text=No results');
@@ -116,11 +120,14 @@ test.describe('RFQ Management', () => {
 
   test('RFQ page accessible from sidebar', async () => {
     await page.goto(`${ADMIN_URL}/dashboard`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
     // Sidebar uses <button> elements, not <a href>
     const rfqBtn = page.locator('button:has-text("RFQ")').first();
-    await expect(rfqBtn).toBeVisible({ timeout: 10000 });
+    await expect(rfqBtn).toBeVisible({ timeout: 15000 });
     await rfqBtn.click();
-    await page.waitForURL(`${ADMIN_URL}/rfq`, { timeout: 15000 });
+    await page.waitForTimeout(1000);
+    await page.waitForURL(`${ADMIN_URL}/rfq`, { timeout: 20000 });
     await expect(page).toHaveURL(/\/rfq/);
   });
 

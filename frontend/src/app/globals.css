@@ -3,65 +3,69 @@
 @tailwind utilities;
 
 @layer base {
-  /* ===== LIGHT MODE (default) ===== */
+  /* ===== LIGHT MODE — Premium Slate Clean ===== */
   :root {
-    --background: #ffffff;
-    --foreground: #111827;
-    --surface: #f9fafb;
-    --surface-50: #f3f4f6;
-    --surface-100: #e5e7eb;
-    --surface-200: #d1d5db;
-    --surface-300: #9ca3af;
-    --surface-400: #6b7280;
-    --card-bg: #ffffff;
-    --card-border: rgba(0, 0, 0, 0.08);
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(0, 0, 0, 0.08);
-    --glass-hover-border: rgba(0, 0, 0, 0.15);
-    --glass-hover-bg: rgba(0, 0, 0, 0.04);
-    --text-primary: #111827;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
-    --text-faint: #9ca3af;
-    --header-bg: rgba(255, 255, 255, 0.95);
-    --scrollbar-track: #f3f4f6;
-    --scrollbar-thumb: rgba(99, 102, 241, 0.3);
-    --scrollbar-thumb-hover: rgba(99, 102, 241, 0.5);
-    --selection-bg: rgba(99, 102, 241, 0.2);
-    --selection-color: #111827;
-    --shadow-glass: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(0, 0, 0, 0.02);
-    --shadow-glass-sm: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.02);
+    --background:        #ffffff;
+    --foreground:        #0f172a;
+    --surface:           #f8fafc;
+    --surface-50:        #f1f5f9;
+    --surface-100:       #e2e8f0;
+    --surface-200:       #cbd5e1;
+    --surface-300:       #94a3b8;
+    --surface-400:       #64748b;
+    --card-bg:           #ffffff;
+    --card-border:       #e2e8f0;
+    --glass-bg:          rgba(255, 255, 255, 0.85);
+    --glass-border:      rgba(0, 0, 0, 0.05);
+    --glass-hover-border:rgba(0, 0, 0, 0.10);
+    --glass-hover-bg:    #f1f5f9;
+    --text-primary:      #0f172a;
+    --text-secondary:    #64748b;
+    --text-muted:        #94a3b8;
+    --text-faint:        #cbd5e1;
+    --header-bg:         rgba(255, 255, 255, 0.98);
+    --scrollbar-track:   #f1f5f9;
+    --scrollbar-thumb:   rgba(71, 85, 105, 0.18);
+    --scrollbar-thumb-hover: rgba(71, 85, 105, 0.35);
+    --selection-bg:      rgba(6, 182, 212, 0.12);
+    --selection-color:   #0f172a;
+    --shadow-card:       0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+    --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
+    --shadow-premium:    0 20px 40px -12px rgba(0,0,0,0.12);
     color-scheme: light;
   }
 
-  /* ===== DARK MODE ===== */
+  /* ===== DARK MODE — Premium OG Luxury Dark ===== */
   .dark {
-    --background: #0a0a0f;
-    --foreground: #e2e8f0;
-    --surface: #0d0d14;
-    --surface-50: #12121c;
-    --surface-100: #1a1a2e;
-    --surface-200: #232340;
-    --surface-300: #2d2d52;
-    --surface-400: #3d3d6b;
-    --card-bg: rgba(255, 255, 255, 0.05);
-    --card-border: rgba(255, 255, 255, 0.1);
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-hover-border: rgba(255, 255, 255, 0.2);
-    --glass-hover-bg: rgba(255, 255, 255, 0.1);
-    --text-primary: #ffffff;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --text-faint: #475569;
-    --header-bg: rgba(30, 27, 75, 0.95);
-    --scrollbar-track: #0d0d14;
-    --scrollbar-thumb: rgba(99, 102, 241, 0.4);
-    --scrollbar-thumb-hover: rgba(99, 102, 241, 0.6);
-    --selection-bg: rgba(99, 102, 241, 0.4);
-    --selection-color: #fff;
-    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    --shadow-glass-sm: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --background:        #040404;
+    --foreground:        #f8fafc;
+    --surface:           #0f1115;
+    --surface-50:        #151821;
+    --surface-100:       #1c1f2b;
+    --surface-200:       #202431;
+    --surface-300:       #2a2f3a;
+    --surface-400:       #3d4352;
+    --card-bg:           #151821;
+    --card-border:       #2a2f3a;
+    --glass-bg:          rgba(21, 24, 33, 0.85);
+    --glass-border:      rgba(255, 255, 255, 0.07);
+    --glass-hover-border:rgba(255, 255, 255, 0.12);
+    --glass-hover-bg:    #202431;
+    --text-primary:      #f8fafc;
+    --text-secondary:    #cbd5e1;
+    --text-muted:        #94a3b8;
+    --text-faint:        #475569;
+    --header-bg:         rgba(4, 4, 4, 0.97);
+    --scrollbar-track:   #0f1115;
+    --scrollbar-thumb:   rgba(6, 182, 212, 0.25);
+    --scrollbar-thumb-hover: rgba(6, 182, 212, 0.45);
+    --selection-bg:      rgba(6, 182, 212, 0.20);
+    --selection-color:   #ffffff;
+    --shadow-card:       0 0 0 1px rgba(255,255,255,0.04);
+    --shadow-card-hover: 0 0 0 1px rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.5);
+    --shadow-premium:    0 20px 40px -12px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04);
+    --glow-accent:       rgba(6, 182, 212, 0.18);
+    --glow-slate:        rgba(71, 85, 105, 0.20);
     color-scheme: dark;
   }
 
@@ -178,22 +182,22 @@
     color: var(--text-muted);
   }
   .glass-input:focus {
-    border-color: rgba(99, 102, 241, 0.5);
+    border-color: rgba(6, 182, 212, 0.45);
     background: var(--glass-hover-bg);
   }
 
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 via-primary-500 to-accent-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary-700 via-accent-500 to-accent-400 bg-clip-text text-transparent;
   }
   .dark .gradient-text {
-    @apply bg-gradient-to-r from-primary-400 via-primary-300 to-accent-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-accent-400 via-accent-300 to-primary-400 bg-clip-text text-transparent;
   }
 
   .badge-discount {
-    @apply inline-flex items-center rounded-lg bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700;
+    @apply inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-600;
   }
   .dark .badge-discount {
-    @apply bg-emerald-500/20 text-emerald-400;
+    @apply bg-rose-500/15 text-rose-400;
   }
 
   .badge-stock {

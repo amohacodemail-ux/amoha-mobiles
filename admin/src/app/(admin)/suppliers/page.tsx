@@ -173,7 +173,7 @@ export default function SuppliersPage() {
   const poStatusColor = (status: string) => {
     switch (status) {
       case 'draft': return 'bg-gray-50 text-gray-700 border-gray-200';
-      case 'sent': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'sent': return 'bg-cyan-50 text-cyan-700 border-cyan-200';
       case 'confirmed': return 'bg-green-50 text-green-700 border-green-200';
       case 'partially_received': return 'bg-yellow-50 text-yellow-700 border-yellow-200';
       case 'received': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -255,7 +255,7 @@ export default function SuppliersPage() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Active Suppliers" value={stats.totalSuppliers} icon={Truck} color="bg-blue-500" />
+          <StatCard title="Active Suppliers" value={stats.totalSuppliers} icon={Truck} color="bg-slate-600" />
           <StatCard title="Total POs" value={stats.totalPOs} icon={Package} color="bg-emerald-500" />
           <StatCard title="Pending POs" value={stats.pendingPOs} icon={TrendingUp} color="bg-yellow-500" />
           <StatCard title="Purchase Value" value={`₹${(stats.totalPurchaseValue || 0).toLocaleString()}`} icon={DollarSign} color="bg-purple-500" />

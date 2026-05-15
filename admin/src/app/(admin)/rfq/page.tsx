@@ -28,7 +28,7 @@ interface RFQ {
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600',
-  sent: 'bg-blue-100 text-blue-700',
+  sent: 'bg-cyan-100 text-cyan-700',
   quoted: 'bg-purple-100 text-purple-700',
   accepted: 'bg-green-100 text-green-700',
   rejected: 'bg-red-100 text-red-700',

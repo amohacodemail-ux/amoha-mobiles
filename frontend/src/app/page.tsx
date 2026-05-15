@@ -164,7 +164,6 @@ export default function HomePage() {
                         src={getSafeImage(banners[(activeBanner - 1 + banners.length) % banners.length]?.image, PLACEHOLDER_BANNER)}
                         alt="Previous banner preview"
                         fill
-                       
                         className="object-cover"
                         sizes="20vw"
                         onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
@@ -175,7 +174,6 @@ export default function HomePage() {
                         src={getSafeImage(banners[(activeBanner + 1) % banners.length]?.image, PLACEHOLDER_BANNER)}
                         alt="Next banner preview"
                         fill
-                       
                         className="object-cover"
                         sizes="20vw"
                         onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
@@ -184,7 +182,7 @@ export default function HomePage() {
                   </>
                 )}
 
-                <div className="absolute inset-2 rounded-[22px] bg-gradient-to-br from-primary-500/15 via-transparent to-fuchsia-500/15 blur-2xl" />
+                <div className="absolute inset-2 rounded-[22px] bg-gradient-to-br from-accent-500/10 via-transparent to-slate-500/10 blur-2xl" />
 
                 <Link
                   href={banners[activeBanner]?.link || '/products'}
@@ -196,7 +194,6 @@ export default function HomePage() {
                     alt={banners[activeBanner]?.title ? `${banners[activeBanner].title} – Amohamobiles Coimbatore` : 'Amohamobiles – Best Mobile Shop in Idikarai, Coimbatore'}
                     fill
                     priority
-                   
                     className="object-cover transition-all duration-700 ease-out"
                     sizes="100vw"
                     onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
@@ -213,7 +210,7 @@ export default function HomePage() {
                       type="button"
                       aria-label={`Show slide ${idx + 1}`}
                       onClick={() => setActiveBanner(idx)}
-                      className={`h-2 rounded-full transition-all duration-300 ${idx === activeBanner ? 'w-8 bg-primary-500' : 'w-2 bg-gray-300 hover:bg-gray-400 dark:bg-white/30 dark:hover:bg-white/50'}`}
+                      className={`h-2 rounded-full transition-all duration-300 ${idx === activeBanner ? 'w-8 bg-slate-700 dark:bg-accent-400' : 'w-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/25 dark:hover:bg-white/45'}`}
                     />
                   ))}
                 </div>
@@ -227,7 +224,6 @@ export default function HomePage() {
                   alt="Hero banner"
                   fill
                   priority
-                 
                   className="object-cover"
                   sizes="100vw"
                 />
@@ -242,7 +238,7 @@ export default function HomePage() {
         <div className="page-container grid grid-cols-2 gap-2 sm:gap-3 py-2 sm:py-3 lg:grid-cols-4 lg:py-4">
           {features.map((feature) => (
             <div key={feature.title} className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-surface-200 dark:text-slate-400">
                 <feature.icon className="h-4 w-4" />
               </div>
               <div className="min-w-0">
@@ -267,13 +263,13 @@ export default function HomePage() {
                 <Link
                   key={cat._id}
                   href={`/products?category=${cat.slug}`}
-                  className="group flex flex-shrink-0 snap-start lg:flex-shrink items-center gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3 transition-all hover:border-primary-200 hover:shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] dark:hover:border-primary-500/30"
+                  className="group flex flex-shrink-0 snap-start lg:flex-shrink items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 transition-all hover:border-slate-300 hover:shadow-sm dark:border-white/[0.05] dark:bg-white/[0.02] dark:hover:border-white/[0.10]"
                 >
                   <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50 dark:bg-white/5">
                     <Image src={getSafeImage(cat.image, PLACEHOLDER_CATEGORY)} alt={cat.name} fill className="object-cover" sizes="40px" onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_CATEGORY; }} />
                   </div>
                   <div className="min-w-0">
-                    <p className="whitespace-nowrap lg:whitespace-normal lg:truncate text-sm font-medium text-gray-700 group-hover:text-primary-600 dark:text-gray-300 dark:group-hover:text-primary-400">
+                    <p className="whitespace-nowrap lg:whitespace-normal lg:truncate text-sm font-medium text-slate-700 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-white">
                       {cat.name}
                     </p>
                     {(cat.productCount ?? 0) > 0 && (
@@ -293,7 +289,7 @@ export default function HomePage() {
           <div className="page-container">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Featured Deals</h2>
-              <Link href="/products?sort=popular" className="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 sm:text-sm">
+              <Link href="/products?sort=popular" className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 sm:text-sm">
                 View All
               </Link>
             </div>
@@ -334,7 +330,7 @@ export default function HomePage() {
           <div className="page-container">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Trending Now</h2>
-              <Link href="/products?sort=popular" className="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 sm:text-sm">
+              <Link href="/products?sort=popular" className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 sm:text-sm">
                 View All
               </Link>
             </div>
@@ -372,7 +368,6 @@ export default function HomePage() {
                   src={getSafeImage(firstDiscover.image, PLACEHOLDER_BANNER)}
                   alt={firstDiscover.title || 'Discover'}
                   fill
-                 
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 768px) 100vw, 33vw"
                 />
@@ -392,7 +387,6 @@ export default function HomePage() {
                   src={getSafeImage(secondDiscover.image, PLACEHOLDER_BANNER)}
                   alt={secondDiscover.title || 'Discover'}
                   fill
-                 
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 768px) 100vw, 66vw"
                 />
@@ -412,7 +406,6 @@ export default function HomePage() {
                   src={getSafeImage(thirdDiscover.image, PLACEHOLDER_PRODUCT)}
                   alt={thirdDiscover.title || 'Discover'}
                   fill
-                 
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 768px) 50vw, 33vw"
                 />
@@ -432,7 +425,6 @@ export default function HomePage() {
                   src={getSafeImage(fourthDiscover.image, PLACEHOLDER_CATEGORY)}
                   alt={fourthDiscover.title || 'Discover'}
                   fill
-                 
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 768px) 50vw, 33vw"
                 />
@@ -458,7 +450,7 @@ export default function HomePage() {
               {topReviews.map((review) => (
                 <div key={review._id} className="w-[220px] flex-shrink-0 snap-start sm:w-[260px] lg:w-auto rounded-xl border border-gray-100 bg-white p-3 sm:p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-50 text-primary-600 font-bold text-sm dark:bg-primary-500/10 dark:text-primary-400">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 font-bold text-sm dark:bg-surface-200 dark:text-slate-300">
                       {review.user.avatar ? (
                         <Image src={getSafeImage(review.user.avatar, PLACEHOLDER_PRODUCT)} alt={review.user.name || 'User'} width={36} height={36} className="rounded-full object-cover" />
                       ) : (
@@ -495,7 +487,7 @@ export default function HomePage() {
           <div className="page-container">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">New Arrivals</h2>
-              <Link href="/products?sort=newest" className="text-xs font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 sm:text-sm">
+              <Link href="/products?sort=newest" className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 sm:text-sm">
                 View All
               </Link>
             </div>
@@ -507,7 +499,7 @@ export default function HomePage() {
             <div className="mt-6 text-center">
               <Link
                 href="/products"
-                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-500"
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-900 dark:bg-accent-600 dark:hover:bg-accent-700"
               >
                 Explore All Products <HiOutlineArrowRight className="h-4 w-4" />
               </Link>
@@ -527,7 +519,7 @@ export default function HomePage() {
       {/* Local SEO Trust Section */}
       <section className="py-8 sm:py-10 border-t border-gray-50 dark:border-white/5">
         <div className="page-container">
-          <div className="rounded-2xl bg-gradient-to-br from-primary-50 to-white border border-primary-100 dark:from-primary-950/30 dark:to-surface-50 dark:border-primary-900/30 p-6 sm:p-8">
+          <div className="rounded-2xl bg-slate-50 border border-slate-200/80 dark:bg-surface-50 dark:border-white/[0.06] p-6 sm:p-8">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">
               Amohamobiles – #1 Mobile Shop in Idikarai, Coimbatore
             </h2>
@@ -535,24 +527,24 @@ export default function HomePage() {
               Looking for the <strong>best mobile shop in Coimbatore</strong>? Amohamobiles in <strong>Idikarai, Coimbatore</strong> is your one-stop destination for the latest smartphones, mobile accessories, and expert phone repair services. We stock <strong>Samsung, Apple iPhone, OnePlus, Xiaomi, Realme, Vivo, Oppo</strong>, and more at the most competitive prices in Coimbatore, Tamil Nadu.
             </p>
             <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400 max-w-3xl">
-              Conveniently located at <strong>Therveethi, Idikarai</strong>, we serve customers from <strong>Gandhipuram, RS Puram, Saravanampatti, Peelamedu, Singanallur, Kavundampalayam, Kalapatti</strong> and all across Coimbatore. Open Monday to Saturday, 10AM – 8PM. Visit us or <Link href="/contact" className="text-primary-500 hover:underline">contact us</Link> today.
+              Conveniently located at <strong>Therveethi, Idikarai</strong>, we serve customers from <strong>Gandhipuram, RS Puram, Saravanampatti, Peelamedu, Singanallur, Kavundampalayam, Kalapatti</strong> and all across Coimbatore. Open Monday to Saturday, 10AM – 8PM. Visit us or <Link href="/contact" className="text-accent-600 hover:underline dark:text-accent-400">contact us</Link> today.
             </p>
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Link href="/products" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
-                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">500+</span>
-                <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Phones in Stock</span>
+              <Link href="/products" className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center hover:border-slate-300 hover:shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] transition-all">
+                <span className="text-2xl font-black text-slate-800 dark:text-white">500+</span>
+                <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">Phones in Stock</span>
               </Link>
-              <Link href="/services" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
-                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">15+</span>
-                <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Repair Services</span>
+              <Link href="/services" className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center hover:border-slate-300 hover:shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] transition-all">
+                <span className="text-2xl font-black text-slate-800 dark:text-white">15+</span>
+                <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">Repair Services</span>
               </Link>
-              <Link href="/contact" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
-                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">⭐ 4.8</span>
-                <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Customer Rating</span>
+              <Link href="/contact" className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center hover:border-slate-300 hover:shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] transition-all">
+                <span className="text-2xl font-black text-slate-800 dark:text-white">⭐ 4.8</span>
+                <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">Customer Rating</span>
               </Link>
-              <Link href="/about" className="flex flex-col items-center rounded-xl border border-primary-100 bg-white p-4 text-center hover:border-primary-300 hover:shadow-sm dark:border-primary-900/30 dark:bg-white/[0.02] transition-all">
-                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">✓</span>
-                <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Warranty Assured</span>
+              <Link href="/about" className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center hover:border-slate-300 hover:shadow-sm dark:border-white/[0.06] dark:bg-white/[0.02] transition-all">
+                <span className="text-2xl font-black text-slate-800 dark:text-white">✓</span>
+                <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">Warranty Assured</span>
               </Link>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
@@ -568,7 +560,7 @@ export default function HomePage() {
                 'Budget Mobiles Coimbatore',
                 'OnePlus Coimbatore',
               ].map((tag) => (
-                <span key={tag} className="rounded-full bg-primary-50 border border-primary-100 px-3 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/20 dark:border-primary-800/30 dark:text-primary-300">
+                <span key={tag} className="rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-surface-200 dark:border-white/[0.07] dark:text-slate-400">
                   {tag}
                 </span>
               ))}

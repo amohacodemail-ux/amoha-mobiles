@@ -5,25 +5,24 @@ import { test, expect } from '@playwright/test';
  * Verifies that admin users have full access to all modules
  */
 
-test.describe('RBAC - Admin Role', () => {
-  test.beforeEach(async ({ page }) => {
-    // Login as admin
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@amoha.com');
-    await page.fill('input[type="password"]', 'admin123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
-  });
+test.use({ storageState: '.auth/admin-state.json' });
 
+const ADMIN_URL = process.env.ADMIN_URL || 'http://localhost:3003';
+
+test.describe('RBAC - Admin Role', () => {
   test('admin can access dashboard', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.locator('text=Dashboard')).toBeVisible();
+    await page.goto(`${ADMIN_URL}/dashboard`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 15000 });
   });
 
   test('admin can access all sales modules', async ({ page }) => {
     const salesModules = ['/orders', '/billing', '/barcode', '/returns', '/wallets'];
     for (const module of salesModules) {
-      await page.goto(module);
+      await page.goto(`${ADMIN_URL}${module}`);
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(1000);
       await expect(page.locator('text=Access Denied')).not.toBeVisible();
     }
   });
@@ -31,7 +30,9 @@ test.describe('RBAC - Admin Role', () => {
   test('admin can access all purchase modules', async ({ page }) => {
     const purchaseModules = ['/products', '/categories', '/brands', '/inventory', '/suppliers', '/rfq', '/purchase-requests'];
     for (const module of purchaseModules) {
-      await page.goto(module);
+      await page.goto(`${ADMIN_URL}${module}`);
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(1000);
       await expect(page.locator('text=Access Denied')).not.toBeVisible();
     }
   });
@@ -39,7 +40,9 @@ test.describe('RBAC - Admin Role', () => {
   test('admin can access all marketing modules', async ({ page }) => {
     const marketingModules = ['/coupons', '/banners', '/reviews', '/crm', '/contact-messages'];
     for (const module of marketingModules) {
-      await page.goto(module);
+      await page.goto(`${ADMIN_URL}${module}`);
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(1000);
       await expect(page.locator('text=Access Denied')).not.toBeVisible();
     }
   });
@@ -47,13 +50,17 @@ test.describe('RBAC - Admin Role', () => {
   test('admin can access admin-only modules', async ({ page }) => {
     const adminModules = ['/users', '/service-requests', '/activity-logs', '/settings'];
     for (const module of adminModules) {
-      await page.goto(module);
+      await page.goto(`${ADMIN_URL}${module}`);
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(1000);
       await expect(page.locator('text=Access Denied')).not.toBeVisible();
     }
   });
 
   test('admin sees all navigation items', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto(`${ADMIN_URL}/dashboard`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
     // Check for Sales section
     await expect(page.locator('text=Sales')).toBeVisible();

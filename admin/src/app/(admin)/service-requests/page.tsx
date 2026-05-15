@@ -200,7 +200,7 @@ export default function ServiceRequestsPage() {
           {[
             { label: 'Total', value: stats.total, icon: Wrench, color: 'text-primary' },
             { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-yellow-500' },
-            { label: 'In Progress', value: stats.inProgress, icon: CheckCircle, color: 'text-blue-500' },
+            { label: 'In Progress', value: stats.inProgress, icon: CheckCircle, color: 'text-cyan-500' },
             { label: 'Completed', value: stats.completed, icon: CheckCircle, color: 'text-green-500' },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-border p-4 flex items-center gap-3">

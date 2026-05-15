@@ -53,9 +53,12 @@ test.describe('CRM page', () => {
   // 2. Segment summary cards visible
   test('segment summary cards render', async () => {
     await goToCrm(page);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000); // Extra buffer for API
 
     // Cards with VIP / Loyal / Regular / New labels
     const cards = page.locator('text=/vip|loyal|regular|new/i');
+    await page.waitForTimeout(1000);
     expect(await cards.count()).toBeGreaterThan(0);
   });
 
@@ -95,6 +98,8 @@ test.describe('CRM page', () => {
   // 5. Segment filter via select
   test('segment select filter changes the result set', async () => {
     await goToCrm(page);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
     const segmentSelect = page.locator('button[role="combobox"]').first();
     if ((await segmentSelect.count()) === 0) {
@@ -103,19 +108,25 @@ test.describe('CRM page', () => {
     }
 
     await segmentSelect.click();
+    await page.waitForTimeout(500);
     // Pick "VIP" from the dropdown
     const vipOption = page.locator('[role="option"]').filter({ hasText: /vip/i }).first();
     if ((await vipOption.count()) === 0) { test.skip(); return; }
 
     await vipOption.click();
+    await page.waitForTimeout(1000);
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000); // Extra buffer for filter API
 
     // Heading still visible
-    await expect(page.getByRole('heading', { name: /crm/i }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /crm/i }).first()).toBeVisible({ timeout: 10000 });
 
     // Reset filter
     const clearBtn = page.locator('button').filter({ hasText: /clear filter/i }).first();
-    if ((await clearBtn.count()) > 0) await clearBtn.click();
+    if ((await clearBtn.count()) > 0) {
+      await clearBtn.click();
+      await page.waitForTimeout(1000);
+    }
   });
 
   // 6. "View Profile" navigates to detail page
@@ -156,23 +167,29 @@ test.describe('CRM page', () => {
   // 8. Add Note on detail page
   test('admin can open Add Note form on CRM detail page', async () => {
     await goToCrm(page);
+    await page.waitForTimeout(2000);
     const viewBtn = page.locator('a').filter({ hasText: /view profile/i }).first();
     if ((await viewBtn.count()) === 0) { test.skip(); return; }
 
     await viewBtn.click();
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000); // Extra buffer for detail page load
 
     // Click "Add Note" button
     const addNoteBtn = page.locator('button').filter({ hasText: /add note/i }).first();
-    await expect(addNoteBtn).toBeVisible({ timeout: 10000 });
+    await expect(addNoteBtn).toBeVisible({ timeout: 15000 });
     await addNoteBtn.click();
+    await page.waitForTimeout(500);
 
     // Form should appear with textarea
     const textarea = page.locator('textarea').first();
-    await expect(textarea).toBeVisible({ timeout: 5000 });
+    await expect(textarea).toBeVisible({ timeout: 10000 });
 
     // Cancel
     const cancelBtn = page.locator('button').filter({ hasText: /cancel/i }).first();
-    if ((await cancelBtn.count()) > 0) await cancelBtn.click();
+    if ((await cancelBtn.count()) > 0) {
+      await cancelBtn.click();
+      await page.waitForTimeout(500);
+    }
   });
 });

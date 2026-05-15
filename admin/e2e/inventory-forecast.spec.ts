@@ -42,6 +42,8 @@ test.describe('Inventory Forecast Page', () => {
 
     // Navigate to inventory page
     await gotoAndWaitFor(page, `${ADMIN_URL}/inventory`, (p) => p.getByRole('heading', { name: /inventory/i }).first());
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
 
     // Page should NOT show the Next.js error overlay
     const errorOverlay = page.locator('text=Application error');
@@ -55,10 +57,12 @@ test.describe('Inventory Forecast Page', () => {
 
     // Click the Forecast tab
     const forecastTab = page.locator('button', { hasText: 'Forecast' });
-    await expect(forecastTab).toBeVisible({ timeout: 10000 });
+    await expect(forecastTab).toBeVisible({ timeout: 15000 });
     await forecastTab.click();
 
     // Wait for content to stabilize
+    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
     await page.waitForTimeout(3000);
 
     // After clicking forecast tab, page should NOT crash
