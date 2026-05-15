@@ -88,7 +88,7 @@ export default function SearchBar({ onSelect }: SearchBarProps) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{item.name}</p>
-                      <p className="text-xs text-gray-500">{item.brand}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{item.brand}</p>
                     </div>
                     <span className="text-sm font-semibold text-primary-400">
                       {formatPrice(item.price)}
@@ -107,7 +107,7 @@ export default function SearchBar({ onSelect }: SearchBarProps) {
               </li>
             </ul>
           ) : (
-            <div className="py-8 text-center text-sm text-gray-500">
+            <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
               No results found for &quot;{query}&quot;
             </div>
           )}

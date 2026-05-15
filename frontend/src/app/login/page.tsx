@@ -46,7 +46,7 @@ function LoginForm() {
               A
             </div>
             <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">Welcome to AMOHA</h1>
-            <p className="mt-1 text-sm text-gray-500">Sign in to continue. Suppliers can also use this login.</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Sign in to continue. Suppliers can also use this login.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
@@ -88,7 +88,7 @@ function LoginForm() {
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2">
                 <input type="checkbox" className="rounded border-gray-300 dark:border-white/20 bg-gray-100 dark:bg-white/5 text-primary-500 focus:ring-primary-500/20" />
-                <span className="text-xs text-gray-500">Remember me</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Remember me</span>
               </label>
               <Link href="/forgot-password" className="text-xs font-medium text-primary-400 hover:text-primary-300">
                 Forgot password?

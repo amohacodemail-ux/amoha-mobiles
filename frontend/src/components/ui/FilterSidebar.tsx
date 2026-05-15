@@ -606,7 +606,7 @@ export default function FilterSidebar({ filters, onFilterChange, onClear }: Filt
                         {Array.from({ length: 5 }).map((_, i) => (
                           <HiStar
                             key={i}
-                            className={`h-3.5 w-3.5 ${i < rating ? 'text-amber-400' : 'text-gray-700'}`}
+                            className={`h-3.5 w-3.5 ${i < rating ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'}`}
                           />
                         ))}
                       </div>

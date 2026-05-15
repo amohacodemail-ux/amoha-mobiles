@@ -179,6 +179,13 @@ export default function Footer() {
           </div>
         </div>
       </div>
+
+      {/* Hide Vercel "Powered by Next.js" badge */}
+      <style jsx global>{`
+        [data-testid="vercel-footer"] {
+          display: none !important;
+        }
+      `}</style>
     </footer>
   );
 }

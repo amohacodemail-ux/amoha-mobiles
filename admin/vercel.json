@@ -1,10 +1,5 @@
 {
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "deployment": {
-    "deploymentIndicator": {
-      "enabled": false
-    }
-  }
+  "buildCommand": "npm run build"
 }
