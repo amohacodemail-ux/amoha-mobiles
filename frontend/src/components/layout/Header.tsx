@@ -46,7 +46,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/98 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[var(--header-bg)] dark:backdrop-blur-xl">
-      {/* Top bar */}
+      {/* Top bar - Dark mode visibility fix */}
       <div className="border-b border-slate-100 bg-slate-50/60 dark:border-slate-700/50 dark:bg-slate-900/80">
         <div className="page-container flex items-center justify-between py-1.5 text-xs text-slate-500 dark:text-white">
           <span className="truncate text-xs font-medium text-slate-600 dark:!text-white mr-2">{announcement}</span>
