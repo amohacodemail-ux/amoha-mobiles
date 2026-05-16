@@ -47,10 +47,10 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/98 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[var(--header-bg)] dark:backdrop-blur-xl">
       {/* Top bar */}
-      <div className="border-b border-slate-100 bg-slate-50/60 dark:border-white/[0.05] dark:bg-surface/60">
-        <div className="page-container flex items-center justify-between py-1.5 text-xs text-slate-500 dark:text-white/90">
-          <span className="truncate text-xs font-medium text-slate-600 dark:text-white mr-2">{announcement}</span>
-          <span className="hidden flex-shrink-0 text-xs font-medium text-slate-600 dark:text-white sm:inline">Support: {contactPhone}</span>
+      <div className="border-b border-slate-100 bg-slate-50/60 dark:border-slate-700/50 dark:bg-slate-900/80">
+        <div className="page-container flex items-center justify-between py-1.5 text-xs text-slate-500 dark:text-white">
+          <span className="truncate text-xs font-medium text-slate-600 dark:!text-white mr-2">{announcement}</span>
+          <span className="hidden flex-shrink-0 text-xs font-medium text-slate-600 dark:!text-white sm:inline">Support: {contactPhone}</span>
         </div>
       </div>
 
