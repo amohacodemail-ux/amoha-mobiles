@@ -11,15 +11,37 @@ class BrandService {
     if (query.isActive !== undefined) qb = qb.eq('is_active', query.isActive === 'true');
     qb = qb.order('name', { ascending: true });
 
+    const { data, error, count } = await qb;
+    if (error) throw error;
+
+    // Count active products per brand
+    const { data: activeProdRows } = await supabase
+      .from('products')
+      .select('brand_id')
+      .eq('is_active', true);
+
+    const activeCountMap: Record<string, number> = {};
+    (activeProdRows || []).forEach((p: any) => {
+      if (p.brand_id) {
+        activeCountMap[p.brand_id] = (activeCountMap[p.brand_id] || 0) + 1;
+      }
+    });
+
+    const brands = (data || []).map((row: any) => {
+      const transformed = transformRow(row);
+      transformed.productCount = activeCountMap[transformed._id] || 0;
+      return transformed;
+    });
+
     if (query.page) {
       const page = parseInt(query.page) || 1;
       const limit = parseInt(query.limit) || 20;
-      qb = qb.range((page - 1) * limit, page * limit - 1);
+      const start = (page - 1) * limit;
+      const end = page * limit - 1;
+      return { brands: brands.slice(start, end + 1), total: brands.length };
     }
 
-    const { data, error, count } = await qb;
-    if (error) throw error;
-    return { brands: (data || []).map(transformRow), total: count || 0 };
+    return { brands, total: brands.length };
   }
 
   async getBrandById(id: string) {
