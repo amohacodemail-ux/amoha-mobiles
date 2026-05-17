@@ -58,17 +58,12 @@ class BrandService {
     if (fetchError) throw fetchError;
     if (!brand) throw new NotFoundError('Brand');
 
-    // Check for linked products before attempting delete
-    const { count, error: countError } = await supabase
+    // Count linked products for audit log (but don't block deletion)
+    const { count } = await supabase
       .from('products')
       .select('id', { count: 'exact', head: true })
       .eq('brand_id', id);
-    if (countError) throw countError;
-    if ((count ?? 0) > 0) {
-      throw new BadRequestError(
-        `Cannot delete brand: ${count} product${count === 1 ? ' is' : 's are'} linked to it. Reassign or delete those products first.`
-      );
-    }
+
     const { error } = await supabase.from('brands').delete().eq('id', id);
     if (error) throw error;
 
@@ -85,7 +80,7 @@ class BrandService {
       ipAddress
     });
 
-    logger.info(`[DELETE] Brand ${id} (${brand.name}) deleted by admin ${adminId}`);
+    logger.info(`[DELETE] Brand ${id} (${brand.name}) deleted by admin ${adminId} (had ${count} linked products)`);
 
     return { message: 'Brand deleted successfully', brandId: id, brandName: brand.name };
   }

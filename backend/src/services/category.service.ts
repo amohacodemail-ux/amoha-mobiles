@@ -86,17 +86,12 @@ class CategoryService {
     if (fetchError) throw fetchError;
     if (!category) throw new NotFoundError('Category');
 
-    // Check for linked products before attempting delete
-    const { count, error: countError } = await supabase
+    // Count linked products for audit log (but don't block deletion)
+    const { count } = await supabase
       .from('products')
       .select('id', { count: 'exact', head: true })
       .eq('category_id', id);
-    if (countError) throw countError;
-    if ((count ?? 0) > 0) {
-      throw new BadRequestError(
-        `Cannot delete category: ${count} product${count === 1 ? ' is' : 's are'} linked to it. Reassign or delete those products first.`
-      );
-    }
+
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) throw error;
 
@@ -113,7 +108,7 @@ class CategoryService {
       ipAddress
     });
 
-    logger.info(`[DELETE] Category ${id} (${category.name}) deleted by admin ${adminId}`);
+    logger.info(`[DELETE] Category ${id} (${category.name}) deleted by admin ${adminId} (had ${count} linked products)`);
 
     return { message: 'Category deleted successfully', categoryId: id, categoryName: category.name };
   }
