@@ -585,6 +585,19 @@ class ProductService {
   }
 
   async updateStock(productId: string, quantity: number) {
+    // Prevent stock updates on products page for existing products
+    const { data: inventoryRecord } = await supabase
+      .from('inventory')
+      .select('id')
+      .eq('product_id', productId)
+      .maybeSingle();
+    
+    if (inventoryRecord) {
+      throw new BadRequestError(
+        'Stock cannot be updated from products page. Please use the Inventory page to update stock for this product.'
+      );
+    }
+
     const { data: product } = await supabase.from('products').select('stock').eq('id', productId).single();
     if (!product) throw new NotFoundError('Product');
     const newStock = product.stock + quantity;
