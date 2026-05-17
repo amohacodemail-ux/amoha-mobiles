@@ -262,8 +262,13 @@ class ProductService {
       mapped.purchasePrice = 0;
     }
 
-    // Log purchase price for debugging
-    logger.info(`[ProductService] Creating product with purchase price: ${mapped.purchasePrice}`);
+    // Handle isActive field (default to true if not provided)
+    if (mapped.isActive === undefined || mapped.isActive === null) {
+      mapped.isActive = true;
+    }
+
+    // Log purchase price and active status for debugging
+    logger.info(`[ProductService] Creating product with purchase price: ${mapped.purchasePrice}, isActive: ${mapped.isActive}`);
 
     const dbData = toDbRow(mapped);
     if (data.specifications) dbData.specifications = data.specifications;
@@ -334,8 +339,14 @@ class ProductService {
       mapped.purchasePrice = 0;
     }
 
-    // Log purchase price for debugging
-    logger.info(`[ProductService] Updating product ${productId} with purchase price: ${mapped.purchasePrice}`);
+    // Handle isActive field (only update if explicitly provided)
+    if (mapped.isActive !== undefined && mapped.isActive !== null) {
+      // Keep the provided value (true or false)
+      logger.info(`[ProductService] Updating product ${productId} isActive to: ${mapped.isActive}`);
+    }
+
+    // Log purchase price and active status for debugging
+    logger.info(`[ProductService] Updating product ${productId} with purchase price: ${mapped.purchasePrice}, isActive: ${mapped.isActive}`);
 
     const dbUpdates = toDbRow(mapped);
     if (updates.specifications) dbUpdates.specifications = updates.specifications;

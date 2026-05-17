@@ -21,6 +21,7 @@ export const createProductSchema = z.object({
     tags: z.array(z.string()).optional(),
     isFeatured: z.boolean().optional(),
     isTrending: z.boolean().optional(),
+    isActive: z.boolean().optional(),
     colors: z.array(z.string()).optional(),
     warranty: z.string().optional(),
   }),
