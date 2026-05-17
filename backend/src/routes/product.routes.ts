@@ -2,7 +2,7 @@ import { Router } from 'express';
 import productController from '../controllers/product.controller';
 import productViewController from '../controllers/product-view.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { canAccessPurchase } from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
 import { createProductSchema, updateProductSchema, reviewSchema } from '../validators/product.validator';
 import { cachePublic } from '../middleware/cache.middleware';
@@ -27,10 +27,10 @@ router.post('/:id/reviews', authenticate, validate(reviewSchema), productControl
 router.delete('/:id/reviews/:reviewId', authenticate, productController.deleteReview);
 
 // Admin routes
-router.post('/bulk', authenticate, isAdmin, productController.bulkCreate);
-router.post('/', authenticate, isAdmin, validate(createProductSchema), productController.create);
-router.put('/:id', authenticate, isAdmin, validate(updateProductSchema), productController.update);
-router.delete('/:id', authenticate, isAdmin, productController.delete);
-router.patch('/:id/stock', authenticate, isAdmin, productController.updateStock);
+router.post('/bulk', authenticate, canAccessPurchase, productController.bulkCreate);
+router.post('/', authenticate, canAccessPurchase, validate(createProductSchema), productController.create);
+router.put('/:id', authenticate, canAccessPurchase, validate(updateProductSchema), productController.update);
+router.delete('/:id', authenticate, canAccessPurchase, productController.delete);
+router.patch('/:id/stock', authenticate, canAccessPurchase, productController.updateStock);
 
 export default router;
