@@ -378,11 +378,6 @@ class OrderService {
     if (findError) throw findError;
     if (!order) throw new Error('Order not found');
 
-    // Only allow deleting cancelled orders
-    if (order.status !== 'cancelled') {
-      throw new Error('Only cancelled orders can be deleted');
-    }
-
     // Delete related records first (to avoid foreign key constraints)
     await supabase.from('order_items').delete().eq('order_id', orderId);
     await supabase.from('order_status_history').delete().eq('order_id', orderId);
@@ -399,7 +394,7 @@ class OrderService {
         action: 'delete',
         entity: 'order',
         entityId: orderId,
-        details: `Deleted cancelled order ${order.order_number}`,
+        details: `Deleted order ${order.order_number} (status: ${order.status})`,
         ipAddress
       }).catch(() => {});
     }

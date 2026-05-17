@@ -117,26 +117,24 @@ export default function OrdersPage() {
           >
             <Download className="h-3.5 w-3.5" />
           </Button>
-          {o.orderStatus === 'cancelled' && (
-            <Button
-              variant="outline"
-              size="icon-sm"
-              title="Delete Order"
-              onClick={async () => {
-                if (window.confirm(`Are you sure you want to delete order ${o.orderNumber}? This action cannot be undone.`)) {
-                  try {
-                    await orderService.deleteOrder(o._id);
-                    toast.success('Order deleted successfully');
-                    load();
-                  } catch (err) {
-                    toast.error('Failed to delete order');
-                  }
+          <Button
+            variant="outline"
+            size="icon-sm"
+            title="Delete Order"
+            onClick={async () => {
+              if (window.confirm(`Are you sure you want to delete order ${o.orderNumber}? This action cannot be undone.`)) {
+                try {
+                  await orderService.deleteOrder(o._id);
+                  toast.success('Order deleted successfully');
+                  load();
+                } catch (err) {
+                  toast.error('Failed to delete order');
                 }
-              }}
-            >
-              <Trash2 className="h-3.5 w-3.5 text-red-600" />
-            </Button>
-          )}
+              }
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+          </Button>
         </div>
       ),
     },
