@@ -356,7 +356,7 @@ class InventoryLedgerService {
 
     let qb = supabase
       .from('inventory_audit_log')
-      .select('*, products(id, name, sku)', { count: 'exact' });
+      .select('*, products(id, name, sku), users:performed_by(id, name, email, role)', { count: 'exact' });
 
     if (query.productId) qb = qb.eq('product_id', query.productId);
     if (query.action) qb = qb.eq('action', query.action);
@@ -368,7 +368,14 @@ class InventoryLedgerService {
     if (error) throw error;
 
     return {
-      logs: (data || []).map(transformRow),
+      logs: (data || []).map((row: any) => {
+        const t = transformRow(row);
+        if (row.users) {
+          t.performedByUser = transformRow(row.users);
+          delete t.users;
+        }
+        return t;
+      }),
       total: count || 0,
       totalPages: Math.ceil((count || 0) / limit),
       currentPage: page,

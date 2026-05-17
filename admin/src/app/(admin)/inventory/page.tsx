@@ -494,6 +494,15 @@ export default function InventoryPage() {
     },
     { key: 'quantityChanged', header: 'Qty', render: (l) => <span className="font-mono">{l.quantityChanged}</span> },
     { key: 'notes', header: 'Notes', render: (l) => <span className="text-sm text-muted-foreground line-clamp-1">{l.notes || '-'}</span> },
+    {
+      key: 'performedByUser', header: 'Performed By',
+      render: (l) => l.performedByUser ? (
+        <div>
+          <p className="text-sm font-medium">{l.performedByUser.name || '-'}</p>
+          <p className="text-xs text-muted-foreground capitalize">{l.performedByUser.role || '-'}</p>
+        </div>
+      ) : <span className="text-xs text-muted-foreground">System</span>,
+    },
     { key: 'referenceType', header: 'Ref', render: (l) => <span className="text-xs text-muted-foreground">{l.referenceType || '-'}</span> },
     { key: 'createdAt', header: 'Date', render: (l) => <span className="text-xs text-muted-foreground">{formatDate(l.createdAt)}</span> },
   ];
