@@ -138,7 +138,14 @@ export default function ServiceRequestsPage() {
       header: 'Customer',
       render: (r) => (
         <div>
-          <p className="text-sm text-foreground">{r.customerName}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-foreground">{r.customerName}</p>
+            {r.user ? (
+              <Badge variant="outline" className="text-xs">Registered</Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs">Guest</Badge>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground">{r.customerPhone}</p>
         </div>
       ),
@@ -249,7 +256,14 @@ export default function ServiceRequestsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground">Customer</p>
-                  <p className="font-medium text-foreground">{detailRequest.customerName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-foreground">{detailRequest.customerName}</p>
+                    {detailRequest.user ? (
+                      <Badge variant="outline" className="text-xs">Registered</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">Guest</Badge>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Phone</p>
@@ -259,6 +273,13 @@ export default function ServiceRequestsPage() {
                   <p className="text-xs text-muted-foreground">Email</p>
                   <p className="text-foreground">{detailRequest.customerEmail}</p>
                 </div>
+                {detailRequest.user && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">User Account</p>
+                    <p className="text-foreground">{detailRequest.user.name}</p>
+                    <p className="text-xs text-muted-foreground">{detailRequest.user.email}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-muted-foreground">Device</p>
                   <p className="text-foreground">{detailRequest.deviceBrand} {detailRequest.deviceModel}</p>

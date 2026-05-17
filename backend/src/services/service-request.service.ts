@@ -8,7 +8,7 @@ class ServiceRequestService {
     const limit = parseInt(query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    let qb = supabase.from('service_requests').select('*', { count: 'exact' });
+    let qb = supabase.from('service_requests').select('*, users:user_id(id, name, email, phone)', { count: 'exact' });
     if (query.userId) qb = qb.eq('user_id', query.userId);
     if (query.status) qb = qb.eq('status', query.status);
     if (query.type) qb = qb.eq('service_type', query.type);
@@ -18,7 +18,14 @@ class ServiceRequestService {
     const { data, error, count } = await qb;
     if (error) throw error;
     return {
-      requests: (data || []).map(transformRow),
+      requests: (data || []).map((row: any) => {
+        const t = transformRow(row);
+        if (row.users) {
+          t.user = transformRow(row.users);
+          delete t.users;
+        }
+        return t;
+      }),
       totalRequests: count || 0,
       totalPages: Math.ceil((count || 0) / limit),
       currentPage: page,
