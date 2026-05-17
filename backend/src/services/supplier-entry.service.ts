@@ -159,6 +159,8 @@ class SupplierEntryService {
     const originalPrice = Number(productData.originalPrice) || sellingPrice;
     const thumbnail = productData.thumbnail || productData.images?.[0] || 'https://placehold.co/400x400?text=Product';
 
+    const costPrice = Number(entry.price) || 0;
+
     const productInsert: any = {
       name: productData.name,
       slug,
@@ -168,6 +170,7 @@ class SupplierEntryService {
       price: sellingPrice,
       selling_price: sellingPrice,
       original_price: originalPrice,
+      purchase_price: costPrice,
       stock: entry.quantity,
       category_id: productData.categoryId || null,
       brand_id: productData.brandId || null,

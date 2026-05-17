@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import controller from '../controllers/supplier-entry.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { canAccessPurchase, canAccessAdminOnly, canAccessSupplier } from '../middleware/role.middleware';
+import { canAccessPurchase, canAccessAdminOnly, canAccessSupplier, authorize } from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
 import {
   createEntrySchema,
@@ -15,8 +15,9 @@ const router = Router();
 router.use(authenticate);
 
 // --- Supplier routes (supplier OR purchase/admin can submit entries) ---
-router.post('/', canAccessSupplier, validate(createEntrySchema), controller.createEntry);
-router.get('/my', canAccessSupplier, controller.getMyEntries);
+const canSubmitEntry = authorize('admin', 'supplier', 'purchase', 'purchase_inventory');
+router.post('/', canSubmitEntry, validate(createEntrySchema), controller.createEntry);
+router.get('/my', canSubmitEntry, controller.getMyEntries);
 
 // --- Purchase & Admin routes ---
 router.get('/dashboard', canAccessPurchase, controller.getDashboardStats);
