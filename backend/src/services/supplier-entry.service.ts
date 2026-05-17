@@ -4,6 +4,7 @@ import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/app-er
 import { SUPPLIER_ENTRIES_TABLE } from '../models/supplier-entry.model';
 import inventoryLedger from './inventory-ledger.service';
 import logger from '../utils/logger.util';
+import { sendEmail } from '../utils/email.util';
 
 class SupplierEntryService {
   // ==================== Supplier actions ====================
@@ -62,8 +63,9 @@ class SupplierEntryService {
     const limit = parseInt(query.limit) || 20;
     const offset = (page - 1) * limit;
 
+    // Try joining suppliers table first (preferred); fall back to users join if FK is on users
     let qb = supabase.from(SUPPLIER_ENTRIES_TABLE)
-      .select('*, users!supplier_entries_supplier_id_fkey(id, name, email)', { count: 'exact' });
+      .select('*', { count: 'exact' });
 
     if (query.status) qb = qb.eq('status', query.status);
     if (query.supplierId) qb = qb.eq('supplier_id', query.supplierId);
@@ -74,12 +76,33 @@ class SupplierEntryService {
     const { data, error, count } = await qb;
     if (error) throw error;
 
+    // Enrich with supplier info using supplier_id
+    const supplierIds = [...new Set((data || []).map((r: any) => r.supplier_id).filter(Boolean))];
+    let supplierMap: Record<string, any> = {};
+    if (supplierIds.length > 0) {
+      // Try suppliers table first
+      const { data: suppliersData } = await supabase
+        .from('suppliers')
+        .select('id, name, company_name, email')
+        .in('id', supplierIds as string[]);
+      if (suppliersData && suppliersData.length > 0) {
+        suppliersData.forEach((s: any) => { supplierMap[s.id] = s; });
+      } else {
+        // Fall back to users table (legacy schema)
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, name, email')
+          .in('id', supplierIds as string[]);
+        (usersData || []).forEach((u: any) => { supplierMap[u.id] = u; });
+      }
+    }
+
     return {
       entries: (data || []).map((row: any) => {
         const entry = transformRow(row);
-        if (row.users) {
-          entry.supplier = transformRow(row.users);
-          delete entry.users;
+        const sup = supplierMap[row.supplier_id];
+        if (sup) {
+          entry.supplier = { id: sup.id, name: sup.company_name || sup.name || sup.email || 'Unknown', email: sup.email };
         }
         return entry;
       }),
@@ -125,6 +148,12 @@ class SupplierEntryService {
     const slug = productData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const sku = `SKU-${Date.now().toString(36).toUpperCase()}`;
     const barcode = `BAR-${Date.now().toString(36).toUpperCase()}`;
+
+    // Check for duplicate product by slug to avoid creating duplicate products
+    const { data: existingProduct } = await supabase.from('products').select('id, name').eq('slug', slug).maybeSingle();
+    if (existingProduct) {
+      throw new BadRequestError(`A product named "${existingProduct.name}" already exists. Please use a different product name.`);
+    }
 
     const sellingPrice = Number(productData.sellingPrice || productData.price || entry.price) || 0;
     const originalPrice = Number(productData.originalPrice) || sellingPrice;
@@ -181,6 +210,18 @@ class SupplierEntryService {
 
     logger.info(`Supplier entry ${entryId} converted to product ${product.id} by admin ${adminId}`);
 
+    // Notify supplier by email if possible
+    try {
+      const supplierEmail = await this.getSupplierEmail(entry.supplier_id);
+      if (supplierEmail.email) {
+        sendEmail({
+          to: supplierEmail.email,
+          subject: 'Your Submission Has Been Approved - AMOHA Mobiles',
+          html: `<p>Dear ${supplierEmail.name || 'Supplier'},</p><p>Your submission for <strong>${entry.item_name}</strong> (Qty: ${entry.quantity}) has been <strong style="color:#059669">approved</strong> and added as a product.</p><p>Thank you for your contribution!</p>`,
+        }).catch(() => {});
+      }
+    } catch { /* email errors should not break conversion */ }
+
     return {
       entry: transformRow({ ...entry, status: 'converted', converted_product_id: product.id }),
       product: transformRow(product),
@@ -205,7 +246,30 @@ class SupplierEntryService {
     if (error) throw error;
 
     logger.info(`Supplier entry ${entryId} rejected by admin ${adminId}: ${reason}`);
+
+    // Notify supplier by email if possible
+    try {
+      const supplierEmail = await this.getSupplierEmail(entry.supplier_id);
+      if (supplierEmail.email) {
+        sendEmail({
+          to: supplierEmail.email,
+          subject: 'Your Submission Was Not Approved - AMOHA Mobiles',
+          html: `<p>Dear ${supplierEmail.name || 'Supplier'},</p><p>Your submission for <strong>${entry.item_name}</strong> has been <strong style="color:#dc2626">rejected</strong>.</p><p><strong>Reason:</strong> ${reason}</p><p>If you have questions, please contact us.</p>`,
+        }).catch(() => {});
+      }
+    } catch { /* email errors should not break rejection */ }
+
     return transformRow(updated);
+  }
+
+  private async getSupplierEmail(supplierId: string): Promise<{ email?: string; name?: string }> {
+    // Try suppliers table first
+    const { data: supplier } = await supabase.from('suppliers').select('name, email').eq('id', supplierId).maybeSingle();
+    if (supplier?.email) return { email: supplier.email, name: supplier.name };
+    // Fall back to users table
+    const { data: user } = await supabase.from('users').select('name, email').eq('id', supplierId).maybeSingle();
+    if (user?.email) return { email: user.email, name: user.name };
+    return {};
   }
 }
 

@@ -143,7 +143,8 @@ class SupplierController {
 
   async receivePurchaseOrder(req: Request, res: Response, next: NextFunction) {
     try {
-      const po = await supplierService.receivePurchaseOrder(req.params.id, req.body.items);
+      const receivedBy = (req as AuthenticatedRequest).user?.userId;
+      const po = await supplierService.receivePurchaseOrder(req.params.id, req.body.items, receivedBy);
       sendSuccess(res, po, 'Items received successfully');
     } catch (error) {
       next(error);

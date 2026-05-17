@@ -3,8 +3,10 @@ import { transformRow, toDbRow, transformUser } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import logger from '../utils/logger.util';
 import activityLog from './activity-log.service';
+import inventoryLedger from './inventory-ledger.service';
 import crypto from 'crypto';
 import { hashPassword } from '../utils/password.util';
+import { sendEmail } from '../utils/email.util';
 
 function generatePoNumber(): string {
   const ts = Date.now().toString(36).toUpperCase();
@@ -472,6 +474,18 @@ class SupplierService {
       }
     }
 
+    // Send email notification to supplier if they have an email
+    if (data.supplierId) {
+      const { data: supplier } = await supabase.from('suppliers').select('name, email').eq('id', data.supplierId).maybeSingle();
+      if (supplier?.email) {
+        sendEmail({
+          to: supplier.email,
+          subject: `Purchase Order ${poNumber} - AMOHA Mobiles`,
+          html: `<p>Dear ${supplier.name},</p><p>A new purchase order <strong>${poNumber}</strong> has been created for your review.</p><p>Total Amount: ₹${totalAmount.toLocaleString('en-IN')}</p><p>Please contact us if you have any questions.</p>`,
+        }).catch(() => {});
+      }
+    }
+
     return this.getPurchaseOrderById(po.id);
   }
 
@@ -488,7 +502,7 @@ class SupplierService {
     return this.getPurchaseOrderById(id);
   }
 
-  async receivePurchaseOrder(id: string, receivedItems: any[]) {
+  async receivePurchaseOrder(id: string, receivedItems: any[], receivedBy?: string) {
     const po = await this.getPurchaseOrderById(id);
 
     let allReceived = true;
@@ -508,16 +522,17 @@ class SupplierService {
         if (receivedQty < item.quantity) allReceived = false;
         if (receivedQty > 0) anyReceived = true;
 
-        // Update product stock
-        if (receivedQty > 0) {
-          const { data: product } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('id', item.productId)
-            .maybeSingle();
-          if (product) {
-            const newStock = (Number(product.stock) || 0) + Number(receivedQty);
-            await supabase.from('products').update({ stock: newStock }).eq('id', item.productId);
+        // Update product stock via inventory ledger (creates proper audit trail)
+        if (receivedQty > 0 && item.productId) {
+          try {
+            await inventoryLedger.addStock(
+              item.productId,
+              Number(receivedQty),
+              `Received from PO ${po.poNumber}`,
+              receivedBy || 'system',
+            );
+          } catch (stockErr) {
+            logger.error(`[PO receive] inventory addStock error for product ${item.productId}:`, stockErr);
           }
         }
       }
@@ -535,7 +550,7 @@ class SupplierService {
 
     // Update supplier metrics
     if (allReceived) {
-      await this.updateSupplierMetrics(po.supplierId, po.expectedDelivery);
+      await this.updateSupplierMetrics(po.supplierId, po.expectedDelivery, po.orderDate);
     }
 
     return this.getPurchaseOrderById(id);
@@ -707,7 +722,7 @@ class SupplierService {
 
   // ==================== Internal Helpers ====================
 
-  private async updateSupplierMetrics(supplierId: string, expectedDelivery?: Date) {
+  private async updateSupplierMetrics(supplierId: string, expectedDelivery?: Date, orderDate?: Date) {
     try {
       const { data: supplier } = await supabase.from('suppliers').select('*').eq('id', supplierId).single();
       if (!supplier) return;
@@ -718,10 +733,20 @@ class SupplierService {
       const onTimeDeliveries = (supplier.on_time_deliveries || 0) + (onTime ? 1 : 0);
       const reliabilityScore = Math.min(5, Math.round(((onTimeDeliveries / totalOrders) * 5) * 10) / 10);
 
+      // Calculate average delivery days
+      const actualDeliveryDays = orderDate
+        ? Math.floor((now.getTime() - new Date(orderDate).getTime()) / (1000 * 60 * 60 * 24))
+        : null;
+      const prevAvgDays = supplier.avg_delivery_days || 0;
+      const avgDeliveryDays = actualDeliveryDays !== null
+        ? Math.round(((prevAvgDays * (totalOrders - 1)) + actualDeliveryDays) / totalOrders)
+        : prevAvgDays;
+
       await supabase.from('suppliers').update({
         total_orders: totalOrders,
         on_time_deliveries: onTimeDeliveries,
         reliability_score: reliabilityScore,
+        avg_delivery_days: avgDeliveryDays,
         updated_at: new Date().toISOString(),
       }).eq('id', supplierId);
     } catch (err) {
