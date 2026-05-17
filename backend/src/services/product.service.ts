@@ -266,6 +266,24 @@ class ProductService {
   async updateProduct(productId: string, updates: any) {
     const mapped = { ...updates };
 
+    // Prevent stock updates on products page for existing products
+    // Stock updates should only be done through inventory page after first creation
+    if (updates.stock !== undefined) {
+      // Check if inventory record exists for this product
+      const { data: inventoryRecord } = await supabase
+        .from('inventory')
+        .select('id')
+        .eq('product_id', productId)
+        .maybeSingle();
+      
+      if (inventoryRecord) {
+        throw new BadRequestError(
+          'Stock cannot be updated from products page. Please use the Inventory page to update stock for this product.'
+        );
+      }
+      // If no inventory record exists, allow stock update (first time setup)
+    }
+
     // Handle barcode update with validation
     if (updates.barcode !== undefined) {
       if (updates.barcode === null || updates.barcode === '') {
