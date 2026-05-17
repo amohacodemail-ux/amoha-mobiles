@@ -14,21 +14,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
       if (type === 'number' && preventScroll !== false) {
         e.preventDefault();
-        e.currentTarget.blur();
-      }
-    };
-
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-      if (type === 'number' && preventScroll !== false) {
-        // Remove wheel event listener when focused to prevent scroll changes
-        e.currentTarget.addEventListener('wheel', handleWheel as any, { passive: false });
-      }
-    };
-
-    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-      if (type === 'number' && preventScroll !== false) {
-        // Remove wheel event listener when blurred
-        e.currentTarget.removeEventListener('wheel', handleWheel as any);
       }
     };
 
@@ -57,9 +42,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               className,
             )}
             ref={ref}
-            onWheel={handleWheel}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
+            onWheel={type === 'number' && preventScroll !== false ? handleWheel : undefined}
             {...props}
           />
         </div>

@@ -54,8 +54,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setChecking(false);
       }
     };
-    verify();
-  }, [pathname]); // Re-verify on route change
+    
+    // Only verify on initial mount, not on every route change
+    if (checking) {
+      verify();
+    }
+  }, [isAuthenticated, user]); // Only re-verify when auth state changes
 
   if (checking) {
     return (
