@@ -6,10 +6,32 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   error?: string;
   label?: string;
   icon?: React.ReactNode;
+  preventScroll?: boolean;
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, error, label, icon, ...props }, ref) => {
+  ({ className, type, error, label, icon, preventScroll, ...props }, ref) => {
+    const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+      if (type === 'number' && preventScroll !== false) {
+        e.preventDefault();
+        e.currentTarget.blur();
+      }
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      if (type === 'number' && preventScroll !== false) {
+        // Remove wheel event listener when focused to prevent scroll changes
+        e.currentTarget.addEventListener('wheel', handleWheel as any, { passive: false });
+      }
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      if (type === 'number' && preventScroll !== false) {
+        // Remove wheel event listener when blurred
+        e.currentTarget.removeEventListener('wheel', handleWheel as any);
+      }
+    };
+
     return (
       <div className="w-full">
         {label && (
@@ -31,9 +53,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               'transition-all duration-200 ease-out',
               icon && 'pl-10',
               error && 'border-destructive/50 focus:ring-destructive/20 focus:border-destructive hover:border-destructive/70',
+              type === 'number' && '[&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none',
               className,
             )}
             ref={ref}
+            onWheel={handleWheel}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
             {...props}
           />
         </div>

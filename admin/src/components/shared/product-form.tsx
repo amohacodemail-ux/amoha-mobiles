@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { ArrowLeft, X, Plus, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, X, Plus, Loader2, RefreshCw, Lock, Unlock } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
 import { MultiImageUploader } from '@/components/shared/image-uploader';
@@ -80,6 +80,7 @@ export function ProductForm({ productId }: Props) {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([{ key: '', value: '' }]);
+  const [editMode, setEditMode] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(!!productId);
   const [imagesUploading, setImagesUploading] = useState(false);
@@ -247,7 +248,30 @@ export function ProductForm({ productId }: Props) {
   return (
     <div>
       <PageHeader title={productId ? 'Edit Product' : 'Add Product'} description={productId ? 'Update product details' : 'Create a new product listing'}>
-        <Link href="/products"><Button variant="outline"><ArrowLeft className="h-4 w-4" />Back</Button></Link>
+        <div className="flex items-center gap-2">
+          {productId && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setEditMode(!editMode)}
+              className="flex items-center gap-2"
+            >
+              {editMode ? (
+                <>
+                  <Lock className="h-4 w-4" />
+                  Lock Editing
+                </>
+              ) : (
+                <>
+                  <Unlock className="h-4 w-4" />
+                  Enable Editing
+                </>
+              )}
+            </Button>
+          )}
+          <Link href="/products"><Button variant="outline"><ArrowLeft className="h-4 w-4" />Back</Button></Link>
+        </div>
       </PageHeader>
 
       {loading ? (
@@ -308,12 +332,12 @@ export function ProductForm({ productId }: Props) {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Input label="Sale Price" type="number" error={errors.price?.message} {...register('price')} />
-                  <Input label="Original Price" type="number" error={errors.originalPrice?.message} {...register('originalPrice')} />
-                  <Input label="Purchase Price" type="number" placeholder="Cost price" error={errors.purchasePrice?.message} {...register('purchasePrice')} />
+                  <Input label="Sale Price" type="number" error={errors.price?.message} {...register('price')} preventScroll disabled={!editMode || !productId} />
+                  <Input label="Original Price" type="number" error={errors.originalPrice?.message} {...register('originalPrice')} preventScroll disabled={!editMode || !productId} />
+                  <Input label="Purchase Price" type="number" placeholder="Cost price" error={errors.purchasePrice?.message} {...register('purchasePrice')} preventScroll disabled={!editMode || !productId} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input label="Stock Quantity" type="number" error={errors.stock?.message} {...register('stock')} />
+                  <Input label="Stock Quantity" type="number" error={errors.stock?.message} {...register('stock')} preventScroll disabled={!editMode || !productId} />
                 </div>
                 <Input label="Tags (comma separated)" placeholder="smartphone, 5g, flagship" {...register('tags')} />
                 <Input label="Colors (comma separated)" placeholder="Black, Silver, Gold" {...register('colors')} />
