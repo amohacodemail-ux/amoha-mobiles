@@ -4,7 +4,7 @@ import Cookies from 'js-cookie';
 import { normalizeRole, type UserRole } from '@/lib/permissions';
 
 // Allowed roles for admin panel access
-const ALLOWED_ROLES: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'digital_marketing', 'purchase_inventory', 'supplier'];
+const ALLOWED_ROLES: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'service_engineer', 'digital_marketing', 'purchase_inventory', 'supplier'];
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {

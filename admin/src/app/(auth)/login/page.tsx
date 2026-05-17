@@ -34,6 +34,8 @@ export default function LoginPage() {
       const role = res.user.role;
       if (role === 'supplier') {
         router.replace('/supplier-portal');
+      } else if (role === 'service_engineer') {
+        router.replace('/service-requests');
       } else {
         router.replace('/dashboard');
       }
@@ -101,7 +103,7 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-border text-center">
             <p className="text-xs text-muted-foreground">
-              Admin &amp; Supplier access only
+              Admin, Supplier &amp; Service Engineer access only
             </p>
           </div>
         </div>

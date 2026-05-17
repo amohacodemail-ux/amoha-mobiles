@@ -173,6 +173,7 @@ export default function AdminUsersPage() {
               <option value="marketing">Marketing</option>
               <option value="logistics">Logistics</option>
               <option value="supplier">Supplier</option>
+              <option value="service_engineer">Service Engineer</option>
             </select>
           </div>
 
@@ -224,6 +225,7 @@ export default function AdminUsersPage() {
                       <option value="marketing">Marketing</option>
                       <option value="logistics">Logistics</option>
                       <option value="supplier">Supplier</option>
+                      <option value="service_engineer">Service Engineer</option>
                     </select>
                     <Button
                       variant="outline"
@@ -274,6 +276,10 @@ export default function AdminUsersPage() {
             <div className="p-4 border rounded-lg">
               <Badge className="mb-2 bg-gray-100 text-gray-800">Supplier</Badge>
               <p className="text-sm text-muted-foreground">Supplier portal access only</p>
+            </div>
+            <div className="p-4 border rounded-lg">
+              <Badge className="mb-2 bg-cyan-100 text-cyan-800">Service Engineer</Badge>
+              <p className="text-sm text-muted-foreground">View and manage service requests</p>
             </div>
           </div>
         </CardContent>

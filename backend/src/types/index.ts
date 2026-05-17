@@ -41,6 +41,7 @@ export type UserRole =
   | "marketing"      // Marketing operations: coupons, banners, reviews, CRM, campaigns
   | "logistics"      // Logistics operations: order tracking, shipping
   | "supplier"       // Supplier portal access
+  | "service_engineer" // Service center operations: view and update service requests
   | "digital_marketing"  // Legacy - mapped to marketing
   | "purchase_inventory"; // Legacy - mapped to purchase
 

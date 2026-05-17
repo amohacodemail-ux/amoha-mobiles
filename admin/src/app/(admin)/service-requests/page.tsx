@@ -19,6 +19,7 @@ import {
   type ServiceStats,
 } from '@/services/service-request.service';
 import { formatDate } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const LIMIT = 10;
 
@@ -40,6 +41,7 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 };
 
 export default function ServiceRequestsPage() {
+  const { isAdmin, canDelete } = usePermissions();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [stats, setStats] = useState<ServiceStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,9 +182,11 @@ export default function ServiceRequestsPage() {
           <Button size="icon" variant="ghost" onClick={() => openDetail(r)}>
             <Eye className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={() => setDeleteId(r._id)} className="text-destructive">
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {isAdmin() && (
+            <Button size="icon" variant="ghost" onClick={() => setDeleteId(r._id)} className="text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       ),
     },

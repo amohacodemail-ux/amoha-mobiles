@@ -98,9 +98,15 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
         ),
       },
       {
+        title: collapsed ? undefined : 'Service',
+        items: filteredNavItems.filter(i =>
+          ['service_requests'].includes(i.module)
+        ),
+      },
+      {
         title: collapsed ? undefined : 'Admin',
         items: filteredNavItems.filter(i =>
-          ['users', 'service_requests', 'activity_logs', 'settings'].includes(i.module)
+          ['users', 'activity_logs', 'settings'].includes(i.module)
         ),
       },
       {

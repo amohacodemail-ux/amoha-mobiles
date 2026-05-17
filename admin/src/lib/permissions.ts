@@ -14,6 +14,7 @@ export type UserRole =
   | 'marketing'
   | 'logistics'
   | 'supplier'
+  | 'service_engineer'    // Service center operations
   | 'digital_marketing'  // Legacy - mapped to marketing
   | 'purchase_inventory'; // Legacy - mapped to purchase
 
@@ -324,6 +325,40 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SUPPLIER_PORTAL]: [],
   },
 
+  service_engineer: {
+    // Service engineers - access to service requests only
+    [MODULES.DASHBOARD]: [ACTIONS.READ],
+    [MODULES.SERVICE_REQUESTS]: [ACTIONS.READ, ACTIONS.EDIT],
+    [MODULES.NOTIFICATIONS]: [ACTIONS.READ],
+    [MODULES.POLICIES]: [ACTIONS.READ],
+    // No access to other modules
+    [MODULES.ORDERS]: [],
+    [MODULES.BILLING]: [],
+    [MODULES.REPORTS]: [],
+    [MODULES.BARCODE_POS]: [],
+    [MODULES.RETURNS]: [],
+    [MODULES.WALLETS]: [],
+    [MODULES.PRODUCTS]: [],
+    [MODULES.CATEGORIES]: [],
+    [MODULES.BRANDS]: [],
+    [MODULES.INVENTORY]: [],
+    [MODULES.SUPPLIERS]: [],
+    [MODULES.SUPPLIER_ENTRIES]: [],
+    [MODULES.RFQ]: [],
+    [MODULES.PURCHASE_REQUESTS]: [],
+    [MODULES.COUPONS]: [],
+    [MODULES.BANNERS]: [],
+    [MODULES.REVIEWS]: [],
+    [MODULES.CONTACT_MESSAGES]: [],
+    [MODULES.PRODUCT_VIEWS]: [],
+    [MODULES.ABANDONED_CARTS]: [],
+    [MODULES.CRM]: [],
+    [MODULES.USERS]: [],
+    [MODULES.ACTIVITY_LOGS]: [],
+    [MODULES.SETTINGS]: [],
+    [MODULES.SUPPLIER_PORTAL]: [],
+  },
+
   // Legacy roles - mapped to standard roles
   digital_marketing: {} as Record<Module, Action[]>,
   purchase_inventory: {} as Record<Module, Action[]>,
@@ -410,6 +445,7 @@ export function getRoleDisplayName(role: UserRole): string {
     marketing: 'Marketing',
     logistics: 'Logistics',
     supplier: 'Supplier',
+    service_engineer: 'Service Engineer',
     user: 'User',
     digital_marketing: 'Digital Marketing',
     purchase_inventory: 'Purchase & Inventory',
@@ -429,6 +465,7 @@ export function getRoleBadgeColor(role: UserRole): string {
     marketing: 'bg-purple-100 text-purple-800 border-purple-200',
     logistics: 'bg-orange-100 text-orange-800 border-orange-200',
     supplier: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    service_engineer: 'bg-cyan-100 text-cyan-800 border-cyan-200',
     user: 'bg-gray-100 text-gray-800 border-gray-200',
     digital_marketing: 'bg-purple-100 text-purple-800 border-purple-200',
     purchase_inventory: 'bg-green-100 text-green-800 border-green-200',

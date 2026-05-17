@@ -149,6 +149,7 @@ export default function NewAdminUserPage() {
                 <option value="marketing">Marketing (Coupons, Banners, CRM)</option>
                 <option value="logistics">Logistics (Order Tracking)</option>
                 <option value="supplier">Supplier (Portal Only)</option>
+                <option value="service_engineer">Service Engineer (Service Requests)</option>
               </select>
               <p className="text-xs text-muted-foreground mt-1">
                 {formData.role === 'admin' && 'Full access to all modules and user management'}
@@ -157,6 +158,7 @@ export default function NewAdminUserPage() {
                 {formData.role === 'marketing' && 'Access to: Coupons, Banners, Reviews, CRM, User Activity, Reports'}
                 {formData.role === 'logistics' && 'Access to: Dashboard, Orders (view only)'}
                 {formData.role === 'supplier' && 'Access to: Supplier portal only'}
+                {formData.role === 'service_engineer' && 'Access to: Service Requests (view and update)'}
               </p>
             </div>
 
@@ -202,6 +204,9 @@ export default function NewAdminUserPage() {
             </div>
             <div className="p-2 bg-orange-50 rounded">
               <strong>Logistics</strong>: Order tracking only
+            </div>
+            <div className="p-2 bg-cyan-50 rounded">
+              <strong>Service Engineer</strong>: Service requests
             </div>
             <div className="p-2 bg-gray-100 rounded">
               <strong>Supplier</strong>: Supplier portal

@@ -13,6 +13,7 @@ import { AuthenticatedRequest, UserRole } from '../types';
  * - marketing: Marketing operations (coupons, banners, reviews, CRM)
  * - logistics: Logistics operations (order tracking, shipping)
  * - supplier: Supplier portal access
+ * - service_engineer: Service center operations (view/update service requests)
  * - user: Regular customer (frontend only)
  */
 
@@ -84,6 +85,10 @@ export const canAccessLogistics = authorize('admin', 'logistics');
 /** Supplier portal access */
 export const canAccessSupplier = authorize('admin', 'supplier');
 
+// ---- SERVICE ENGINEER MODULE ----
+/** Service center operations: view and update service requests */
+export const canAccessServiceEngineer = authorize('admin', 'service_engineer');
+
 // ---- ADMIN-ONLY MODULES ----
 /** System settings, user management, activity logs */
 export const canAccessAdminOnly = authorize('admin');
@@ -91,22 +96,22 @@ export const canAccessAdminOnly = authorize('admin');
 // ==================== COMBINED AUTHORIZERS ====================
 
 /** Dashboard - accessible by all internal roles */
-export const canAccessDashboard = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics');
+export const canAccessDashboard = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer');
 
 /** Reports - accessible by admin, sales, purchase */
 export const canAccessReports = authorize('admin', 'sales', 'purchase', 'purchase_inventory');
 
 /** Notifications - accessible by all internal roles */
-export const canAccessNotifications = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics');
+export const canAccessNotifications = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer');
 
 /** Settings/Profile - accessible by all authenticated users */
-export const canAccessSettings = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics');
+export const canAccessSettings = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer');
 
 // ==================== LEGACY COMPATIBILITY ====================
 
 // Keep legacy exports for backward compatibility
 export const isUser = authorize('user', 'admin');
-export const isInternalUser = authorize('admin', 'digital_marketing', 'sales', 'marketing', 'purchase', 'purchase_inventory', 'logistics');
+export const isInternalUser = authorize('admin', 'digital_marketing', 'sales', 'marketing', 'purchase', 'purchase_inventory', 'logistics', 'service_engineer');
 export const isSalesOrAdmin = canAccessSales;
 export const isMarketingOrAdmin = canAccessMarketing;
 export const isLogisticsOrAdmin = canAccessLogistics;
@@ -164,6 +169,9 @@ export function getAccessibleModules(role: UserRole): string[] {
     ],
     supplier: [
       'dashboard', 'rfq', 'notifications'
+    ],
+    service_engineer: [
+      'dashboard', 'service_requests', 'notifications', 'policies'
     ],
     user: []
   };

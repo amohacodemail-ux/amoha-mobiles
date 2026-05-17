@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import serviceRequestController from '../controllers/service-request.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { isAdmin } from '../middleware/role.middleware';
+import { canAccessServiceEngineer, isAdmin } from '../middleware/role.middleware';
 
 const router = Router();
 
@@ -20,11 +20,13 @@ router.post('/', (req, res, next) => {
 // Authenticated: get my requests
 router.get('/my-requests', authenticate, serviceRequestController.getMyRequests);
 
-// Admin routes
-router.get('/', authenticate, isAdmin, serviceRequestController.getAll);
-router.get('/stats', authenticate, isAdmin, serviceRequestController.getStats);
-router.get('/:id', authenticate, isAdmin, serviceRequestController.getById);
-router.patch('/:id/status', authenticate, isAdmin, serviceRequestController.updateStatus);
+// Admin & Service Engineer routes (view and update)
+router.get('/', authenticate, canAccessServiceEngineer, serviceRequestController.getAll);
+router.get('/stats', authenticate, canAccessServiceEngineer, serviceRequestController.getStats);
+router.get('/:id', authenticate, canAccessServiceEngineer, serviceRequestController.getById);
+router.patch('/:id/status', authenticate, canAccessServiceEngineer, serviceRequestController.updateStatus);
+
+// Admin-only routes (delete)
 router.delete('/:id', authenticate, isAdmin, serviceRequestController.delete);
 
 export default router;

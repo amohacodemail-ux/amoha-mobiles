@@ -9,7 +9,7 @@ import { normalizeRole, type UserRole } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 
 // Allowed roles for admin panel access
-const ALLOWED_ROLES: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'digital_marketing', 'purchase_inventory'];
+const ALLOWED_ROLES: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'digital_marketing', 'purchase_inventory'];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);

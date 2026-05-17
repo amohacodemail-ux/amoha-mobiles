@@ -21,6 +21,7 @@ export type AdminRole =
   | 'marketing'
   | 'logistics'
   | 'supplier'
+  | 'service_engineer'
   | 'user'
   | 'digital_marketing'
   | 'purchase_inventory';
