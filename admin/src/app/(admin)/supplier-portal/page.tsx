@@ -1,7 +1,8 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { ClipboardList, Plus, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, User, Building2 } from 'lucide-react';
+import { ClipboardList, Plus, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, User, Building2, ShieldAlert } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { supplierEntryService } from '@/services/supplier-entry.service';
 import apiClient from '@/lib/api-client';
 import { useAuthStore } from '@/store/auth.store';
+import { normalizeRole } from '@/lib/permissions';
 import { formatDate } from '@/lib/utils';
 
 const LIMIT = 15;
@@ -22,8 +24,9 @@ const statusColors: Record<string, string> = {
 
 export default function SupplierPortalPage() {
   const { user } = useAuthStore();
+  const router = useRouter();
 
-  // Profile state
+  // ALL hooks must come before any conditional return
   const [profile, setProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,20 +36,20 @@ export default function SupplierPortalPage() {
     pincode: '', country: 'India', gstNumber: '', panNumber: '',
     bankName: '', bankAccountNumber: '', bankIfsc: '', paymentTerms: 'Net 30', notes: '',
   });
-
-  // Entries state
   const [entries, setEntries] = useState<any[]>([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  // Submit entry dialog
   const [submitOpen, setSubmitOpen] = useState(false);
   const [entryForm, setEntryForm] = useState({ itemName: '', quantity: 1, price: '', note: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  // Load supplier profile
-  const loadProfile = async () => {
+  // Strict RBAC check
+  const normalizedRole = user ? normalizeRole(user.role as any) : null;
+  const isAllowed = normalizedRole === 'supplier' || normalizedRole === 'admin';
+
+  const loadProfile = useCallback(async () => {
+    if (!isAllowed) return;
     setProfileLoading(true);
     try {
       const { data } = await apiClient.get('/suppliers/me');
@@ -76,10 +79,10 @@ export default function SupplierPortalPage() {
     } finally {
       setProfileLoading(false);
     }
-  };
+  }, [isAllowed]);
 
-  // Load my entries
   const loadEntries = useCallback(async () => {
+    if (!isAllowed) return;
     setEntriesLoading(true);
     try {
       const result = await supplierEntryService.getMyEntries({ page, limit: LIMIT });
@@ -90,12 +93,29 @@ export default function SupplierPortalPage() {
     } finally {
       setEntriesLoading(false);
     }
-  }, [page]);
+  }, [page, isAllowed]);
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => {
+    if (user && !isAllowed) {
+      toast.error('Access denied. This page is for suppliers only.');
+      router.replace('/dashboard');
+    }
+  }, [user, isAllowed, router]);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
   useEffect(() => { loadEntries(); }, [loadEntries]);
 
-  // Save profile
+  // Conditional render AFTER all hooks
+  if (!user || !isAllowed) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center">
+        <ShieldAlert className="h-12 w-12 text-red-400 mb-4" />
+        <h2 className="text-xl font-bold text-foreground">Access Denied</h2>
+        <p className="text-sm text-muted-foreground mt-2">This page is for supplier accounts only.</p>
+      </div>
+    );
+  }
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -110,7 +130,6 @@ export default function SupplierPortalPage() {
     }
   };
 
-  // Submit entry
   const handleSubmitEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!entryForm.itemName.trim()) return toast.error('Item name is required');

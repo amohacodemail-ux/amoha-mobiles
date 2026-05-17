@@ -31,7 +31,12 @@ export default function LoginPage() {
       const res = await authService.login(data);
       setUser(res.user);
       toast.success(`Welcome back, ${res.user.name}!`);
-      router.replace('/dashboard');
+      const role = res.user.role;
+      if (role === 'supplier') {
+        router.replace('/supplier-portal');
+      } else {
+        router.replace('/dashboard');
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.message ?? err?.message ?? 'Login failed');
     }
@@ -51,7 +56,7 @@ export default function LoginPage() {
             <Smartphone className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Amoha Admin</h1>
-          <p className="text-sm text-muted-foreground mt-1">Sign in to your admin account</p>
+          <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
         </div>
 
         {/* Card */}
@@ -96,7 +101,7 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-border text-center">
             <p className="text-xs text-muted-foreground">
-              Protected route — Admin access only
+              Admin &amp; Supplier access only
             </p>
           </div>
         </div>
