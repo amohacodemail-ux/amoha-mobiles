@@ -30,6 +30,7 @@ const schema = z.object({
   shortDescription: z.string().optional(),
   price: z.coerce.number().min(1, 'Price must be > 0'),
   originalPrice: z.coerce.number().min(1, 'Original price must be > 0'),
+  purchasePrice: z.coerce.number().min(0, 'Purchase price cannot be negative').optional(),
   stock: z.coerce.number().min(0, 'Stock cannot be negative'),
   warranty: z.string().optional(),
   tags: z.string().optional(),
@@ -111,6 +112,7 @@ export function ProductForm({ productId }: Props) {
             shortDescription: p.shortDescription,
             price: p.price,
             originalPrice: p.originalPrice,
+            purchasePrice: (p as any).purchasePrice || 0,
             stock: p.stock,
             warranty: p.warranty || '',
             tags: p.tags?.join(', ') || '',
@@ -190,6 +192,7 @@ export function ProductForm({ productId }: Props) {
         shortDescription: data.shortDescription || '',
         price: data.price,
         originalPrice: data.originalPrice,
+        purchasePrice: data.purchasePrice || 0,
         discount: Math.max(0, discount),
         stock: data.stock,
         specifications: specsObj,
@@ -291,6 +294,9 @@ export function ProductForm({ productId }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Input label="Sale Price" type="number" error={errors.price?.message} {...register('price')} />
                   <Input label="Original Price" type="number" error={errors.originalPrice?.message} {...register('originalPrice')} />
+                  <Input label="Purchase Price" type="number" placeholder="Cost price" error={errors.purchasePrice?.message} {...register('purchasePrice')} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input label="Stock Quantity" type="number" error={errors.stock?.message} {...register('stock')} />
                 </div>
                 <Input label="Tags (comma separated)" placeholder="smartphone, 5g, flagship" {...register('tags')} />
