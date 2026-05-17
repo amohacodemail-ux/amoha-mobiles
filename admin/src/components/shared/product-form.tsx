@@ -196,7 +196,6 @@ export function ProductForm({ productId }: Props) {
         originalPrice: data.originalPrice,
         purchasePrice: data.purchasePrice || 0,
         discount: Math.max(0, discount),
-        stock: data.stock,
         specifications: specsObj,
         tags: data.tags ? data.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
         colors: data.colors ? data.colors.split(',').map((c: string) => c.trim()).filter(Boolean) : [],
@@ -209,6 +208,11 @@ export function ProductForm({ productId }: Props) {
         barcode: data.barcode || undefined,
         barcodeType: data.barcodeType,
       };
+
+      // Only include stock in payload for new products (not updates)
+      if (!productId) {
+        payload.stock = data.stock;
+      }
 
       if (productId) {
         await productService.update(productId, payload);

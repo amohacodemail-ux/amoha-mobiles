@@ -282,7 +282,7 @@ class ProductService {
 
     // Prevent stock updates on products page for existing products
     // Stock updates should only be done through inventory page after first creation
-    if (updates.stock !== undefined) {
+    if (updates.stock !== undefined && updates.stock !== null) {
       // Check if inventory record exists for this product
       const { data: inventoryRecord } = await supabase
         .from('inventory')
