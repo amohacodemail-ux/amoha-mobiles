@@ -12,7 +12,7 @@ class ServiceRequestController {
       const authReq = req as AuthenticatedRequest;
       const data = {
         ...req.body,
-        user: authReq.user?.userId,
+        userId: authReq.user?.userId || null,
       };
       const request = await serviceRequestService.create(data);
       notifyServiceRequest(request.customerName, request.serviceType, request._id.toString());

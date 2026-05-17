@@ -5,6 +5,7 @@ import logger from './utils/logger.util';
 import { runV4Migration } from './migrations/v4-order-items-nullable-product';
 import { runV7Migration } from './migrations/v7-purchase-price';
 import { runV8Migration } from './migrations/v8-ensure-is-active';
+import { runV9Migration } from './migrations/v9-ensure-service-requests';
 
 // Keep-alive cron for Render free tier (pings health endpoint every 14 minutes)
 const startKeepAlive = (port: number | string): void => {
@@ -43,6 +44,9 @@ const startServer = async (): Promise<void> => {
     );
     runV8Migration().catch((err) =>
       logger.warn('[migration-v8] unexpected error:', err),
+    );
+    runV9Migration().catch((err) =>
+      logger.warn('[migration-v9] unexpected error:', err),
     );
 
     // Render provides PORT dynamically

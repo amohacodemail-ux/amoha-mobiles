@@ -34,9 +34,16 @@ class ServiceRequestService {
 
   async createServiceRequest(reqData: any) {
     const ticketNumber = `SR-${Date.now().toString(36).toUpperCase()}`;
+    const dbRow: any = { ...toDbRow(reqData), request_number: ticketNumber };
+    // Remove user_id if null/undefined to avoid FK violation on anonymous requests
+    if (!dbRow.user_id) delete dbRow.user_id;
     const { data, error } = await supabase
-      .from('service_requests').insert({ ...toDbRow(reqData), request_number: ticketNumber }).select('*').single();
-    if (error) throw error;
+      .from('service_requests').insert(dbRow).select('*').single();
+    if (error) {
+      const logger = (await import('../utils/logger.util')).default;
+      logger.error('[service-request] create error:', error);
+      throw error;
+    }
     return transformRow(data);
   }
 
