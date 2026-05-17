@@ -287,7 +287,7 @@ export default function InventoryPage() {
     const unacked = alerts.filter((a: any) => !a.isAcknowledged);
     if (!unacked.length) return toast.error('No unacknowledged alerts');
     try {
-      await Promise.all(unacked.map((a: any) => inventoryService.acknowledgeAlert(a._id)));
+      await Promise.all(unacked.map((a: any) => inventoryService.acknowledgeAlert(a._id || a.id)));
       toast.success(`${unacked.length} alerts acknowledged`);
       loadAlerts();
       loadStats();
@@ -425,17 +425,49 @@ export default function InventoryPage() {
   ];
 
   const alertColumns: Column<StockAlert>[] = [
-    { key: 'product', header: 'Product', render: (a) => <span className="font-medium">{(a as any).product?.name || '-'}</span> },
     {
-      key: 'alertType', header: 'Alert',
-      render: (a) => <Badge variant="outline">{(a.alertType || '').replace(/_/g, ' ') || '-'}</Badge>,
+      key: 'product', header: 'Product',
+      render: (a) => {
+        const name = (a as any).products?.name || (a as any).product?.name || (a as any).productName || 'Unknown Product';
+        const sku = (a as any).products?.sku || (a as any).product?.sku || '';
+        return (
+          <div>
+            <span className="font-medium text-sm">{name}</span>
+            {sku && <p className="text-xs text-muted-foreground">{sku}</p>}
+          </div>
+        );
+      },
     },
-    { key: 'threshold', header: 'Threshold', render: (a) => <span className="font-mono text-sm">{a.threshold}</span> },
     {
-      key: 'actions', header: '',
-      render: (a) => !a.isAcknowledged
-        ? <Button variant="outline" size="sm" onClick={() => handleAcknowledgeAlert((a as any)._id)}>Acknowledge</Button>
-        : <Badge variant="outline" className="bg-green-50 text-green-700">Acknowledged</Badge>,
+      key: 'alertType', header: 'Alert Type',
+      render: (a) => {
+        const colorMap: Record<string, string> = {
+          low_stock: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+          out_of_stock: 'bg-red-50 text-red-700 border-red-200',
+          overstock: 'bg-blue-50 text-blue-700 border-blue-200',
+        };
+        const type = a.alertType || '';
+        return <Badge variant="outline" className={colorMap[type] || ''}>{type.replace(/_/g, ' ') || '-'}</Badge>;
+      },
+    },
+    {
+      key: 'currentStock', header: 'Current Stock',
+      render: (a) => {
+        const stock = (a as any).currentStock ?? (a as any).products?.stock ?? '-';
+        const isOut = stock === 0;
+        return <span className={`font-mono text-sm font-semibold ${isOut ? 'text-red-600' : 'text-orange-600'}`}>{stock}</span>;
+      },
+    },
+    { key: 'threshold', header: 'Threshold', render: (a) => <span className="font-mono text-sm text-muted-foreground">{a.threshold ?? '-'}</span> },
+    { key: 'createdAt', header: 'Date', render: (a) => <span className="text-xs text-muted-foreground">{formatDate((a as any).createdAt)}</span> },
+    {
+      key: 'actions', header: 'Status',
+      render: (a) => {
+        const id = (a as any)._id || (a as any).id;
+        return !a.isAcknowledged
+          ? <Button variant="outline" size="sm" onClick={() => handleAcknowledgeAlert(id)}>Acknowledge</Button>
+          : <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Acknowledged</Badge>;
+      },
     },
   ];
 
