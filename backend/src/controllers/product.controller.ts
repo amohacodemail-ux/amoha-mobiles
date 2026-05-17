@@ -217,7 +217,8 @@ class ProductController {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
       const products = await productService.getRecentlyViewed(req.user!.userId, limit);
-      sendSuccess(res, products, 'Recently viewed products');
+      // Filter purchasePrice for user endpoints
+      sendSuccess(res, filterProductsForPublic(products), 'Recently viewed products');
     } catch (error) {
       next(error);
     }
