@@ -23,7 +23,7 @@ class ActivityLogService {
     const limit = parseInt(query.limit) || 50;
     const offset = (page - 1) * limit;
 
-    let qb = supabase.from('activity_logs').select('*, users:user_id(id, name, email)', { count: 'exact' });
+    let qb = supabase.from('activity_logs').select('*, users:user_id(id, name, email, role)', { count: 'exact' });
     if (query.userId) qb = qb.eq('user_id', query.userId);
     if (query.adminId) qb = qb.eq('user_id', query.adminId);
     if (query.action) qb = qb.eq('action', query.action);
