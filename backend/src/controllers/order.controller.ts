@@ -135,9 +135,6 @@ class OrderController {
       if (error.message === 'Order not found') {
         return res.status(404).json({ success: false, message: 'Order not found' });
       }
-      if (error.message === 'Only cancelled orders can be deleted') {
-        return res.status(400).json({ success: false, message: 'Only cancelled orders can be deleted. Please cancel the order first.' });
-      }
       next(error);
     }
   }
