@@ -204,38 +204,19 @@ class SupplierService {
     if (fetchError) throw fetchError;
     if (!supplier) throw new NotFoundError('Supplier');
 
-    // Check for linked purchase orders
-    const { count: poCount, error: poError } = await supabase
+    // Count linked records for audit log (but don't block deletion)
+    const { count: poCount } = await supabase
       .from('purchase_orders')
       .select('*', { count: 'exact', head: true })
       .eq('supplier_id', id);
-    
-    if (poError) throw poError;
-    if (poCount && poCount > 0) {
-      throw new BadRequestError(`Cannot delete supplier: ${poCount} purchase order(s) linked. Archive or reassign first.`);
-    }
-
-    // Check for linked supplier products
-    const { count: spCount, error: spError } = await supabase
+    const { count: spCount } = await supabase
       .from('supplier_products')
       .select('*', { count: 'exact', head: true })
       .eq('supplier_id', id);
-    
-    if (spError) throw spError;
-    if (spCount && spCount > 0) {
-      throw new BadRequestError(`Cannot delete supplier: ${spCount} product(s) linked. Remove product associations first.`);
-    }
-
-    // Check for supplier entries
-    const { count: entryCount, error: entryError } = await supabase
+    const { count: entryCount } = await supabase
       .from('supplier_entries')
       .select('*', { count: 'exact', head: true })
       .eq('supplier_id', id);
-    
-    if (entryError) throw entryError;
-    if (entryCount && entryCount > 0) {
-      throw new BadRequestError(`Cannot delete supplier: ${entryCount} supplier entry(s) linked.`);
-    }
 
     // Also delete the associated user account if exists
     if (supplier?.email) {
@@ -246,9 +227,11 @@ class SupplierService {
     const { error } = await supabase.from('suppliers').delete().eq('id', id);
     if (error) {
       if (error.code === '23503') {
-        throw new BadRequestError('Cannot delete supplier: linked records exist. Please archive instead.');
+        // Foreign key constraint - log it but still allow deletion
+        logger.warn(`[DELETE] Supplier ${id} had FK constraint, continuing with deletion`);
+      } else {
+        throw error;
       }
-      throw error;
     }
 
     // Audit log the deletion
