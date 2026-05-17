@@ -37,6 +37,7 @@ const schema = z.object({
   colors: z.string().optional(),
   isFeatured: z.boolean().default(false),
   isTrending: z.boolean().default(false),
+  isActive: z.boolean().default(true),
   barcode: z.string().optional(),
   barcodeType: z.enum(['EAN13', 'EAN8', 'UPCA', 'CODE128', 'CODE39']).default('EAN13'),
 });
@@ -87,7 +88,7 @@ export function ProductForm({ productId }: Props) {
 
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, barcodeType: 'EAN13' },
+    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, isActive: true, barcodeType: 'EAN13' },
   });
 
   const barcodeType = watch('barcodeType');
@@ -119,6 +120,7 @@ export function ProductForm({ productId }: Props) {
             colors: p.colors?.join(', ') || '',
             isFeatured: p.isFeatured,
             isTrending: p.isTrending,
+            isActive: (p as any).isActive ?? true,
             barcode: p.barcode || '',
             barcodeType: (p.barcodeType as BarcodeType) || 'EAN13',
           });
@@ -200,6 +202,7 @@ export function ProductForm({ productId }: Props) {
         colors: data.colors ? data.colors.split(',').map((c: string) => c.trim()).filter(Boolean) : [],
         isFeatured: data.isFeatured,
         isTrending: data.isTrending,
+        isActive: data.isActive ?? true,
         warranty: data.warranty || '',
         images: existingImages.length > 0 ? existingImages : [],
         thumbnail: existingImages[0] || '',
@@ -419,6 +422,13 @@ export function ProductForm({ productId }: Props) {
             <Card>
               <CardHeader><CardTitle>Visibility</CardTitle></CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Active</p>
+                    <p className="text-xs text-muted-foreground">Show on frontend (required for visibility)</p>
+                  </div>
+                  <Controller name="isActive" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
+                </div>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">Featured</p>
