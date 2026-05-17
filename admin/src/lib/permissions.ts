@@ -66,6 +66,9 @@ export const MODULES = {
   ACTIVITY_LOGS: 'activity_logs',
   POLICIES: 'policies',
   SETTINGS: 'settings',
+
+  // Supplier portal
+  SUPPLIER_PORTAL: 'supplier_portal',
 } as const;
 
 export type Module = typeof MODULES[keyof typeof MODULES];
@@ -115,6 +118,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.ACTIVITY_LOGS]: [ACTIONS.READ],
     [MODULES.POLICIES]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.SETTINGS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.SUPPLIER_PORTAL]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
   },
 
   sales: {
@@ -148,6 +152,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.POLICIES]: [ACTIONS.READ],
     [MODULES.SETTINGS]: [],
+    [MODULES.SUPPLIER_PORTAL]: [],
   },
 
   purchase: {
@@ -181,6 +186,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SERVICE_REQUESTS]: [],
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.SETTINGS]: [],
+    [MODULES.SUPPLIER_PORTAL]: [],
   },
 
   marketing: {
@@ -214,6 +220,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SERVICE_REQUESTS]: [],
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.SETTINGS]: [],
+    [MODULES.SUPPLIER_PORTAL]: [],
   },
 
   logistics: {
@@ -247,13 +254,16 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SERVICE_REQUESTS]: [],
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.SETTINGS]: [],
+    [MODULES.SUPPLIER_PORTAL]: [],
   },
 
   supplier: {
-    // Supplier - limited access
-    [MODULES.DASHBOARD]: [ACTIONS.READ],
-    [MODULES.RFQ]: [ACTIONS.READ, ACTIONS.EDIT], // Can respond to RFQs
+    // Supplier - portal access only
+    [MODULES.DASHBOARD]: [],
+    [MODULES.RFQ]: [ACTIONS.READ, ACTIONS.EDIT],
     [MODULES.NOTIFICATIONS]: [ACTIONS.READ],
+    [MODULES.SUPPLIER_PORTAL]: [ACTIONS.READ, ACTIONS.CREATE],
+    [MODULES.SUPPLIER_ENTRIES]: [ACTIONS.READ, ACTIONS.CREATE],
     // No access to other modules
     [MODULES.ORDERS]: [],
     [MODULES.BILLING]: [],
@@ -266,7 +276,6 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.BRANDS]: [],
     [MODULES.INVENTORY]: [],
     [MODULES.SUPPLIERS]: [],
-    [MODULES.SUPPLIER_ENTRIES]: [],
     [MODULES.PURCHASE_REQUESTS]: [],
     [MODULES.COUPONS]: [],
     [MODULES.BANNERS]: [],
@@ -312,6 +321,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.POLICIES]: [],
     [MODULES.SETTINGS]: [],
+    [MODULES.SUPPLIER_PORTAL]: [],
   },
 
   // Legacy roles - mapped to standard roles

@@ -19,7 +19,7 @@ function LoginForm() {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace(user?.role === 'supplier' ? '/supplier/profile' : redirectTo);
+      router.replace(redirectTo);
     }
   }, [isAuthenticated, router, redirectTo, user?.role]);
 
@@ -46,7 +46,7 @@ function LoginForm() {
               A
             </div>
             <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">Welcome to AMOHA</h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Sign in to continue. Suppliers can also use this login.</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Sign in to your account to continue.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
@@ -110,10 +110,6 @@ function LoginForm() {
             <p>
               Don&apos;t have an account?{' '}
               <Link href="/register" className="font-semibold text-primary-400 hover:text-primary-300">Create one</Link>
-            </p>
-            <p>
-              Supplier access?{' '}
-              <Link href="/supplier/login" className="font-semibold text-primary-400 hover:text-primary-300">Open supplier login</Link>
             </p>
           </div>
         </div>

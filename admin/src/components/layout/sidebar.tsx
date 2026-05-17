@@ -7,7 +7,7 @@ import {
   ChevronRight, Smartphone, LogOut, X, Wrench, Mail, Bell,
   Eye, AlertCircle, Users2, Barcode, FileText, RotateCcw, Wallet, Activity,
   Truck, Warehouse, ClipboardList, BarChart3, FileQuestion, ShoppingBag,
-  Receipt, IndianRupee, Shield,
+  Receipt, IndianRupee, Shield, Store,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
@@ -48,6 +48,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/activity-logs', label: 'Activity Logs', icon: Activity, module: 'activity_logs' },
   { href: '/suppliers', label: 'Suppliers', icon: Truck, module: 'suppliers' },
   { href: '/supplier-entries', label: 'Supplier Entries', icon: ClipboardList, module: 'supplier_entries' },
+  { href: '/supplier-portal', label: 'My Portal', icon: Store, module: 'supplier_portal' },
   { href: '/rfq', label: 'RFQ', icon: FileQuestion, module: 'rfq' },
   { href: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingBag, module: 'purchase_requests' },
   { href: '/inventory', label: 'Inventory', icon: Warehouse, module: 'inventory' },
@@ -87,7 +88,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {
         title: collapsed ? undefined : 'Purchase',
         items: filteredNavItems.filter(i =>
-          ['products', 'categories', 'brands', 'inventory', 'suppliers', 'supplier_entries', 'rfq', 'purchase_requests'].includes(i.module)
+          ['products', 'categories', 'brands', 'inventory', 'suppliers', 'supplier_entries', 'supplier_portal', 'rfq', 'purchase_requests'].includes(i.module)
         ),
       },
       {
