@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import apiClient from '@/lib/api-client';
 import type { ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
+import { downloadExcelFromBlob } from '@/lib/excel-export';
 import {
   TrendingUp, ShoppingCart, DollarSign, BarChart3,
   Download, RefreshCw, Filter, Calendar,
@@ -129,18 +130,24 @@ export default function ReportsPage() {
     fetchOrders();
   }, [fetchSummary, fetchOrders]);
 
-  const handleDownloadCSV = () => {
-    const params = new URLSearchParams();
-    if (period === 'custom' && customStart && customEnd) {
-      const [year, month] = customStart.split('-');
-      params.set('year', year); params.set('month', month);
-    } else {
-      const d = new Date();
-      params.set('year', String(d.getFullYear()));
-      params.set('month', String(period === 'month' ? d.getMonth() + 1 : d.getMonth() + 1));
+  const handleDownloadCSV = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (period === 'custom' && customStart && customEnd) {
+        const [year, month] = customStart.split('-');
+        params.set('year', year); params.set('month', month);
+      } else {
+        const d = new Date();
+        params.set('year', String(d.getFullYear()));
+        params.set('month', String(d.getMonth() + 1));
+      }
+      const response = await apiClient.get(`/admin/reports/sales?${params}`, { responseType: 'blob' });
+      const label = period === 'custom' && customStart ? customStart : new Date().toISOString().slice(0, 7);
+      await downloadExcelFromBlob(new Blob([response.data]), `sales-report-${label}`);
+      toast.success('Sales report downloaded!');
+    } catch {
+      toast.error('Failed to download report');
     }
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
-    window.open(`${baseUrl}/admin/reports/sales?${params}`, '_blank');
   };
 
   const stats = [
@@ -157,7 +164,7 @@ export default function ReportsPage() {
         description="View order reports, sales tracking and analytics"
         action={
           <Button onClick={handleDownloadCSV} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" /> Export CSV
+            <Download className="h-4 w-4 mr-2" /> Export Excel
           </Button>
         }
       />

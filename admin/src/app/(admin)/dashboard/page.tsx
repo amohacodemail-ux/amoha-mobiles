@@ -13,6 +13,7 @@ import type { DashboardStats, RevenueData, TopProduct, RecentOrder } from '@/typ
 import Image from 'next/image';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
+import { downloadExcelFromBlob } from '@/lib/excel-export';
 
 const RevenueChart = dynamic(
   () => import('@/components/charts/revenue-chart').then((m) => ({ default: m.RevenueChart })),
@@ -47,16 +48,10 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Failed to download report');
 
       const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = type === 'sales'
-        ? `sales-report-${now.toISOString().slice(0, 7)}.csv`
-        : `inventory-report-${now.toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(downloadUrl);
+      const filename = type === 'sales'
+        ? `sales-report-${now.toISOString().slice(0, 7)}`
+        : `inventory-report-${now.toISOString().split('T')[0]}`;
+      await downloadExcelFromBlob(blob, filename);
       toast.success(`${type === 'sales' ? 'Sales' : 'Inventory'} report downloaded!`);
     } catch {
       toast.error('Failed to download report');

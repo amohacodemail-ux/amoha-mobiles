@@ -49,7 +49,7 @@ export default function AbandonedCartsPage() {
     setDownloading(true);
     try {
       await cartAbandonmentService.downloadCSV();
-      toast.success('CSV downloaded successfully');
+      toast.success('Excel file downloaded successfully');
     } catch { toast.error('Failed to download CSV'); }
     finally { setDownloading(false); }
   };

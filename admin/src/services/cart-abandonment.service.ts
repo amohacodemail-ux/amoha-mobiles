@@ -1,4 +1,5 @@
 import apiClient from '@/lib/api-client';
+import { downloadExcelFromBlob } from '@/lib/excel-export';
 import type { ApiResponse } from '@/types';
 
 export interface AbandonedCartItem {
@@ -37,14 +38,6 @@ export const cartAbandonmentService = {
       params: { minAge },
       responseType: 'blob',
     });
-    const blob = new Blob([response.data as BlobPart], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `abandoned-carts-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    await downloadExcelFromBlob(new Blob([response.data as BlobPart]), `abandoned-carts-${new Date().toISOString().split('T')[0]}`);
   },
 };

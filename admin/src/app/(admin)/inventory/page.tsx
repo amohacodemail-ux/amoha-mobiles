@@ -315,7 +315,7 @@ export default function InventoryPage() {
     setExporting(true);
     try {
       await inventoryLedgerService.exportCsv();
-      toast.success('CSV downloaded');
+      toast.success('Excel file downloaded');
     } catch { toast.error('Failed to export CSV'); }
     finally { setExporting(false); }
   };
@@ -559,7 +559,7 @@ export default function InventoryPage() {
             </select>
             <Button variant="outline" onClick={loadStock} title="Refresh"><RefreshCw className="h-4 w-4" /></Button>
             <Button variant="outline" onClick={handleExportCsv} disabled={exporting}>
-              <Download className="h-4 w-4 mr-2" />{exporting ? 'Exporting...' : 'Export CSV'}
+              <Download className="h-4 w-4 mr-2" />{exporting ? 'Exporting...' : 'Export Excel'}
             </Button>
           </div>
           <DataTable columns={stockColumns} data={stock} loading={stockLoading} rowKey={(r) => r._id || r.inventoryId || r.productId || Math.random().toString()} />

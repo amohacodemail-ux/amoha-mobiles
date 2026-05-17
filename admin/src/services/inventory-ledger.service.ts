@@ -1,4 +1,5 @@
 import apiClient from '@/lib/api-client';
+import { downloadExcelFromBlob } from '@/lib/excel-export';
 
 const buildQuery = (filters: Record<string, any>) => {
   const params = new URLSearchParams();
@@ -45,11 +46,6 @@ export const inventoryLedgerService = {
   },
   exportCsv: async () => {
     const res = await apiClient.get('/inventory-ledger/export/csv', { responseType: 'blob' });
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `stock-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    await downloadExcelFromBlob(new Blob([res.data]), `stock-report-${new Date().toISOString().split('T')[0]}`);
   },
 };

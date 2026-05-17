@@ -1,5 +1,6 @@
 import apiClient from '@/lib/api-client';
 import type { ApiResponse } from '@/types';
+import { downloadExcelFromBlob } from '@/lib/excel-export';
 
 export interface BillingSummary {
   totalRevenue: number;
@@ -113,14 +114,7 @@ export const billingService = {
     const response = await apiClient.get(`/admin/reports/gst-summary?${query.toString()}`, {
       responseType: 'blob',
     });
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
-    const link = document.createElement('a');
-    link.href = url;
     const label = params.startDate ? params.startDate : new Date().toISOString().split('T')[0];
-    link.setAttribute('download', `GST-Report-${label}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    await downloadExcelFromBlob(new Blob([response.data]), `GST-Report-${label}`);
   },
 };
