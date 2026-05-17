@@ -3,6 +3,7 @@ import connectDB from './config/db';
 import env from './config/env';
 import logger from './utils/logger.util';
 import { runV4Migration } from './migrations/v4-order-items-nullable-product';
+import { runV8Migration } from './migrations/v8-ensure-is-active';
 
 // Keep-alive cron for Render free tier (pings health endpoint every 14 minutes)
 const startKeepAlive = (port: number | string): void => {
@@ -35,6 +36,9 @@ const startServer = async (): Promise<void> => {
     // Run pending schema migrations (non-blocking — server starts regardless)
     runV4Migration().catch((err) =>
       logger.warn('[migration-v4] unexpected error:', err),
+    );
+    runV8Migration().catch((err) =>
+      logger.warn('[migration-v8] unexpected error:', err),
     );
 
     // Render provides PORT dynamically
