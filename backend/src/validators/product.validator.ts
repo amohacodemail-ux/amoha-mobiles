@@ -12,6 +12,7 @@ export const createProductSchema = z.object({
     shortDescription: z.string().optional(),
     price: z.coerce.number().min(0, 'Price must be positive'),
     originalPrice: z.coerce.number().min(0, 'Original price must be positive'),
+    purchasePrice: z.coerce.number().min(0, 'Purchase price cannot be negative').optional(),
     discount: z.coerce.number().min(0).max(100).optional(),
     images: z.array(z.string()).min(1, 'At least one image is required'),
     thumbnail: z.string().min(1, 'Thumbnail is required'),

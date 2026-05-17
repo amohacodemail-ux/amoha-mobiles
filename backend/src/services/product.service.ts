@@ -262,6 +262,9 @@ class ProductService {
       mapped.purchasePrice = 0;
     }
 
+    // Log purchase price for debugging
+    logger.info(`[ProductService] Creating product with purchase price: ${mapped.purchasePrice}`);
+
     const dbData = toDbRow(mapped);
     if (data.specifications) dbData.specifications = data.specifications;
 
@@ -330,6 +333,9 @@ class ProductService {
     if (mapped.purchasePrice === undefined || mapped.purchasePrice === null) {
       mapped.purchasePrice = 0;
     }
+
+    // Log purchase price for debugging
+    logger.info(`[ProductService] Updating product ${productId} with purchase price: ${mapped.purchasePrice}`);
 
     const dbUpdates = toDbRow(mapped);
     if (updates.specifications) dbUpdates.specifications = updates.specifications;

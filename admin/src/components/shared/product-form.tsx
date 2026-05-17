@@ -30,7 +30,7 @@ const schema = z.object({
   shortDescription: z.string().optional(),
   price: z.coerce.number().min(1, 'Price must be > 0'),
   originalPrice: z.coerce.number().min(1, 'Original price must be > 0'),
-  purchasePrice: z.coerce.number().min(0, 'Purchase price cannot be negative').optional(),
+  purchasePrice: z.coerce.number().min(0, 'Purchase price cannot be negative').default(0),
   stock: z.coerce.number().min(0, 'Stock cannot be negative'),
   warranty: z.string().optional(),
   tags: z.string().optional(),
@@ -113,7 +113,7 @@ export function ProductForm({ productId }: Props) {
             shortDescription: p.shortDescription,
             price: p.price,
             originalPrice: p.originalPrice,
-            purchasePrice: (p as any).purchasePrice || 0,
+            purchasePrice: typeof (p as any).purchasePrice === 'number' ? (p as any).purchasePrice : 0,
             stock: p.stock,
             warranty: p.warranty || '',
             tags: p.tags?.join(', ') || '',
@@ -194,7 +194,7 @@ export function ProductForm({ productId }: Props) {
         shortDescription: data.shortDescription || '',
         price: data.price,
         originalPrice: data.originalPrice,
-        purchasePrice: data.purchasePrice || 0,
+        purchasePrice: typeof data.purchasePrice === 'number' ? data.purchasePrice : 0,
         discount: Math.max(0, discount),
         specifications: specsObj,
         tags: data.tags ? data.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
@@ -209,6 +209,13 @@ export function ProductForm({ productId }: Props) {
         barcodeType: data.barcodeType,
       };
 
+      // Log purchase price for debugging
+      console.log('Saving product with purchase price:', {
+        purchasePrice: payload.purchasePrice,
+        originalPrice: payload.originalPrice,
+        sellingPrice: payload.price
+      });
+
       // Only include stock in payload for new products (not updates)
       if (!productId) {
         payload.stock = data.stock;
@@ -217,6 +224,8 @@ export function ProductForm({ productId }: Props) {
       if (productId) {
         await productService.update(productId, payload);
         toast.success('Product updated successfully');
+        // Force refresh the page to ensure latest data is loaded
+        router.refresh();
       } else {
         await productService.create(payload);
         toast.success('Product created successfully');
