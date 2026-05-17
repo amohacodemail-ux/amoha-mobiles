@@ -14,6 +14,39 @@ class AdminService {
     d.ordersGrowth = pct(d.thisMonthOrders || 0, d.lastMonthOrders || 0);
     d.usersGrowth = pct(d.thisMonthUsers || 0, d.lastMonthUsers || 0);
     d.productsGrowth = pct(d.thisMonthProducts || 0, d.lastMonthProducts || 0);
+
+    // Add profit metrics from orders table
+    const { data: profitData } = await supabase
+      .from('orders')
+      .select('total_revenue, total_cost, total_profit, profit_margin')
+      .in('status', ['delivered', 'completed']);
+
+    if (profitData && profitData.length > 0) {
+      d.totalRevenue = profitData.reduce((sum: number, o: any) => sum + (o.total_revenue || 0), 0);
+      d.totalCost = profitData.reduce((sum: number, o: any) => sum + (o.total_cost || 0), 0);
+      d.totalProfit = profitData.reduce((sum: number, o: any) => sum + (o.total_profit || 0), 0);
+      d.averageProfitMargin = profitData.reduce((sum: number, o: any) => sum + (o.profit_margin || 0), 0) / profitData.length;
+    } else {
+      d.totalRevenue = 0;
+      d.totalCost = 0;
+      d.totalProfit = 0;
+      d.averageProfitMargin = 0;
+    }
+
+    // This month profit
+    const thisMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    const { data: thisMonthProfit } = await supabase
+      .from('orders')
+      .select('total_revenue, total_cost, total_profit')
+      .gte('created_at', thisMonthStart)
+      .in('status', ['delivered', 'completed']);
+
+    if (thisMonthProfit && thisMonthProfit.length > 0) {
+      d.thisMonthProfit = thisMonthProfit.reduce((sum: number, o: any) => sum + (o.total_profit || 0), 0);
+      d.thisMonthRevenue = thisMonthProfit.reduce((sum: number, o: any) => sum + (o.total_revenue || 0), 0);
+      d.thisMonthCost = thisMonthProfit.reduce((sum: number, o: any) => sum + (o.total_cost || 0), 0);
+    }
+
     return d;
   }
 

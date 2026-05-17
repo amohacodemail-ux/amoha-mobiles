@@ -5,11 +5,34 @@ import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import { notifyReview } from '../utils/notify';
 import activityLogService from '../services/activity-log.service';
 
+/**
+ * Filter sensitive fields (purchasePrice) from product data for public/frontend endpoints
+ * Only admin users should see purchase price
+ */
+function filterProductForPublic(product: any): any {
+  if (!product) return product;
+  const filtered = { ...product };
+  delete filtered.purchasePrice;
+  delete filtered.purchase_price;
+  delete filtered.profit;
+  delete filtered.profitMargin;
+  return filtered;
+}
+
+function filterProductsForPublic(products: any[]): any[] {
+  if (!Array.isArray(products)) return products;
+  return products.map(filterProductForPublic);
+}
+
 class ProductController {
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
       const filters = req.query as ProductFilterQuery;
       const result = await productService.getAll(filters);
+      // Filter purchasePrice for public/frontend endpoints
+      if (result.products) {
+        result.products = filterProductsForPublic(result.products);
+      }
       sendSuccess(res, result, 'Products fetched');
     } catch (error) {
       next(error);
@@ -19,7 +42,8 @@ class ProductController {
   async getBySlug(req: Request, res: Response, next: NextFunction) {
     try {
       const product = await productService.getBySlug(req.params.slug);
-      sendSuccess(res, product, 'Product fetched');
+      // Filter purchasePrice for public/frontend endpoints
+      sendSuccess(res, filterProductForPublic(product), 'Product fetched');
     } catch (error) {
       next(error);
     }
@@ -28,7 +52,8 @@ class ProductController {
   async getFeatured(_req: Request, res: Response, next: NextFunction) {
     try {
       const products = await productService.getFeatured();
-      sendSuccess(res, products, 'Featured products fetched');
+      // Filter purchasePrice for public/frontend endpoints
+      sendSuccess(res, filterProductsForPublic(products), 'Featured products fetched');
     } catch (error) {
       next(error);
     }
@@ -37,7 +62,8 @@ class ProductController {
   async getTrending(_req: Request, res: Response, next: NextFunction) {
     try {
       const products = await productService.getTrending();
-      sendSuccess(res, products, 'Trending products fetched');
+      // Filter purchasePrice for public/frontend endpoints
+      sendSuccess(res, filterProductsForPublic(products), 'Trending products fetched');
     } catch (error) {
       next(error);
     }
@@ -47,6 +73,10 @@ class ProductController {
     try {
       const filters = req.query as ProductFilterQuery;
       const result = await productService.getByCategory(req.params.categorySlug, filters);
+      // Filter purchasePrice for public/frontend endpoints
+      if (result.products) {
+        result.products = filterProductsForPublic(result.products);
+      }
       sendSuccess(res, result, 'Category products fetched');
     } catch (error) {
       next(error);
@@ -57,7 +87,8 @@ class ProductController {
     try {
       const q = req.query.q as string;
       const suggestions = await productService.searchSuggestions(q);
-      sendSuccess(res, suggestions, 'Search suggestions');
+      // Filter purchasePrice for public/frontend endpoints
+      sendSuccess(res, filterProductsForPublic(suggestions), 'Search suggestions');
     } catch (error) {
       next(error);
     }
@@ -66,7 +97,8 @@ class ProductController {
   async getRelated(req: Request, res: Response, next: NextFunction) {
     try {
       const products = await productService.getRelated(req.params.id);
-      sendSuccess(res, products, 'Related products fetched');
+      // Filter purchasePrice for public/frontend endpoints
+      sendSuccess(res, filterProductsForPublic(products), 'Related products fetched');
     } catch (error) {
       next(error);
     }

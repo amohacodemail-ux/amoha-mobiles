@@ -35,6 +35,16 @@ function normalizeProduct(p: any): any {
     p.discount = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
   }
   p.discount = p.discount ?? 0;
+  // purchase price (default to 0 if not set)
+  p.purchasePrice = p.purchasePrice ?? p.purchase_price ?? 0;
+  // calculate profit margin (selling price - purchase price)
+  if (p.price && p.purchasePrice) {
+    p.profit = p.price - p.purchasePrice;
+    p.profitMargin = p.purchasePrice > 0 ? Math.round(((p.price - p.purchasePrice) / p.purchasePrice) * 100) : 0;
+  } else {
+    p.profit = 0;
+    p.profitMargin = 0;
+  }
   return p;
 }
 
@@ -247,6 +257,10 @@ class ProductService {
       mapped.slug = mapped.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     }
     if (!mapped.sellingPrice) mapped.sellingPrice = mapped.price;
+    // Handle purchase price (default to 0 if not provided)
+    if (mapped.purchasePrice === undefined || mapped.purchasePrice === null) {
+      mapped.purchasePrice = 0;
+    }
 
     const dbData = toDbRow(mapped);
     if (data.specifications) dbData.specifications = data.specifications;
@@ -312,6 +326,10 @@ class ProductService {
     if (mapped.brand) { mapped.brandId = mapped.brand; delete mapped.brand; }
     if (mapped.category) { mapped.categoryId = mapped.category; delete mapped.category; }
     if (mapped.sellingPrice === undefined && mapped.price !== undefined) mapped.sellingPrice = mapped.price;
+    // Handle purchase price (default to 0 if not provided)
+    if (mapped.purchasePrice === undefined || mapped.purchasePrice === null) {
+      mapped.purchasePrice = 0;
+    }
 
     const dbUpdates = toDbRow(mapped);
     if (updates.specifications) dbUpdates.specifications = updates.specifications;
