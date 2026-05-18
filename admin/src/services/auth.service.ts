@@ -10,8 +10,8 @@ export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const { data } = await apiClient.post<AuthResponse>('/auth/login', credentials);
 
-    // Check if user has an allowed admin panel role
-    const userRole = normalizeRole(data.user.role as UserRole);
+    // Check if user has an allowed admin panel role (use original role before normalization)
+    const userRole = data.user.role as UserRole;
     if (data.success && !ALLOWED_ROLES.includes(userRole)) {
       throw new Error('Access denied. Admin panel access only.');
     }
