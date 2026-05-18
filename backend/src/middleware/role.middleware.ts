@@ -91,7 +91,7 @@ export const canAccessServiceEngineer = authorize('admin', 'service_engineer');
 
 // ---- ADMIN-ONLY MODULES ----
 /** System settings, user management, activity logs */
-export const canAccessAdminOnly = authorize('admin');
+export const canAccessAdminOnly = authorize('admin', 'service_engineer');
 
 // ==================== COMBINED AUTHORIZERS ====================
 
