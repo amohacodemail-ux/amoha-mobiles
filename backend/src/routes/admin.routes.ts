@@ -18,6 +18,7 @@ import {
   canAccessPurchase,
   canAccessMarketing,
   canAccessLogistics,
+  canAccessServiceEngineer,
   canAccessDashboard,
   canAccessReports,
   canAccessNotifications,
@@ -578,12 +579,12 @@ router.delete('/reviews/:id', canAccessMarketing, async (req: Request, res: Resp
   }
 });
 
-// ====== Service Requests - Admin only ======
-router.get('/service-requests', canAccessAdminOnly, serviceRequestController.getAll);
-router.get('/service-requests/stats', canAccessAdminOnly, serviceRequestController.getStats);
-router.get('/service-requests/:id', canAccessAdminOnly, serviceRequestController.getById);
-router.patch('/service-requests/:id/status', canAccessAdminOnly, serviceRequestController.updateStatus);
-router.delete('/service-requests/:id', canAccessAdminOnly, serviceRequestController.delete);
+// ====== Service Requests - Admin & Service Engineer only ======
+router.get('/service-requests', canAccessServiceEngineer, serviceRequestController.getAll);
+router.get('/service-requests/stats', canAccessServiceEngineer, serviceRequestController.getStats);
+router.get('/service-requests/:id', canAccessServiceEngineer, serviceRequestController.getById);
+router.patch('/service-requests/:id/status', canAccessServiceEngineer, serviceRequestController.updateStatus);
+router.delete('/service-requests/:id', canAccessServiceEngineer, serviceRequestController.delete);
 
 // ====== Contact Messages - Marketing & Admin only ======
 router.get('/contact-messages', canAccessMarketing, contactController.getAll);
