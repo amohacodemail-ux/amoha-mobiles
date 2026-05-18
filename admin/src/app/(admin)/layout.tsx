@@ -23,8 +23,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const verify = async () => {
       // Skip if already verified and user exists with valid role
       if (isAuthenticated && user?.role) {
-        const normalizedRole = normalizeRole(user.role as UserRole);
-        if (ALLOWED_ROLES.includes(normalizedRole)) {
+        if (ALLOWED_ROLES.includes(user.role as UserRole)) {
           setChecking(false);
           return;
         }
@@ -37,10 +36,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       try {
         const profile = await authService.getProfile();
-        const normalizedRole = normalizeRole(profile.role as UserRole);
 
-        // Check if user has an allowed admin panel role
-        if (!ALLOWED_ROLES.includes(normalizedRole)) {
+        // Check if user has an allowed admin panel role (use original role before normalization)
+        if (!ALLOWED_ROLES.includes(profile.role as UserRole)) {
           // User is authenticated but not authorized for admin panel
           authService.logout();
           router.replace('/login?error=unauthorized');
