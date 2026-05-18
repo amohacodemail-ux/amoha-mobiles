@@ -17,7 +17,7 @@ CREATE TABLE users (
   password VARCHAR(255) NOT NULL,
   avatar TEXT,
   role VARCHAR(30) NOT NULL DEFAULT 'user'
-    CHECK (role IN ('user','admin','digital_marketing','sales','marketing','purchase_inventory','logistics')),
+    CHECK (role IN ('user','admin','digital_marketing','sales','marketing','purchase_inventory','logistics','purchase','supplier','service_engineer')),
   is_verified BOOLEAN NOT NULL DEFAULT false,
   is_blocked BOOLEAN NOT NULL DEFAULT false,
   -- KYC (flattened from embedded document)
