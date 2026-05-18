@@ -61,8 +61,8 @@ export const createAdminUserSchema = z.object({
     email: z.string().email('Invalid email address'),
     phone: z.string().min(10, 'Phone must be at least 10 digits'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
-    role: z.enum(['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer'], {
-      errorMap: () => ({ message: 'Role must be one of: admin, sales, purchase, marketing, logistics, supplier, service_engineer' }),
+    role: z.enum(['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'digital_marketing', 'purchase_inventory'], {
+      errorMap: () => ({ message: 'Role must be one of: admin, sales, purchase, marketing, logistics, supplier, service_engineer, digital_marketing, purchase_inventory' }),
     }),
   }),
 });
@@ -70,8 +70,8 @@ export const createAdminUserSchema = z.object({
 // RBAC - Update user role schema
 export const updateUserRoleSchema = z.object({
   body: z.object({
-    role: z.enum(['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'user'], {
-      errorMap: () => ({ message: 'Role must be one of: admin, sales, purchase, marketing, logistics, supplier, service_engineer, user' }),
+    role: z.enum(['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'digital_marketing', 'purchase_inventory', 'user'], {
+      errorMap: () => ({ message: 'Role must be one of: admin, sales, purchase, marketing, logistics, supplier, service_engineer, digital_marketing, purchase_inventory, user' }),
     }),
   }),
 });

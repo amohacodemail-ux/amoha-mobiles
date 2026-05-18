@@ -388,7 +388,7 @@ router.get('/admin-users', canAccessAdminOnly, async (req: Request, res: Respons
     const offset = (pageNum - 1) * limitNum;
 
     // Get admin panel roles only
-    const adminRoles = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer'];
+    const adminRoles = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'digital_marketing', 'purchase_inventory'];
 
     let query = supabase
       .from('users')

@@ -96,22 +96,22 @@ export const canAccessAdminOnly = authorize('admin', 'service_engineer');
 // ==================== COMBINED AUTHORIZERS ====================
 
 /** Dashboard - accessible by all internal roles */
-export const canAccessDashboard = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer');
+export const canAccessDashboard = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
 
 /** Reports - accessible by admin, sales, purchase */
 export const canAccessReports = authorize('admin', 'sales', 'purchase', 'purchase_inventory');
 
 /** Notifications - accessible by all internal roles */
-export const canAccessNotifications = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer');
+export const canAccessNotifications = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
 
 /** Settings/Profile - accessible by all authenticated users */
-export const canAccessSettings = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer');
+export const canAccessSettings = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
 
 // ==================== LEGACY COMPATIBILITY ====================
 
 // Keep legacy exports for backward compatibility
 export const isUser = authorize('user', 'admin');
-export const isInternalUser = authorize('admin', 'digital_marketing', 'sales', 'marketing', 'purchase', 'purchase_inventory', 'logistics', 'service_engineer');
+export const isInternalUser = authorize('admin', 'digital_marketing', 'sales', 'marketing', 'purchase', 'purchase_inventory', 'logistics', 'service_engineer', 'supplier');
 export const isSalesOrAdmin = canAccessSales;
 export const isMarketingOrAdmin = canAccessMarketing;
 export const isLogisticsOrAdmin = canAccessLogistics;

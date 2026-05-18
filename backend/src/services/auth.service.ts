@@ -157,7 +157,7 @@ class AuthService {
     if (existingPhone) throw new ConflictError('Phone number already registered');
 
     // Validate role is allowed for admin panel
-    const allowedRoles: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer'];
+    const allowedRoles: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'digital_marketing', 'purchase_inventory'];
     if (!allowedRoles.includes(role)) {
       throw new BadRequestError(`Role must be one of: ${allowedRoles.join(', ')}`);
     }
@@ -191,7 +191,7 @@ class AuthService {
 
   // RBAC - Update user role
   async updateUserRole(userId: string, newRole: UserRole) {
-    const allowedRoles: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'user'];
+    const allowedRoles: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'digital_marketing', 'purchase_inventory', 'user'];
     if (!allowedRoles.includes(newRole)) {
       throw new BadRequestError(`Role must be one of: ${allowedRoles.join(', ')}`);
     }
