@@ -150,6 +150,8 @@ export default function NewAdminUserPage() {
                 <option value="logistics">Logistics (Order Tracking)</option>
                 <option value="supplier">Supplier (Portal Only)</option>
                 <option value="service_engineer">Service Engineer (Service Requests)</option>
+                <option value="digital_marketing">Digital Marketing (Legacy Marketing)</option>
+                <option value="purchase_inventory">Purchase & Inventory (Legacy Purchase)</option>
               </select>
               <p className="text-xs text-muted-foreground mt-1">
                 {formData.role === 'admin' && 'Full access to all modules and user management'}
@@ -159,6 +161,8 @@ export default function NewAdminUserPage() {
                 {formData.role === 'logistics' && 'Access to: Dashboard, Orders (view only)'}
                 {formData.role === 'supplier' && 'Access to: Supplier portal only'}
                 {formData.role === 'service_engineer' && 'Access to: Service Requests (view and update)'}
+                {formData.role === 'digital_marketing' && 'Access to: Same as Marketing (legacy role)'}
+                {formData.role === 'purchase_inventory' && 'Access to: Same as Purchase (legacy role)'}
               </p>
             </div>
 
