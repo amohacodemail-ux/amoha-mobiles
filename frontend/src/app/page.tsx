@@ -106,8 +106,6 @@ export default function HomePage() {
     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
     .slice(0, 4);
 
-  // Build discover items: prefer admin-configured discover banners (with real images),
-  // then hero banners, then categories, then product images.
   const buildDiscoverItems = () => {
     if (activeDiscoverBanners.length >= 4) return activeDiscoverBanners;
 
