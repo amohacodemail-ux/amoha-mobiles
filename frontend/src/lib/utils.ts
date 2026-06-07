@@ -16,10 +16,6 @@ export function safeImageSrc(src: string | null | undefined, fallback: string): 
     'placehold.co',
     'via.placeholder.com',
     'dummyimage.com',
-    'images.unsplash.com',
-    '/api/upload/',
-    'amoha-backend.onrender.com',
-    'amoha-backend-v2.onrender.com',
   ];
 
   if (blockedPatterns.some((pattern) => lower.includes(pattern))) return fallback;
