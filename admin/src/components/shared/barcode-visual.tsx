@@ -54,8 +54,9 @@ export function BarcodeVisual({
     setError(null);
     setLoading(true);
 
-    import('jsbarcode')
-      .then(({ default: JsBarcode }) => {
+    import('jsbarcode/bin/JsBarcode.js')
+      .then((mod) => {
+        const JsBarcode = mod.default ?? mod;
         if (cancelled || !svg) return;
 
         // Determine format

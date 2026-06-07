@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 // v2
 const nextConfig = {
+  transpilePackages: ['jsbarcode'],
   experimental: {
     optimizePackageImports: ['recharts', 'lucide-react', 'date-fns'],
   },
