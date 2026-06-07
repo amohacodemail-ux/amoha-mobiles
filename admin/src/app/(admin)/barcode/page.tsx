@@ -6,9 +6,9 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
   Search, Package, RefreshCw, X, CheckCircle, AlertCircle, Camera,
-  ScanLine, Smartphone, Printer, ShoppingCart, Trash2, Plus, Minus,
+  ScanLine, Printer, ShoppingCart, Trash2, Plus, Minus,
   CreditCard, Banknote, QrCode, IndianRupee, FileText, Receipt,
-  TrendingUp, Clock, User, Phone, Mail,
+  TrendingUp, User, Phone, Mail,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
@@ -24,7 +24,7 @@ import { BarcodeVisual } from '@/components/shared/barcode-visual';
 import { posService, type PosBillingInfo, type PosTodayStats, type PosOrderResult } from '@/services/pos.service';
 import { orderService } from '@/services/order.service';
 import { productService } from '@/services/product.service';
-import { formatCurrency, getInitials } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import type { Product } from '@/types';
 
 const LIMIT = 15;
@@ -295,12 +295,13 @@ export default function BarcodePage() {
 
   const addToBilling = (product: BarcodeProduct) => {
     const defaultRate = billingInfoRef.current?.billing?.gstRate ?? 18;
-    let toastMsg: { type: 'error' | 'warn'; text: string } | null = null;
+    type ToastMsg = { type: 'error' | 'warn'; text: string };
+    const toastMsg: { current: ToastMsg | null } = { current: null };
     setBillingItems((prev) => {
       const existing = prev.find((item) => item._id === product._id);
       if (existing) {
         if (existing.quantity >= existing.stock) {
-          toastMsg = { type: 'error', text: `Only ${existing.stock} units available for "${product.name}"` };
+          toastMsg.current = { type: 'error', text: `Only ${existing.stock} units available for "${product.name}"` };
           return prev;
         }
         return prev.map((item) =>
@@ -308,13 +309,13 @@ export default function BarcodePage() {
         );
       }
       if (product.stock <= 0) {
-        toastMsg = { type: 'warn', text: `"${product.name}" shows 0 stock — verify physical stock before billing` };
+        toastMsg.current = { type: 'warn', text: `"${product.name}" shows 0 stock — verify physical stock before billing` };
       }
       return [...prev, { ...product, quantity: 1, itemGstRate: defaultRate }];
     });
     // Show toasts after setState to avoid calling side-effects inside updater
-    if (toastMsg?.type === 'error') toast.error(toastMsg.text);
-    else if (toastMsg?.type === 'warn') toast(toastMsg.text, { icon: '⚠️' });
+    if (toastMsg.current?.type === 'error') toast.error(toastMsg.current.text);
+    else if (toastMsg.current?.type === 'warn') toast(toastMsg.current.text, { icon: '⚠️' });
   };
 
   const updateItemGstRate = (productId: string, rate: number) => {
