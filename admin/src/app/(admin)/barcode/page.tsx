@@ -293,11 +293,12 @@ export default function BarcodePage() {
 
   const addToBilling = (product: BarcodeProduct) => {
     const defaultRate = billingInfoRef.current?.billing?.gstRate ?? 18;
+    let toastMsg: { type: 'error' | 'warn'; text: string } | null = null;
     setBillingItems((prev) => {
       const existing = prev.find((item) => item._id === product._id);
       if (existing) {
         if (existing.quantity >= existing.stock) {
-          toast.error(`Only ${existing.stock} units available for "${product.name}"`);
+          toastMsg = { type: 'error', text: `Only ${existing.stock} units available for "${product.name}"` };
           return prev;
         }
         return prev.map((item) =>
@@ -305,10 +306,13 @@ export default function BarcodePage() {
         );
       }
       if (product.stock <= 0) {
-        toast(`"${product.name}" shows 0 stock — verify physical stock before billing`, { icon: '⚠️' });
+        toastMsg = { type: 'warn', text: `"${product.name}" shows 0 stock — verify physical stock before billing` };
       }
       return [...prev, { ...product, quantity: 1, itemGstRate: defaultRate }];
     });
+    // Show toasts after setState to avoid calling side-effects inside updater
+    if (toastMsg?.type === 'error') toast.error(toastMsg.text);
+    else if (toastMsg?.type === 'warn') toast(toastMsg.text, { icon: '⚠️' });
   };
 
   const updateItemGstRate = (productId: string, rate: number) => {
@@ -318,17 +322,19 @@ export default function BarcodePage() {
   };
 
   const updateBillingQty = (productId: string, delta: number) => {
+    let stockToast: string | null = null;
     setBillingItems((prev) =>
       prev.map((item) => {
         if (item._id !== productId) return item;
         const newQty = item.quantity + delta;
         if (newQty > item.stock) {
-          toast.error(`Only ${item.stock} units available`);
+          stockToast = `Only ${item.stock} units available`;
           return item;
         }
         return { ...item, quantity: Math.max(0, newQty) };
       }).filter((item) => item.quantity > 0),
     );
+    if (stockToast) toast.error(stockToast);
   };
 
   const removeBillingItem = (productId: string) => {
