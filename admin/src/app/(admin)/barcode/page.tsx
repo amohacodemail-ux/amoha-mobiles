@@ -80,6 +80,7 @@ export default function BarcodePage() {
   const [posTotalPages, setPosTotalPages] = useState(1);
   const [posTotalItems, setPosTotalItems] = useState(0);
   const [posSearch, setPosSearch] = useState('');
+  const debouncedPosSearch = useDebouncedValue(posSearch, 350);
 
   // View toggle
   const [activeView, setActiveView] = useState<ActiveView>('billing');
@@ -137,7 +138,7 @@ export default function BarcodePage() {
   const loadPosOrders = useCallback(async () => {
     setPosOrdersLoading(true);
     try {
-      const res = await posService.getOrders({ page: posPage, limit: 15, search: posSearch || undefined });
+      const res = await posService.getOrders({ page: posPage, limit: 15, search: debouncedPosSearch || undefined });
       setPosOrders(Array.isArray(res.orders) ? res.orders : []);
       setPosTotalPages(res.totalPages);
       setPosTotalItems(res.totalOrders);
@@ -147,12 +148,12 @@ export default function BarcodePage() {
     } finally {
       setPosOrdersLoading(false);
     }
-  }, [posPage, posSearch]);
+  }, [posPage, debouncedPosSearch]);
 
   useEffect(() => {
     if (activeView === 'history') loadPosOrders();
   }, [activeView, loadPosOrders]);
-  useEffect(() => { setPosPage(1); }, [posSearch]);
+  useEffect(() => { setPosPage(1); }, [debouncedPosSearch]);
 
   // Delete handlers
   const openDelete = (order: any) => {
@@ -160,7 +161,7 @@ export default function BarcodePage() {
       toast.error('You do not have permission to delete orders');
       return;
     }
-    setDeleteOrderId(order._id);
+    setDeleteOrderId(order._id || order.id);
     setDeleteInvoiceNumber(order.invoiceNumber || order.orderNumber || 'this order');
   };
 
@@ -171,7 +172,7 @@ export default function BarcodePage() {
       await orderService.deleteOrder(deleteOrderId);
       toast.success('Order deleted successfully');
       setDeleteOrderId(null);
-      setPosOrders((prev) => prev.filter((o) => o._id !== deleteOrderId));
+      setPosOrders((prev) => prev.filter((o) => (o._id || o.id) !== deleteOrderId));
       setPosTotalItems((prev) => Math.max(0, prev - 1));
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to delete order');
@@ -241,7 +242,7 @@ export default function BarcodePage() {
       }
       const BarcodeDetectorClass = (window as any).BarcodeDetector;
       if (!BarcodeDetectorClass) {
-        setCameraError('Live preview is open. For auto scanning, use Chrome on Android. USB/Bluetooth scanners work instantly.');
+        setCameraError('Camera preview is live. Auto-scan requires Chrome on Android or a USB/Bluetooth scanner — type the barcode in the input box above and press Lookup.');
         return;
       }
       const detector = new BarcodeDetectorClass({
@@ -420,10 +421,11 @@ export default function BarcodePage() {
   const escapeHtml = (value: string) =>
     value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-  const printInvoice = (orderData?: PosOrderResult) => {
+  const printInvoice = (orderData?: PosOrderResult | any) => {
     const data = orderData || lastOrder;
     if (!data) return;
-    const order = data.order;
+    // When called from history tab, the raw order object is passed directly (no .order wrapper)
+    const order = data.order ?? data;
     const billing = data.billing || billingInfo?.billing || {};
     const printWindow = window.open('', '_blank', 'width=500,height=800');
     if (!printWindow) return;
@@ -449,11 +451,13 @@ export default function BarcodePage() {
     const footer = escapeHtml(billing.footerNote || 'Thank you for your purchase!');
     const terms = billing.termsOnInvoice ? `<p style="font-size:10px;color:#888;margin-top:12px;">${escapeHtml(billing.termsOnInvoice)}</p>` : '';
 
-    const cgst = Math.floor(data.gstAmount / 2);
-    const sgst = data.gstAmount - cgst;
-    const gstSection = data.gstRate > 0 ? `
-      <tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">CGST (${data.gstRate / 2}%)</td><td style="text-align:right;padding:3px 4px;font-size:12px;">Rs.${cgst.toLocaleString('en-IN')}</td></tr>
-      <tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">SGST (${data.gstRate / 2}%)</td><td style="text-align:right;padding:3px 4px;font-size:12px;">Rs.${sgst.toLocaleString('en-IN')}</td></tr>
+    const resolvedGstAmount = data.gstAmount ?? order.gstAmount ?? 0;
+    const resolvedGstRate = data.gstRate ?? order.gstRate ?? 0;
+    const cgst = Math.floor(resolvedGstAmount / 2);
+    const sgst = resolvedGstAmount - cgst;
+    const gstSection = resolvedGstRate > 0 ? `
+      <tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">CGST (${resolvedGstRate / 2}%)</td><td style="text-align:right;padding:3px 4px;font-size:12px;">Rs.${cgst.toLocaleString('en-IN')}</td></tr>
+      <tr><td colspan="3" style="text-align:right;padding:3px 4px;font-size:12px;color:#666;">SGST (${resolvedGstRate / 2}%)</td><td style="text-align:right;padding:3px 4px;font-size:12px;">Rs.${sgst.toLocaleString('en-IN')}</td></tr>
     ` : '';
 
     const orderDiscount = order.discount ?? order.posDiscount ?? 0;
@@ -540,7 +544,8 @@ export default function BarcodePage() {
     const printWindow = window.open('', '_blank', 'width=900,height=1200');
     if (!printWindow) return;
     const entries: Array<{ id: string; code: string; fmt: string }> = [];
-    let labelsHtml = '';
+    // Build individual label HTML strings in a clean array (no fragile regex parsing)
+    const labelItems: string[] = [];
     prods.forEach((p, idx) => {
       const rawCode = (p as any).barcode || (p as any).sku || 'NO-CODE';
       const fmt = /^\d{13}$/.test(rawCode) ? 'EAN13' : /^\d{8}$/.test(rawCode) ? 'EAN8' : 'CODE128';
@@ -549,32 +554,18 @@ export default function BarcodePage() {
       const safeName = escapeHtml((p.name || 'Product').slice(0, 42));
       const safeSku = escapeHtml((p as any).sku || '\u2014');
       const priceLabel = typeof p.price === 'number' ? `&#8377;${p.price.toLocaleString('en-IN')}` : '\u2014';
-      labelsHtml += `<div class="lbl"><div class="lname">${safeName}</div><div class="lsku">SKU: ${safeSku}</div><svg id="${id}" class="lbc"></svg><div class="lprice">${priceLabel}</div></div>`;
+      labelItems.push(`<div class="lbl"><div class="lname">${safeName}</div><div class="lsku">SKU: ${safeSku}</div><svg id="${id}" class="lbc"></svg><div class="lprice">${priceLabel}</div></div>`);
     });
     const entriesJson = JSON.stringify(entries);
     const colsStyle = `repeat(${cols},${wMm}mm)`;
     const labelMinH = `${hMm}mm`;
     const bcMaxH = `${bcH}mm`;
-    // Build page-break hint: after every `rows*cols` labels insert a page-break
+    // Group labels into pages of (rows * cols)
     const perPage = rows * cols;
-    let pagedHtml = '';
-    prods.forEach((_p, idx) => {
-      if (idx > 0 && idx % perPage === 0) {
-        pagedHtml += '</div><div class="sheet">';
-      }
-      pagedHtml += labelsHtml.split('</div>').slice(
-        idx * 4, idx * 4 + 4
-      ).join('</div>') + '</div>';
-    });
-    // Simpler: rebuild with page groups
     const chunks: string[] = [];
-    let chunk = '';
-    prods.forEach((_p, idx) => {
-      const lbl = labelsHtml.match(/<div class="lbl">[\s\S]*?<\/div><\/div>/g)?.[idx] || '';
-      chunk += lbl;
-      if ((idx + 1) % perPage === 0) { chunks.push(chunk); chunk = ''; }
-    });
-    if (chunk) chunks.push(chunk);
+    for (let i = 0; i < labelItems.length; i += perPage) {
+      chunks.push(labelItems.slice(i, i + perPage).join(''));
+    }
     const sheetsHtml = chunks.map((c, i) => `<div class="sheet${i > 0 ? ' page-break' : ''}">${c}</div>`).join('');
     printWindow.document.write(`<!DOCTYPE html><html><head><title>Barcode Label Sheet</title><meta charset="utf-8"><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:8mm;background:#fff;color:#000}.sheet{display:grid;grid-template-columns:${colsStyle};gap:${gap}mm}.page-break{page-break-before:always;margin-top:8mm}.lbl{border:1px dashed #bbb;padding:1.5mm 2mm;display:flex;flex-direction:column;align-items:center;min-height:${labelMinH};overflow:hidden}.lname{font-size:6.5pt;font-weight:700;text-align:center;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.5mm}.lsku{font-size:5.5pt;color:#666;margin-bottom:0.5mm}.lbc{width:100%!important;max-height:${bcMaxH};display:block}.lprice{font-size:7pt;font-weight:700;margin-top:0.5mm}@media print{body{padding:5mm}.page-break{margin-top:0}.lbl{border:1px dashed #ccc}}</style></head><body>${sheetsHtml}<script>var E=${entriesJson};window.onload=function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';s.onload=function(){E.forEach(function(e){var el=document.getElementById(e.id);if(!el)return;try{JsBarcode(el,e.code,{format:e.fmt,lineColor:'#000',width:1,height:${Math.round(bcH * 2.83)},displayValue:true,fontSize:6,margin:1,background:'#fff'});}catch(ex){try{JsBarcode(el,e.code,{format:'CODE128',lineColor:'#000',width:1,height:${Math.round(bcH * 2.83)},displayValue:true,fontSize:6,margin:1,background:'#fff'});}catch(ex2){}}});window.print();setTimeout(function(){window.close();},800);};document.head.appendChild(s);};<\/script></body></html>`);
     printWindow.document.close();
