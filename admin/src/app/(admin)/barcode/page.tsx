@@ -68,6 +68,8 @@ export default function BarcodePage() {
   const [lastOrder, setLastOrder] = useState<PosOrderResult | null>(null);
   // Local GST toggle: null = use settings default
   const [localGstEnabled, setLocalGstEnabled] = useState<boolean | null>(null);
+  // Quick GST rate applied to all items at once (null = keep per-item rates)
+  const [quickGstRate, setQuickGstRate] = useState<number | null>(null);
 
   // Billing info and stats
   const [billingInfo, setBillingInfo] = useState<PosBillingInfo | null>(null);
@@ -350,6 +352,12 @@ export default function BarcodePage() {
     setPaymentMethod('cash');
     setLastOrder(null);
     setLocalGstEnabled(null);
+    setQuickGstRate(null);
+  };
+
+  const applyQuickGstRate = (rate: number) => {
+    setQuickGstRate(rate);
+    setBillingItems((prev) => prev.map((item) => ({ ...item, itemGstRate: rate })));
   };
 
   // Derived values
@@ -811,22 +819,68 @@ export default function BarcodePage() {
                 </CardContent>
               </Card>
 
-              {/* GST Toggle */}
+              {/* GST Toggle + Quick Slab Selector */}
               <Card>
-                <CardContent className="pt-4 pb-3">
-                  <div className="flex items-center justify-between">
+                <CardContent className="pt-4 pb-4">
+                  {/* Toggle row */}
+                  <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-sm font-medium">GST (Tax)</p>
-                      <p className="text-xs text-muted-foreground">{enableGst ? 'Inclusive GST active — select rate per item' : 'No tax applied'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">GST (Tax)</p>
+                        {!enableGst && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">Default: {defaultGstRate}%</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{enableGst ? 'Select a slab below — applies to all items' : 'No tax applied'}</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => { userToggledGst.current = true; setLocalGstEnabled(!enableGst); }}
+                      onClick={() => {
+                        userToggledGst.current = true;
+                        const turningOn = !enableGst;
+                        setLocalGstEnabled(turningOn);
+                        if (turningOn) {
+                          // Auto-apply default rate to all items when enabling GST
+                          applyQuickGstRate(defaultGstRate);
+                        } else {
+                          setQuickGstRate(null);
+                        }
+                      }}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${enableGst ? 'bg-primary' : 'bg-muted-foreground/30'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${enableGst ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
+
+                  {/* Quick slab buttons — only when GST is ON */}
+                  {enableGst && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {taxSlabs.map((slab) => {
+                        const isDefault = slab.rate === defaultGstRate;
+                        const isActive = quickGstRate === slab.rate ||
+                          (quickGstRate === null && billingItems.length > 0 && billingItems.every((i) => i.itemGstRate === slab.rate));
+                        return (
+                          <button
+                            key={slab.rate}
+                            type="button"
+                            onClick={() => applyQuickGstRate(slab.rate)}
+                            className={`relative flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                              isActive
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                            }`}
+                          >
+                            {slab.rate === 0 ? 'No Tax' : `${slab.rate}%`}
+                            {isDefault && (
+                              <span className={`text-[9px] font-bold rounded px-0.5 ${
+                                isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+                              }`}>default</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
