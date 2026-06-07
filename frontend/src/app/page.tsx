@@ -102,42 +102,43 @@ export default function HomePage() {
   ];
 
   const activeDiscoverBanners = (settings?.discoverBanners || [])
-    .filter((b: any) => b.isActive)
+    .filter((b: any) => b.isActive && b.image && b.image.trim() !== '')
     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
     .slice(0, 4);
 
-  // Build discover items: prefer admin-configured banners, then map to actual categories.
-  // Each item is fully independent — no image sharing between tiles.
+  // Build discover items: prefer admin-configured discover banners (with real images),
+  // then hero banners, then categories, then product images.
   const buildDiscoverItems = () => {
     if (activeDiscoverBanners.length >= 4) return activeDiscoverBanners;
 
-    // Build from actual categories — each gets its own image + category-scoped link
-    const catItems = categories.slice(0, 4).map((cat) => ({
-      title: cat.name,
-      image: getSafeImage(cat.image, PLACEHOLDER_CATEGORY),
-      link: `/products?category=${cat.slug}`,
-    }));
+    // Collect all available image sources in priority order
+    const heroBanners = banners.filter((b) => b.isActive !== false && b.image && b.image.trim() !== '');
+    const catList = categories.filter((c) => c.image && c.image.trim() !== '');
+    const productImages = [
+      ...featuredProducts.flatMap((p) => p.images || []),
+      ...trendingProducts.flatMap((p) => p.images || []),
+      ...newArrivals.flatMap((p) => p.images || []),
+    ].filter(Boolean);
 
-    // Fallback fixed sections — each uses a strictly different image source so tiles
-    // never share the same picture. Banner index 0/1/2/3 are tried first; if a given
-    // banner slot is empty the corresponding product image is used; as a last resort
-    // the PLACEHOLDER_CATEGORY is used (not PLACEHOLDER_BANNER) to keep them visually
-    // distinct from each other.
-    const fallbackImages = [
-      getSafeImage(banners[0]?.image, PLACEHOLDER_BANNER),
-      getSafeImage(banners[1]?.image ?? newArrivals[0]?.images?.[0], PLACEHOLDER_CATEGORY),
-      getSafeImage(banners[2]?.image ?? featuredProducts[0]?.images?.[0], PLACEHOLDER_PRODUCT),
-      getSafeImage(banners[3]?.image ?? trendingProducts[0]?.images?.[0], PLACEHOLDER_CATEGORY),
-    ];
-    const fallbackItems = [
-      { title: 'Latest Launches',   image: fallbackImages[0], link: '/products?sort=newest' },
-      { title: 'Trending Deals',    image: fallbackImages[1], link: '/products?sort=popular' },
-      { title: 'Featured Picks',    image: fallbackImages[2], link: '/products?isFeatured=true' },
-      { title: 'Accessories & More', image: fallbackImages[3], link: '/products' },
-    ];
+    const getImg = (index: number): string => {
+      if (heroBanners[index]?.image) return getSafeImage(heroBanners[index].image, PLACEHOLDER_BANNER);
+      if (catList[index]?.image) return getSafeImage(catList[index].image, PLACEHOLDER_CATEGORY);
+      if (productImages[index]) return getSafeImage(productImages[index], PLACEHOLDER_PRODUCT);
+      return PLACEHOLDER_BANNER;
+    };
 
-    // Use real category items where available, fill remaining slots with fallbacks
-    return [0, 1, 2, 3].map((i) => catItems[i] || fallbackItems[i]);
+    const getTitle = (index: number, fallback: string): string => {
+      if (catList[index]?.name) return catList[index].name;
+      if (heroBanners[index]?.title) return heroBanners[index].title;
+      return fallback;
+    };
+
+    return [
+      { title: getTitle(0, 'Latest Launches'),    image: getImg(0), link: catList[0] ? `/products?category=${catList[0].slug}` : '/products?sort=newest' },
+      { title: getTitle(1, 'Trending Deals'),      image: getImg(1), link: catList[1] ? `/products?category=${catList[1].slug}` : '/products?sort=popular' },
+      { title: getTitle(2, 'Featured Picks'),      image: getImg(2), link: catList[2] ? `/products?category=${catList[2].slug}` : '/products?isFeatured=true' },
+      { title: getTitle(3, 'Accessories & More'),  image: getImg(3), link: catList[3] ? `/products?category=${catList[3].slug}` : '/products' },
+    ];
   };
 
   const discoverItems = buildDiscoverItems();
