@@ -107,9 +107,6 @@ export default function HomePage() {
     .slice(0, 4);
 
   const buildDiscoverItems = () => {
-    if (activeDiscoverBanners.length >= 4) return activeDiscoverBanners;
-
-    // Collect all available image sources in priority order
     const heroBanners = banners.filter((b) => b.isActive !== false && b.image && b.image.trim() !== '');
     const catList = categories.filter((c) => c.image && c.image.trim() !== '');
     const productImages = [
@@ -118,25 +115,31 @@ export default function HomePage() {
       ...newArrivals.flatMap((p) => p.images || []),
     ].filter(Boolean);
 
-    const getImg = (index: number): string => {
+    const fallbackImg = (index: number): string => {
       if (heroBanners[index]?.image) return getSafeImage(heroBanners[index].image, PLACEHOLDER_BANNER);
       if (catList[index]?.image) return getSafeImage(catList[index].image, PLACEHOLDER_CATEGORY);
       if (productImages[index]) return getSafeImage(productImages[index], PLACEHOLDER_PRODUCT);
       return PLACEHOLDER_BANNER;
     };
 
-    const getTitle = (index: number, fallback: string): string => {
+    const fallbackTitle = (index: number, def: string): string => {
       if (catList[index]?.name) return catList[index].name;
       if (heroBanners[index]?.title) return heroBanners[index].title;
-      return fallback;
+      return def;
     };
 
-    return [
-      { title: getTitle(0, 'Latest Launches'),    image: getImg(0), link: catList[0] ? `/products?category=${catList[0].slug}` : '/products?sort=newest' },
-      { title: getTitle(1, 'Trending Deals'),      image: getImg(1), link: catList[1] ? `/products?category=${catList[1].slug}` : '/products?sort=popular' },
-      { title: getTitle(2, 'Featured Picks'),      image: getImg(2), link: catList[2] ? `/products?category=${catList[2].slug}` : '/products?isFeatured=true' },
-      { title: getTitle(3, 'Accessories & More'),  image: getImg(3), link: catList[3] ? `/products?category=${catList[3].slug}` : '/products' },
+    const defaults = [
+      { title: fallbackTitle(0, 'Latest Launches'),   image: fallbackImg(0), link: catList[0] ? `/products?category=${catList[0].slug}` : '/products?sort=newest' },
+      { title: fallbackTitle(1, 'Trending Deals'),     image: fallbackImg(1), link: catList[1] ? `/products?category=${catList[1].slug}` : '/products?sort=popular' },
+      { title: fallbackTitle(2, 'Featured Picks'),     image: fallbackImg(2), link: catList[2] ? `/products?category=${catList[2].slug}` : '/products?isFeatured=true' },
+      { title: fallbackTitle(3, 'Accessories & More'), image: fallbackImg(3), link: catList[3] ? `/products?category=${catList[3].slug}` : '/products' },
     ];
+
+    return defaults.map((d, i) =>
+      activeDiscoverBanners[i]
+        ? { ...d, ...activeDiscoverBanners[i], image: getSafeImage(activeDiscoverBanners[i].image, d.image) }
+        : d
+    );
   };
 
   const discoverItems = buildDiscoverItems();

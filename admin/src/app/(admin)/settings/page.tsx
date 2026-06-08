@@ -542,7 +542,7 @@ export default function SettingsPage() {
                           </div>
                           <ImageUploader
                             value={siteForm.watch(`discoverBanners.${index}.image`)}
-                            onChange={(url) => siteForm.setValue(`discoverBanners.${index}.image`, url)}
+                            onChange={(url) => siteForm.setValue(`discoverBanners.${index}.image`, url, { shouldDirty: true, shouldTouch: true })}
                             folder="discover"
                             label="Image"
                           />

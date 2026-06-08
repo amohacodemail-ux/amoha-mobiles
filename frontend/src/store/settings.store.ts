@@ -61,7 +61,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   settings: null,
   loaded: false,
   fetchSettings: async () => {
-    if (get().loaded) return;
     try {
       const { data } = await apiClient.get('/settings');
       set({ settings: data.data, loaded: true });
