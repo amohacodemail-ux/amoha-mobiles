@@ -332,12 +332,12 @@ export function ProductForm({ productId }: Props) {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Input label="Sale Price" type="number" error={errors.price?.message} {...register('price')} preventScroll disabled={!editMode || !productId} />
-                  <Input label="Original Price" type="number" error={errors.originalPrice?.message} {...register('originalPrice')} preventScroll disabled={!editMode || !productId} />
-                  <Input label="Purchase Price" type="number" placeholder="Cost price" error={errors.purchasePrice?.message} {...register('purchasePrice')} preventScroll disabled={!editMode || !productId} />
+                  <Input label="Sale Price" type="number" error={errors.price?.message} {...register('price')} preventScroll disabled={!!productId && !editMode} />
+                  <Input label="Original Price" type="number" error={errors.originalPrice?.message} {...register('originalPrice')} preventScroll disabled={!!productId && !editMode} />
+                  <Input label="Purchase Price" type="number" placeholder="Cost price" error={errors.purchasePrice?.message} {...register('purchasePrice')} preventScroll disabled={!!productId && !editMode} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input label="Stock Quantity" type="number" error={errors.stock?.message} {...register('stock')} preventScroll disabled={!editMode || !productId} />
+                  <Input label="Stock Quantity" type="number" error={errors.stock?.message} {...register('stock')} preventScroll disabled={!!productId && !editMode} />
                 </div>
                 <Input label="Tags (comma separated)" placeholder="smartphone, 5g, flagship" {...register('tags')} />
                 <Input label="Colors (comma separated)" placeholder="Black, Silver, Gold" {...register('colors')} />
