@@ -832,7 +832,7 @@ export default function BarcodePage() {
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">Default: {defaultGstRate}%</span>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">{enableGst ? 'Select a slab below — applies to all items' : 'No tax applied'}</p>
+                      <p className="text-xs text-muted-foreground">{enableGst ? 'Tax applied — change rate via dropdown' : 'Toggle on or pick a rate below'}</p>
                     </div>
                     <button
                       type="button"
@@ -853,35 +853,31 @@ export default function BarcodePage() {
                     </button>
                   </div>
 
-                  {/* Quick slab buttons — only when GST is ON */}
-                  {enableGst && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {taxSlabs.map((slab) => {
-                        const isDefault = slab.rate === defaultGstRate;
-                        const isActive = quickGstRate === slab.rate ||
-                          (quickGstRate === null && billingItems.length > 0 && billingItems.every((i) => i.itemGstRate === slab.rate));
-                        return (
-                          <button
-                            key={slab.rate}
-                            type="button"
-                            onClick={() => applyQuickGstRate(slab.rate)}
-                            className={`relative flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
-                              isActive
-                                ? 'border-primary bg-primary text-primary-foreground'
-                                : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
-                            }`}
-                          >
-                            {slab.rate === 0 ? 'No Tax' : `${slab.rate}%`}
-                            {isDefault && (
-                              <span className={`text-[9px] font-bold rounded px-0.5 ${
-                                isActive ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
-                              }`}>default</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* Tax rate dropdown — always visible */}
+                  <div className="flex items-center gap-2 mt-1">
+                    <label className="text-xs text-muted-foreground whitespace-nowrap">Tax Rate</label>
+                    <select
+                      className="flex-1 h-8 rounded-md border border-input bg-background px-2 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                      value={quickGstRate ?? defaultGstRate}
+                      onChange={(e) => {
+                        const rate = Number(e.target.value);
+                        userToggledGst.current = true;
+                        if (rate === 0) {
+                          setLocalGstEnabled(false);
+                          setQuickGstRate(null);
+                        } else {
+                          setLocalGstEnabled(true);
+                          applyQuickGstRate(rate);
+                        }
+                      }}
+                    >
+                      {taxSlabs.map((slab) => (
+                        <option key={slab.rate} value={slab.rate}>
+                          {slab.rate === 0 ? 'No Tax (0%)' : `${slab.name || `GST ${slab.rate}%`} — ${slab.rate}%`}{slab.rate === defaultGstRate ? ' ★ default' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </CardContent>
               </Card>
 
