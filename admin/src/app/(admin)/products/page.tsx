@@ -4,7 +4,8 @@ import { useDebouncedValue } from '@/lib/hooks';
 import Link from 'next/link';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, AlertTriangle, Download, Loader2 } from 'lucide-react';
+import { exportAllProductsToExcel } from '@/lib/product-export';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Pagination } from '@/components/shared/pagination';
@@ -31,6 +32,7 @@ export default function ProductsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const { canDelete, canCreate } = useModulePermissions(MODULES.PRODUCTS);
 
@@ -62,6 +64,18 @@ export default function ProductsPage() {
     }
     setDeleteId(product._id);
     setDeleteProduct(product);
+  };
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const count = await exportAllProductsToExcel(debouncedSearch || undefined);
+      toast.success(`Downloaded ${count} product${count === 1 ? '' : 's'} to Excel`);
+    } catch {
+      toast.error('Failed to export products. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -133,9 +147,19 @@ export default function ProductsPage() {
   return (
     <div>
       <PageHeader title="Products" description={`${totalItems} total products`}>
-        {canCreate && (
-          <Link href="/products/add"><Button><Plus className="h-4 w-4" />Add Product</Button></Link>
-        )}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportExcel} disabled={exporting || loading}>
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            {exporting ? 'Exporting…' : 'Download Excel'}
+          </Button>
+          {canCreate && (
+            <Link href="/products/add"><Button><Plus className="h-4 w-4" />Add Product</Button></Link>
+          )}
+        </div>
       </PageHeader>
 
       <DataTable
