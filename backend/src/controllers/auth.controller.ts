@@ -91,8 +91,8 @@ class AuthController {
 
   async forgotPassword(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email } = req.body;
-      await authService.forgotPassword(email);
+      const { email, portal } = req.body;
+      await authService.forgotPassword(email, portal === 'admin' ? 'admin' : 'store');
       sendMessage(res, 'If the email exists, a password reset link has been sent');
     } catch (error) {
       next(error);

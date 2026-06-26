@@ -10,6 +10,27 @@ import env from '../config/env';
 import { v4 as uuidv4 } from 'uuid';
 import { UserRole } from '../types';
 
+const ADMIN_PANEL_ROLES: UserRole[] = [
+  'admin', 'sales', 'purchase', 'marketing', 'logistics',
+  'supplier', 'service_engineer', 'digital_marketing', 'purchase_inventory',
+];
+
+function resolvePortalBaseUrl(portal: 'admin' | 'store'): string {
+  const origins = env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
+  if (portal === 'admin') {
+    return (
+      origins.find((origin) => origin.includes('admin.')) ||
+      origins.find((origin) => origin.includes(':3003')) ||
+      'http://localhost:3003'
+    );
+  }
+  return (
+    origins.find((origin) => !origin.includes('admin.') && !origin.includes(':3003') && !origin.includes(':3001')) ||
+    origins[0] ||
+    'http://localhost:3002'
+  );
+}
+
 class AuthService {
   async register(data: { name: string; email: string; phone: string; password: string }) {
     const { data: existing } = await supabase
@@ -109,16 +130,28 @@ class AuthService {
     await supabase.from('users').update({ password: hashed }).eq('id', userId);
   }
 
-  async forgotPassword(email: string) {
-    const { data: user } = await supabase.from('users').select('id, email, name').eq('email', email.toLowerCase()).maybeSingle();
+  async forgotPassword(email: string, portal: 'admin' | 'store' = 'store') {
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, email, name, role')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
     if (!user) return;
+
+    const isAdminPortal = portal === 'admin';
+    if (isAdminPortal && !ADMIN_PANEL_ROLES.includes(user.role as UserRole)) {
+      // Don't reveal whether the email exists — silently skip non-admin users
+      return;
+    }
+
     const resetToken = uuidv4();
     await supabase.from('users').update({
       reset_password_token: resetToken,
       reset_password_expiry: new Date(Date.now() + 3600000).toISOString(),
     }).eq('id', user.id);
-    const frontendUrl = env.CORS_ORIGIN.split(',')[0].trim();
-    sendPasswordResetEmail(user.email, user.name, resetToken, frontendUrl).catch((err: any) => {
+
+    const baseUrl = resolvePortalBaseUrl(isAdminPortal ? 'admin' : 'store');
+    sendPasswordResetEmail(user.email, user.name, resetToken, baseUrl, { portal }).catch((err: any) => {
       logger.error('Failed to send password reset email:', err?.message);
     });
   }
@@ -132,7 +165,10 @@ class AuthService {
     if (!user) throw new BadRequestError('Invalid or expired reset token');
     const hashed = await hashPassword(newPassword);
     await supabase.from('users').update({
-      password: hashed, reset_password_token: null, reset_password_expiry: null,
+      password: hashed,
+      reset_password_token: null,
+      reset_password_expiry: null,
+      refresh_token: null,
     }).eq('id', user.id);
   }
 

@@ -209,18 +209,30 @@ export async function sendServiceRequestStatusEmail(email: string, name: string,
   return sendEmail({ to: email, subject: `Service Request #${requestNumber} - ${label}`, html });
 }
 
-export async function sendPasswordResetEmail(email: string, name: string, resetToken: string, frontendUrl: string) {
-  const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+export async function sendPasswordResetEmail(
+  email: string,
+  name: string,
+  resetToken: string,
+  baseUrl: string,
+  options?: { portal?: 'admin' | 'store' },
+) {
+  const portal = options?.portal ?? 'store';
+  const resetLink = `${baseUrl.replace(/\/+$/, '')}/reset-password?token=${resetToken}`;
+  const isAdmin = portal === 'admin';
   const html = wrapHtml(`
-    <h2>Password Reset</h2>
-    <p>Hi ${name}, we received a request to reset your password.</p>
+    <h2>${isAdmin ? 'Admin Panel Password Reset' : 'Password Reset'}</h2>
+    <p>Hi ${name}, we received a request to reset your ${isAdmin ? 'admin panel ' : ''}password.</p>
     <p>Click the button below to set a new password. This link expires in 1 hour.</p>
     <div style="text-align:center;margin:24px 0">
       <a href="${resetLink}" class="btn">Reset Password</a>
     </div>
     <p style="font-size:12px;color:#9ca3af">If you didn't request this, you can safely ignore this email.</p>
   `);
-  return sendEmail({ to: email, subject: 'Password Reset - AMOHA Mobiles', html });
+  return sendEmail({
+    to: email,
+    subject: isAdmin ? 'Password Reset - Amoha Admin Panel' : 'Password Reset - AMOHA Mobiles',
+    html,
+  });
 }
 
 export async function sendKycStatusEmail(email: string, name: string, status: 'pending' | 'verified' | 'rejected', reason?: string) {

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 import { Smartphone, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,6 +95,11 @@ export default function LoginPage() {
                 </button>
               </div>
               {errors.password && <p className="mt-1 text-xs text-destructive">{errors.password.message}</p>}
+              <div className="mt-2 text-right">
+                <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
