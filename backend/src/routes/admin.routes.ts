@@ -355,7 +355,7 @@ router.patch('/users/:id/block', canAccessAdminOnly, userController.toggleBlock)
 router.delete('/users/:id', canAccessAdminOnly, userController.deleteUser);
 
 // ====== RBAC - Admin User Management (Admin only) ======
-import { createAdminUserSchema, updateUserRoleSchema } from '../validators/auth.validator';
+import { createAdminUserSchema, updateUserRoleSchema, adminSetUserPasswordSchema } from '../validators/auth.validator';
 import authService from '../services/auth.service';
 
 // Create admin panel user with specific role
@@ -373,6 +373,16 @@ router.patch('/users/:id/role', canAccessAdminOnly, validate(updateUserRoleSchem
   try {
     const result = await authService.updateUserRole(req.params.id, req.body.role);
     sendSuccess(res, result.user, result.message);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Set password for an admin panel user (admin-only)
+router.patch('/users/:id/password', canAccessAdminOnly, validate(adminSetUserPasswordSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await authService.setUserPasswordByAdmin(req.params.id, req.body.password);
+    sendSuccess(res, null, result.message);
   } catch (error) {
     next(error);
   }

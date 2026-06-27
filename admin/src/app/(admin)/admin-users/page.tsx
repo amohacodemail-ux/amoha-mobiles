@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Search, UserCog, Shield, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Search, UserCog, Shield, Loader2, Trash2, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,13 @@ export default function AdminUsersPage() {
   const [deleting, setDeleting] = useState(false);
   const [forceDelete, setForceDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Set password state
+  const [passwordUser, setPasswordUser] = useState<AdminUser | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [settingPassword, setSettingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -95,6 +102,40 @@ export default function AdminUsersPage() {
     setDeleteUserName(user.name);
     setForceDelete(false);
     setDeleteError(null);
+  };
+
+  const openSetPassword = (user: AdminUser) => {
+    setPasswordUser(user);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError(null);
+  };
+
+  const handleSetPassword = async () => {
+    if (!passwordUser) return;
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setSettingPassword(true);
+    setPasswordError(null);
+    try {
+      await apiClient.patch(`/admin/users/${passwordUser.id}/password`, { password: newPassword });
+      toast.success(`Password updated for ${passwordUser.name}`);
+      setPasswordUser(null);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      setPasswordError(error?.response?.data?.message || 'Failed to update password');
+    } finally {
+      setSettingPassword(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -230,6 +271,14 @@ export default function AdminUsersPage() {
                     <Button
                       variant="outline"
                       size="icon"
+                      title="Set password"
+                      onClick={() => openSetPassword(user)}
+                    >
+                      <KeyRound className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
                       className="hover:border-destructive hover:text-destructive"
                       onClick={() => openDelete(user)}
                     >
@@ -284,6 +333,52 @@ export default function AdminUsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Set Password Dialog */}
+      <Dialog open={!!passwordUser} onOpenChange={() => setPasswordUser(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-primary/15">
+                <KeyRound className="h-5 w-5 text-primary" />
+              </div>
+              <DialogTitle>Set New Password</DialogTitle>
+            </div>
+            <DialogDescription className="mt-2">
+              Set a new login password for &quot;{passwordUser?.name}&quot;. They will need to use this password on their next sign-in.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Input
+              label="New Password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 6 characters"
+            />
+            <Input
+              label="Confirm Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter password"
+            />
+            {passwordError && (
+              <p className="text-sm text-destructive">{passwordError}</p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPasswordUser(null)} disabled={settingPassword}>
+              Cancel
+            </Button>
+            <Button onClick={handleSetPassword} disabled={settingPassword}>
+              {settingPassword ? 'Saving...' : 'Set Password'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Custom Delete Dialog with Force Delete Option */}
       <Dialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>

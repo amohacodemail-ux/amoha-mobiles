@@ -32,9 +32,7 @@ const shouldSkipRefresh = (url?: string) => {
   if (!url) return false;
   return (
     url.includes('/auth/login') ||
-    url.includes('/auth/refresh-token') ||
-    url.includes('/auth/forgot-password') ||
-    url.includes('/auth/reset-password')
+    url.includes('/auth/refresh-token')
   );
 };
 

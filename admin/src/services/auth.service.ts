@@ -45,14 +45,6 @@ export const authService = {
     await apiClient.put('/auth/change-password', payload);
   },
 
-  forgotPassword: async (email: string): Promise<void> => {
-    await apiClient.post('/auth/forgot-password', { email, portal: 'admin' });
-  },
-
-  resetPassword: async (token: string, password: string): Promise<void> => {
-    await apiClient.post('/auth/reset-password', { token, password });
-  },
-
   getToken: () => Cookies.get('admin_token'),
   isAuthenticated: () => !!Cookies.get('admin_token'),
 };

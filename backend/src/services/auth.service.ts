@@ -130,6 +130,26 @@ class AuthService {
     await supabase.from('users').update({ password: hashed }).eq('id', userId);
   }
 
+  async setUserPasswordByAdmin(userId: string, newPassword: string) {
+    const { data: user } = await supabase.from('users').select('id, role').eq('id', userId).maybeSingle();
+    if (!user) throw new NotFoundError('User');
+    if (!ADMIN_PANEL_ROLES.includes(user.role as UserRole)) {
+      throw new BadRequestError('Can only set passwords for admin panel users');
+    }
+
+    const hashed = await hashPassword(newPassword);
+    const { error } = await supabase.from('users').update({
+      password: hashed,
+      refresh_token: null,
+      reset_password_token: null,
+      reset_password_expiry: null,
+    }).eq('id', userId);
+
+    if (error) throw error;
+
+    return { message: 'Password updated successfully' };
+  }
+
   async forgotPassword(email: string, portal: 'admin' | 'store' = 'store') {
     const { data: user } = await supabase
       .from('users')
