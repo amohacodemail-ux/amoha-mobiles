@@ -3,6 +3,9 @@ import supabase from '../config/supabase';
 
 export type BarcodeType = 'EAN13' | 'EAN8' | 'CODE128' | 'CODE39' | 'UPCA';
 
+/** DB column limit — products.barcode is VARCHAR(20) */
+export const MAX_BARCODE_LENGTH = 20;
+
 export interface BarcodeOptions {
   type?: BarcodeType;
   value?: string;
@@ -143,6 +146,10 @@ export function validateBarcode(barcode: string, type: BarcodeType): { valid: bo
     return { valid: false, error: 'Barcode is required' };
   }
 
+  if (barcode.length > MAX_BARCODE_LENGTH) {
+    return { valid: false, error: `Barcode must be ${MAX_BARCODE_LENGTH} characters or less` };
+  }
+
   switch (type) {
     case 'EAN13':
       if (!/^\d{13}$/.test(barcode)) {
@@ -238,13 +245,12 @@ export async function generateEAN13(prefix: string = '200'): Promise<string> {
  */
 export async function generateCode128(prefix: string = 'AMH'): Promise<string> {
   const maxAttempts = 10;
-  const timestamp = Date.now().toString(36).toUpperCase();
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const barcode = `${prefix}-${timestamp}-${randomPart}`;
+    const randomPart = crypto.randomBytes(2).toString('hex').toUpperCase();
+    const seq = crypto.randomInt(0, 9999999).toString().padStart(7, '0');
+    const barcode = `${prefix}-${seq}-${randomPart}`;
 
-    // Check for duplicates
     const exists = await isBarcodeExists(barcode);
     if (!exists) {
       return barcode;
@@ -340,9 +346,9 @@ export async function bulkGenerateBarcodes(
           barcode = base12 + calculateEAN13Checksum(base12);
           break;
         case 'CODE128':
-          const timestamp = Date.now().toString(36).toUpperCase();
-          const random = crypto.randomBytes(3).toString('hex').toUpperCase();
-          barcode = `AMH-${timestamp}-${random}`;
+          const seq = crypto.randomInt(0, 9999999).toString().padStart(7, '0');
+          const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+          barcode = `AMH-${seq}-${random}`;
           break;
         default:
           throw new Error(`Bulk generation not implemented for type: ${type}`);

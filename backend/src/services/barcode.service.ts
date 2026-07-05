@@ -100,14 +100,24 @@ class BarcodeService {
 
     // Generate new unique barcode
     const type = options.type || 'EAN13';
-    let barcode: string;
+    let barcode: string | undefined;
 
-    try {
-      const result = await generateProductBarcode({ type, prefix: options.prefix });
-      barcode = result.barcode;
-    } catch (err: any) {
-      logger.error(`[BarcodeService] Error generating barcode for product ${productId}:`, err);
-      throw new BadRequestError(err.message || 'Failed to generate unique barcode');
+    // CODE128: prefer SKU (same as migrated catalog products)
+    if (type === 'CODE128' && product.sku && validateBarcode(product.sku, 'CODE128').valid) {
+      const skuTaken = await isBarcodeExists(product.sku, productId);
+      if (!skuTaken) {
+        barcode = product.sku;
+      }
+    }
+
+    if (!barcode) {
+      try {
+        const result = await generateProductBarcode({ type, prefix: options.prefix });
+        barcode = result.barcode;
+      } catch (err: any) {
+        logger.error(`[BarcodeService] Error generating barcode for product ${productId}:`, err);
+        throw new BadRequestError(err.message || 'Failed to generate unique barcode');
+      }
     }
 
     // Update product

@@ -39,7 +39,7 @@ const schema = z.object({
   isTrending: z.boolean().default(false),
   isActive: z.boolean().default(true),
   barcode: z.string().optional(),
-  barcodeType: z.enum(['EAN13', 'EAN8', 'UPCA', 'CODE128', 'CODE39']).default('EAN13'),
+  barcodeType: z.enum(['EAN13', 'EAN8', 'UPCA', 'CODE128', 'CODE39']).default('CODE128'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -86,10 +86,11 @@ export function ProductForm({ productId }: Props) {
   const [imagesUploading, setImagesUploading] = useState(false);
   const [barcodePreview, setBarcodePreview] = useState<string>('');
   const [regeneratingBarcode, setRegeneratingBarcode] = useState(false);
+  const [productSku, setProductSku] = useState<string>('');
 
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, isActive: true, barcodeType: 'EAN13' },
+    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, isActive: true, barcodeType: 'CODE128' },
   });
 
   const barcodeType = watch('barcodeType');
@@ -123,8 +124,9 @@ export function ProductForm({ productId }: Props) {
             isTrending: p.isTrending,
             isActive: (p as any).isActive ?? true,
             barcode: p.barcode || '',
-            barcodeType: (p.barcodeType as BarcodeType) || 'EAN13',
+            barcodeType: (p.barcodeType as BarcodeType) || 'CODE128',
           });
+          setProductSku(p.sku || '');
           setBarcodePreview(p.barcode || '');
           setExistingImages(p.images || []);
           const specEntries = p.specifications
@@ -141,10 +143,20 @@ export function ProductForm({ productId }: Props) {
     loadData();
   }, [productId, reset]);
 
+  const handleUseSkuAsBarcode = () => {
+    if (!productSku) {
+      toast.error('SKU not available yet — save the product first or use Regenerate');
+      return;
+    }
+    setValue('barcodeType', 'CODE128');
+    setValue('barcode', productSku);
+    setBarcodePreview(productSku);
+    toast.success('Barcode set to SKU (Code 128)');
+  };
+
   const handleRegenerateBarcode = async () => {
     if (!productId) {
-      // For new products, just generate a preview
-      toast.success('Barcode will be auto-generated on create');
+      toast('Leave barcode empty to auto-use SKU (Code 128) when you save', { icon: 'ℹ️' });
       return;
     }
 
@@ -154,10 +166,11 @@ export function ProductForm({ productId }: Props) {
         type: barcodeType,
       });
       setValue('barcode', result.barcode);
+      setValue('barcodeType', (result.barcodeType as BarcodeType) || barcodeType);
       setBarcodePreview(result.barcode);
-      toast.success('Barcode regenerated successfully');
+      toast.success(barcodeType === 'CODE128' ? 'Barcode set from SKU' : 'Barcode regenerated');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to regenerate barcode');
+      toast.error(err?.response?.data?.message || 'Failed to update barcode');
     } finally {
       setRegeneratingBarcode(false);
     }
@@ -206,7 +219,7 @@ export function ProductForm({ productId }: Props) {
         warranty: data.warranty || '',
         images: existingImages.length > 0 ? existingImages : [],
         thumbnail: existingImages[0] || '',
-        barcode: data.barcode || undefined,
+        barcode: data.barcode?.trim() || undefined,
         barcodeType: data.barcodeType,
       };
 
@@ -223,9 +236,17 @@ export function ProductForm({ productId }: Props) {
       }
 
       if (productId) {
-        await productService.update(productId, payload);
+        const updated = await productService.update(productId, payload);
+        setProductSku(updated.sku || productSku);
+        reset({
+          ...data,
+          brand: String((updated as any).brandId || (updated.brand as any)?.id || data.brand),
+          category: String((updated as any).categoryId || (updated.category as any)?.id || data.category),
+          barcode: updated.barcode || data.barcode?.trim() || '',
+          barcodeType: (updated.barcodeType as BarcodeType) || data.barcodeType,
+        });
+        setBarcodePreview(updated.barcode || '');
         toast.success('Product updated successfully');
-        // Force refresh the page to ensure latest data is loaded
         router.refresh();
       } else {
         await productService.create(payload);
@@ -372,11 +393,31 @@ export function ProductForm({ productId }: Props) {
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1.5">Barcode</label>
                       <div className="flex gap-2">
-                        <Input
-                          placeholder="Auto-generated if empty"
-                          {...register('barcode')}
-                          value={barcodeValue || ''}
+                        <Controller
+                          name="barcode"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              placeholder={barcodeType === 'CODE128' ? 'Enter manually or use SKU' : 'Enter barcode value'}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                field.onChange(e.target.value);
+                                setBarcodePreview(e.target.value);
+                              }}
+                            />
+                          )}
                         />
+                        {productId && productSku && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleUseSkuAsBarcode}
+                            title="Use product SKU as Code 128 barcode"
+                          >
+                            Use SKU
+                          </Button>
+                        )}
                         {productId && (
                           <Button
                             type="button"
@@ -384,14 +425,19 @@ export function ProductForm({ productId }: Props) {
                             size="icon"
                             onClick={handleRegenerateBarcode}
                             disabled={regeneratingBarcode}
-                            title="Regenerate barcode"
+                            title={barcodeType === 'CODE128' ? 'Set barcode from SKU' : 'Regenerate barcode'}
                           >
                             <RefreshCw className={`h-4 w-4 ${regeneratingBarcode ? 'animate-spin' : ''}`} />
                           </Button>
                         )}
                       </div>
+                      {productSku && (
+                        <p className="text-xs text-muted-foreground mt-1">SKU: <code className="font-mono">{productSku}</code></p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        Leave empty to auto-generate {barcodeType === 'EAN13' ? 'EAN-13' : barcodeType} barcode
+                        {barcodeType === 'CODE128'
+                          ? 'Leave empty on create to auto-use SKU. Max 20 characters.'
+                          : `Leave empty to auto-generate ${barcodeType} on save.`}
                       </p>
                     </div>
                   </div>

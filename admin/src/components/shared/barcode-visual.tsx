@@ -58,7 +58,7 @@ export function BarcodeVisual({
       .then(({ default: JsBarcode }) => {
         if (cancelled || !svg) return;
 
-        // Determine format
+        // Determine format — respect explicit type (don't auto-switch 13-digit codes to EAN13)
         const format = type || detectFormat(code);
 
         const opts = {

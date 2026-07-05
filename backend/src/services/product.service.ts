@@ -215,37 +215,43 @@ class ProductService {
 
     // Handle barcode generation/validation
     let barcode: string;
-    let barcodeType: BarcodeType = 'EAN13';
+    let barcodeType: BarcodeType = 'CODE128';
 
-    if (data.barcode) {
-      // Validate provided barcode
-      const type = data.barcodeType || 'EAN13';
-      const validation = validateBarcode(data.barcode, type);
+    if (data.barcode && String(data.barcode).trim()) {
+      const trimmed = String(data.barcode).trim();
+      // Validate provided barcode — honour the selected type (never silently default to EAN13)
+      const type = (data.barcodeType as BarcodeType) || 'CODE128';
+      const validation = validateBarcode(trimmed, type);
 
       if (!validation.valid) {
         throw new BadRequestError(validation.error || 'Invalid barcode format');
       }
 
-      // Check for duplicates
-      const exists = await isBarcodeExists(data.barcode);
+      const exists = await isBarcodeExists(trimmed);
       if (exists) {
         throw new BadRequestError('Barcode already exists in database');
       }
 
-      barcode = data.barcode;
+      barcode = trimmed;
       barcodeType = type;
     } else {
-      // Generate new unique barcode
-      try {
-        const result = await generateProductBarcode({
-          type: data.barcodeType || 'EAN13',
-          prefix: data.barcodePrefix,
-        });
-        barcode = result.barcode;
-        barcodeType = result.type;
-      } catch (err: any) {
-        logger.error('[ProductService] Error generating barcode:', err);
-        throw new BadRequestError(err.message || 'Failed to generate barcode');
+      const type = (data.barcodeType as BarcodeType) || 'CODE128';
+      if (type === 'CODE128') {
+        // Default for new products: barcode = SKU (matches existing catalog)
+        barcode = sku;
+        barcodeType = 'CODE128';
+      } else {
+        try {
+          const result = await generateProductBarcode({
+            type,
+            prefix: data.barcodePrefix,
+          });
+          barcode = result.barcode;
+          barcodeType = result.type;
+        } catch (err: any) {
+          logger.error('[ProductService] Error generating barcode:', err);
+          throw new BadRequestError(err.message || 'Failed to generate barcode');
+        }
       }
     }
 
@@ -306,27 +312,41 @@ class ProductService {
       // If no inventory record exists, allow stock update (first time setup)
     }
 
-    // Handle barcode update with validation
-    if (updates.barcode !== undefined) {
-      if (updates.barcode === null || updates.barcode === '') {
-        // Allow clearing barcode
+    // Handle barcode / barcodeType updates
+    const barcodeProvided = updates.barcode !== undefined;
+    const typeProvided = updates.barcodeType !== undefined;
+
+    if (barcodeProvided || typeProvided) {
+      const { data: current } = await supabase
+        .from('products')
+        .select('barcode, barcode_type, sku')
+        .eq('id', productId)
+        .maybeSingle();
+
+      if (barcodeProvided && (updates.barcode === null || updates.barcode === '')) {
         mapped.barcode = null;
         mapped.barcodeType = null;
       } else {
-        // Validate provided barcode
-        const type = updates.barcodeType || 'EAN13';
-        const validation = validateBarcode(updates.barcode, type);
+        const nextBarcode = barcodeProvided
+          ? String(updates.barcode).trim()
+          : (current?.barcode || '');
 
+        if (!nextBarcode) {
+          throw new BadRequestError('Barcode value is required');
+        }
+
+        const type = ((typeProvided ? updates.barcodeType : current?.barcode_type) || 'CODE128') as BarcodeType;
+        const validation = validateBarcode(nextBarcode, type);
         if (!validation.valid) {
           throw new BadRequestError(validation.error || 'Invalid barcode format');
         }
 
-        // Check for duplicates (excluding current product)
-        const exists = await isBarcodeExists(updates.barcode, productId);
+        const exists = await isBarcodeExists(nextBarcode, productId);
         if (exists) {
           throw new BadRequestError('Barcode already exists in database');
         }
 
+        mapped.barcode = nextBarcode;
         mapped.barcodeType = type;
       }
     }
