@@ -2,16 +2,13 @@
   "version": 2,
   "framework": "nextjs",
   "buildCommand": "cd admin && npm run build",
-  "outputDirectory": "admin/dist",
+  "outputDirectory": "admin/.next",
   "installCommand": "cd admin && npm install",
   "devCommand": "cd admin && npm run dev",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@next_public_api_url"
-  },
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://amoha-mobiles-api.onrender.com/api/:path*"
+      "destination": "https://amoha-backend-v2.onrender.com/api/:path*"
     }
   ]
 }

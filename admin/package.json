@@ -10,7 +10,7 @@
     "test:e2e:headed": "npx playwright test --headed"
   },
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
