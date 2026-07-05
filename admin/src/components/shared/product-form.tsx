@@ -219,8 +219,8 @@ export function ProductForm({ productId }: Props) {
         warranty: data.warranty || '',
         images: existingImages.length > 0 ? existingImages : [],
         thumbnail: existingImages[0] || '',
-        barcode: data.barcode?.trim() || undefined,
         barcodeType: data.barcodeType,
+        ...(data.barcode?.trim() ? { barcode: data.barcode.trim() } : {}),
       };
 
       // Log purchase price for debugging
@@ -374,7 +374,13 @@ export function ProductForm({ productId }: Props) {
                         name="barcodeType"
                         control={control}
                         render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value || 'EAN13'}>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setBarcodePreview(barcodeValue || '');
+                            }}
+                            value={field.value || 'CODE128'}
+                          >
                             <SelectTrigger><SelectValue placeholder="Select barcode type" /></SelectTrigger>
                             <SelectContent>
                               {BARCODE_TYPES.map((type) => (
@@ -448,6 +454,7 @@ export function ProductForm({ productId }: Props) {
                       <p className="text-xs text-muted-foreground mb-2">Preview:</p>
                       <div className="flex items-center gap-4">
                         <BarcodeVisual
+                          key={`${barcodeValue}-${barcodeType}`}
                           code={barcodeValue}
                           type={barcodeType as any}
                           compact

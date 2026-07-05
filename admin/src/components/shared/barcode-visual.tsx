@@ -14,9 +14,6 @@ interface BarcodeVisualProps {
   className?: string;
 }
 
-/**
- * Auto-detect barcode format based on code pattern
- */
 function detectFormat(code: string): BarcodeFormat {
   if (/^\d{13}$/.test(code)) return 'EAN13';
   if (/^\d{8}$/.test(code)) return 'EAN8';
@@ -24,9 +21,14 @@ function detectFormat(code: string): BarcodeFormat {
   return 'CODE128';
 }
 
+const TYPE_MISMATCH_HINT: Partial<Record<BarcodeFormat, string>> = {
+  EAN13: 'EAN-13 needs exactly 13 digits',
+  EAN8: 'EAN-8 needs exactly 8 digits',
+  UPCA: 'UPC-A needs exactly 12 digits',
+};
+
 /**
- * Renders a real machine-readable barcode using JsBarcode.
- * Compatible with TVS BS-C103G and all standard 1D barcode scanners.
+ * Renders a machine-readable barcode using JsBarcode.
  */
 export function BarcodeVisual({
   code,
@@ -42,7 +44,8 @@ export function BarcodeVisual({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!code) {
+    const trimmed = code?.trim() || '';
+    if (!trimmed) {
       setLoading(false);
       setError(null);
       return;
@@ -56,11 +59,9 @@ export function BarcodeVisual({
 
     import('jsbarcode')
       .then(({ default: JsBarcode }) => {
-        if (cancelled || !svg) return;
+        if (cancelled || !svgRef.current) return;
 
-        // Determine format — respect explicit type (don't auto-switch 13-digit codes to EAN13)
-        const format = type || detectFormat(code);
-
+        const format = type || detectFormat(trimmed);
         const opts = {
           lineColor: '#111827',
           width: width ?? (compact ? 1 : 1.5),
@@ -69,31 +70,40 @@ export function BarcodeVisual({
           fontSize: compact ? 8 : 11,
           margin: compact ? 3 : 6,
           background: 'transparent',
-          valid: function(valid: boolean) {
-            if (!valid && !cancelled) {
-              setError('Invalid barcode format');
-            }
-          },
         };
 
-        try {
-          JsBarcode(svg, code, { format, ...opts });
-          setLoading(false);
-        } catch (err) {
-          // Fallback: try Code 128 which accepts any ASCII string
+        const attemptRender = (tryFormat: BarcodeFormat): boolean => {
           try {
-            JsBarcode(svg, code, { format: 'CODE128', ...opts });
+            svg.innerHTML = '';
+            let valid = true;
+            JsBarcode(svg, trimmed, {
+              format: tryFormat,
+              ...opts,
+              valid: (ok: boolean) => {
+                valid = ok;
+              },
+            });
+            return valid;
+          } catch {
+            svg.innerHTML = '';
+            return false;
+          }
+        };
+
+        if (attemptRender(format)) {
+          if (!cancelled) {
             setError(null);
             setLoading(false);
-          } catch (fallbackErr) {
-            if (!cancelled) {
-              setError('Invalid barcode data');
-              setLoading(false);
-            }
           }
+          return;
+        }
+
+        if (!cancelled) {
+          setError(TYPE_MISMATCH_HINT[format] || 'Invalid barcode format');
+          setLoading(false);
         }
       })
-      .catch((err) => {
+      .catch(() => {
         if (!cancelled) {
           setError('Failed to load barcode library');
           setLoading(false);
@@ -105,16 +115,14 @@ export function BarcodeVisual({
     };
   }, [code, type, compact, height, width, showValue]);
 
-  if (!code) {
-    return (
-      <span className="text-xs text-muted-foreground">—</span>
-    );
+  if (!code?.trim()) {
+    return <span className="text-xs text-muted-foreground">—</span>;
   }
 
   if (error) {
     return (
       <div className={`flex items-center gap-1 text-xs text-destructive ${className}`}>
-        <AlertCircle className="h-3 w-3" />
+        <AlertCircle className="h-3 w-3 shrink-0" />
         <span>{error}</span>
       </div>
     );
@@ -122,13 +130,8 @@ export function BarcodeVisual({
 
   return (
     <div className={`${compact ? 'min-w-[110px] max-w-[150px]' : 'w-full max-w-[280px]'} ${className}`}>
-      {loading && (
-        <div className="animate-pulse bg-muted h-8 rounded" />
-      )}
-      <svg
-        ref={svgRef}
-        className={`w-full ${loading ? 'hidden' : 'block'}`}
-      />
+      {loading && <div className="animate-pulse bg-muted h-8 rounded" />}
+      <svg ref={svgRef} className={`w-full ${loading ? 'hidden' : 'block'}`} />
     </div>
   );
 }
