@@ -321,3 +321,28 @@ The barcode system is now fully production-ready with:
 - ✅ Bulk generation capabilities
 - ✅ Backward compatibility with existing products
 - ✅ Comprehensive error handling and edge case coverage
+
+---
+
+## July 2026 updates (production fixes)
+
+Additional fixes shipped after the original implementation:
+
+| Issue | Fix | Commit |
+|-------|-----|--------|
+| CODE128 regenerate 500 (barcode > 20 chars) | SKU-based CODE128, max length 20 | `d3c259b` |
+| Barcode type not saving on product edit | Zod validator + form fixes | `24827e9` |
+| UPC-A preview false “needs 12 digits” | Map `UPCA` → `UPC` for JsBarcode | `8cf1e87` |
+| EAN save fails with 12 digits | Auto-append check digit on save | `8cf1e87` |
+| Misleading preview errors | `admin/src/lib/barcode-utils.ts` | `8cf1e87` |
+
+**New files:**
+- `admin/src/lib/barcode-utils.ts` — client normalization, format mapping, hints
+- `normalizeBarcodeValue()` in `backend/src/utils/barcode.util.ts`
+
+**Further reading:**
+- [BARCODE_USER_GUIDE.md](./BARCODE_USER_GUIDE.md) — Test values and daily usage
+- [BARCODE_FIXES_CHANGELOG.md](./BARCODE_FIXES_CHANGELOG.md) — Full technical changelog
+- [../deployment/BARCODE_TYPE_FIX_DEPLOYMENT_REPORT.md](../deployment/BARCODE_TYPE_FIX_DEPLOYMENT_REPORT.md) — Deploy incident report
+
+*Last updated: July 6, 2026*

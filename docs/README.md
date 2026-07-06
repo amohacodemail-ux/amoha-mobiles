@@ -1,14 +1,28 @@
 # AMOHA Mobiles - Complete Documentation
 
 **Version:** 1.0.0  
-**Last Updated:** May 5, 2026  
+**Last Updated:** July 6, 2026  
 **Tech Stack:** PostgreSQL (Supabase) / Express.js / Next.js 14 / Node.js  
 
 ---
 
 ## 📚 Documentation Index
 
-This comprehensive documentation covers the entire AMOHA Mobiles e-commerce platform from A to Z.
+### Barcode system (July 2026)
+
+| Document | Description |
+|----------|-------------|
+| **[Barcode User Guide](./features/BARCODE_USER_GUIDE.md)** | Types, test values, check digits, daily usage |
+| **[Barcode Fixes Changelog](./features/BARCODE_FIXES_CHANGELOG.md)** | All July 2026 fixes (`d3c259b` → `8cf1e87`) |
+| **[Barcode System Implementation](./features/BARCODE_SYSTEM_IMPLEMENTATION.md)** | Technical architecture and API |
+
+### Deployment
+
+| Document | Description |
+|----------|-------------|
+| **[Deployment Index](./deployment/DEPLOYMENT_INDEX.md)** | Central deploy hub |
+| **[Fast Deploy Runbook](./deployment/FAST_DEPLOY_RUNBOOK.md)** | Quick commands and troubleshooting |
+| **[Barcode Deploy Report](./deployment/BARCODE_TYPE_FIX_DEPLOYMENT_REPORT.md)** | Jul 5–6 deploy incident write-up |
 
 ### Core Documentation
 
@@ -32,14 +46,16 @@ This comprehensive documentation covers the entire AMOHA Mobiles e-commerce plat
 
 ---
 
-## Quick Links
+## Production URLs
 
-- **Live Demo:** https://amohamobiles.com
+- **Store:** https://www.amohamobiles.com
 - **Admin Panel:** https://admin.amohamobiles.com
 - **API Base URL:** https://amoha-backend-v2.onrender.com/api
-- **Repository:** (Your GitHub repository URL)
+- **Repository:** https://github.com/amohacodemail-ux/amoha-mobiles
 
 ---
+
+## Quick Links (legacy section)
 
 ## Quick Start
 
