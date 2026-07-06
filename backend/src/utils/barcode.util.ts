@@ -90,14 +90,12 @@ export function validateCode128(barcode: string): boolean {
 }
 
 /**
- * Validate UPC-A barcode (12 digits with checksum)
+ * Calculate UPC-A checksum digit (11-digit base)
  */
-export function validateUPCA(barcode: string): boolean {
-  if (!/^\d{12}$/.test(barcode)) return false;
-
-  // UPC-A uses same checksum algorithm as EAN-13
-  const base11 = barcode.slice(0, 11);
-  const checksum = parseInt(barcode[11], 10);
+export function calculateUPCAChecksum(base11: string): number {
+  if (!/^\d{11}$/.test(base11)) {
+    throw new Error('UPC-A base must be exactly 11 digits');
+  }
 
   let sum = 0;
   for (let i = 0; i < 11; i++) {
@@ -105,8 +103,39 @@ export function validateUPCA(barcode: string): boolean {
     sum += digit * (i % 2 === 0 ? 3 : 1);
   }
 
-  const calculated = (10 - (sum % 10)) % 10;
-  return checksum === calculated;
+  return (10 - (sum % 10)) % 10;
+}
+
+/**
+ * Append check digit when user enters base digits only (EAN/UPC standard).
+ */
+export function normalizeBarcodeValue(barcode: string, type: BarcodeType): string {
+  const trimmed = barcode.trim();
+
+  switch (type) {
+    case 'EAN13':
+      if (/^\d{12}$/.test(trimmed)) return `${trimmed}${calculateEAN13Checksum(trimmed)}`;
+      return trimmed;
+    case 'EAN8':
+      if (/^\d{7}$/.test(trimmed)) return `${trimmed}${calculateEAN8Checksum(trimmed)}`;
+      return trimmed;
+    case 'UPCA':
+      if (/^\d{11}$/.test(trimmed)) return `${trimmed}${calculateUPCAChecksum(trimmed)}`;
+      return trimmed;
+    default:
+      return trimmed;
+  }
+}
+
+/**
+ * Validate UPC-A barcode (12 digits with checksum)
+ */
+export function validateUPCA(barcode: string): boolean {
+  if (!/^\d{12}$/.test(barcode)) return false;
+
+  const base11 = barcode.slice(0, 11);
+  const checksum = parseInt(barcode[11], 10);
+  return checksum === calculateUPCAChecksum(base11);
 }
 
 /**
@@ -141,54 +170,65 @@ export function detectBarcodeType(barcode: string): BarcodeType | null {
 /**
  * Validate barcode based on type
  */
-export function validateBarcode(barcode: string, type: BarcodeType): { valid: boolean; error?: string } {
+export function validateBarcode(barcode: string, type: BarcodeType): { valid: boolean; error?: string; normalized?: string } {
   if (!barcode || barcode.trim() === '') {
     return { valid: false, error: 'Barcode is required' };
   }
 
-  if (barcode.length > MAX_BARCODE_LENGTH) {
+  const normalized = normalizeBarcodeValue(barcode, type);
+
+  if (normalized.length > MAX_BARCODE_LENGTH) {
     return { valid: false, error: `Barcode must be ${MAX_BARCODE_LENGTH} characters or less` };
   }
 
   switch (type) {
     case 'EAN13':
-      if (!/^\d{13}$/.test(barcode)) {
-        return { valid: false, error: 'EAN-13 must be exactly 13 digits' };
+      if (!/^\d+$/.test(barcode.trim())) {
+        return { valid: false, error: 'EAN-13 must contain digits only' };
       }
-      if (!validateEAN13(barcode)) {
-        return { valid: false, error: 'Invalid EAN-13 checksum' };
+      if (!/^\d{13}$/.test(normalized)) {
+        return { valid: false, error: 'EAN-13 needs 12 digits (check digit auto-added) or 13 full digits' };
       }
-      return { valid: true };
+      if (!validateEAN13(normalized)) {
+        return { valid: false, error: 'Invalid EAN-13 check digit' };
+      }
+      return { valid: true, normalized };
 
     case 'EAN8':
-      if (!/^\d{8}$/.test(barcode)) {
-        return { valid: false, error: 'EAN-8 must be exactly 8 digits' };
+      if (!/^\d+$/.test(barcode.trim())) {
+        return { valid: false, error: 'EAN-8 must contain digits only' };
       }
-      if (!validateEAN8(barcode)) {
-        return { valid: false, error: 'Invalid EAN-8 checksum' };
+      if (!/^\d{8}$/.test(normalized)) {
+        return { valid: false, error: 'EAN-8 needs 7 digits (check digit auto-added) or 8 full digits' };
       }
-      return { valid: true };
+      if (!validateEAN8(normalized)) {
+        return { valid: false, error: 'Invalid EAN-8 check digit' };
+      }
+      return { valid: true, normalized };
 
     case 'UPCA':
-      if (!/^\d{12}$/.test(barcode)) {
-        return { valid: false, error: 'UPC-A must be exactly 12 digits' };
+      if (!/^\d+$/.test(barcode.trim())) {
+        return { valid: false, error: 'UPC-A must contain digits only' };
       }
-      if (!validateUPCA(barcode)) {
-        return { valid: false, error: 'Invalid UPC-A checksum' };
+      if (!/^\d{12}$/.test(normalized)) {
+        return { valid: false, error: 'UPC-A needs 11 digits (check digit auto-added) or 12 full digits' };
       }
-      return { valid: true };
+      if (!validateUPCA(normalized)) {
+        return { valid: false, error: 'Invalid UPC-A check digit' };
+      }
+      return { valid: true, normalized };
 
     case 'CODE128':
-      if (!validateCode128(barcode)) {
+      if (!validateCode128(normalized)) {
         return { valid: false, error: 'Code 128 must be 1-48 printable ASCII characters' };
       }
-      return { valid: true };
+      return { valid: true, normalized };
 
     case 'CODE39':
-      if (!validateCode39(barcode)) {
+      if (!validateCode39(normalized)) {
         return { valid: false, error: 'Code 39 must be 0-9, A-Z, space, or -.$/+%' };
       }
-      return { valid: true };
+      return { valid: true, normalized };
 
     default:
       return { valid: false, error: 'Unknown barcode type' };

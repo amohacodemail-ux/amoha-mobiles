@@ -25,6 +25,7 @@ import { posService, type PosBillingInfo, type PosTodayStats, type PosOrderResul
 import { orderService } from '@/services/order.service';
 import { productService } from '@/services/product.service';
 import { formatCurrency } from '@/lib/utils';
+import { resolvePrintFormat } from '@/lib/barcode-utils';
 import type { Product } from '@/types';
 
 const LIMIT = 15;
@@ -526,7 +527,7 @@ export default function BarcodePage() {
     printWindow.document.close();
   };
 
-  const printBarcodeLabel = (product: { name: string; sku?: string; barcode?: string; price?: number }) => {
+  const printBarcodeLabel = (product: { name: string; sku?: string; barcode?: string; price?: number; barcodeType?: string }) => {
     const printWindow = window.open('', '_blank', 'width=460,height=600');
     if (!printWindow) return;
     const rawCode = product.barcode || product.sku || 'NO-CODE';
@@ -534,7 +535,7 @@ export default function BarcodePage() {
     const sku = escapeHtml(product.sku || '\u2014');
     const priceStr = typeof product.price === 'number' ? `\u20B9${product.price.toLocaleString('en-IN')}` : '\u2014';
     const codeJson = JSON.stringify(rawCode);
-    const fmt = /^\d{13}$/.test(rawCode) ? 'EAN13' : /^\d{8}$/.test(rawCode) ? 'EAN8' : 'CODE128';
+    const fmt = resolvePrintFormat(rawCode, product.barcodeType);
     printWindow.document.write(`<!DOCTYPE html><html><head><title>Barcode Label</title><style>*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;padding:16px;background:#fff;color:#000}.label{width:340px;border:2px solid #111;border-radius:10px;padding:16px;margin:0 auto}.title{font-size:16px;font-weight:700;margin-bottom:6px}.meta{font-size:11px;color:#555;margin-bottom:10px}.bc{width:100%;overflow:hidden;text-align:center}.bc svg{width:100%!important;max-height:90px!important}.price{margin-top:10px;font-size:16px;font-weight:700}@media print{body{padding:4px}.label{border:2px solid #000}}</style></head><body><div class="label"><div class="title">${name}</div><div class="meta">SKU: ${sku}</div><div class="bc"><svg id="bc"></svg></div><div class="price">Price: ${priceStr}</div></div><script>window.onload=function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';s.onload=function(){try{JsBarcode('#bc',${codeJson},{format:'${fmt}',lineColor:'#000',width:2.2,height:80,displayValue:true,fontSize:14,margin:8,background:'#fff'});}catch(e){try{JsBarcode('#bc',${codeJson},{format:'CODE128',lineColor:'#000',width:2,height:80,displayValue:true,fontSize:14,margin:8,background:'#fff'});}catch(e2){}}window.print();setTimeout(function(){window.close();},800);};document.head.appendChild(s);};<\/script></body></html>`);
     printWindow.document.close();
   };
@@ -563,7 +564,7 @@ export default function BarcodePage() {
     const labelItems: string[] = [];
     prods.forEach((p, idx) => {
       const rawCode = (p as any).barcode || (p as any).sku || 'NO-CODE';
-      const fmt = /^\d{13}$/.test(rawCode) ? 'EAN13' : /^\d{8}$/.test(rawCode) ? 'EAN8' : 'CODE128';
+      const fmt = resolvePrintFormat(rawCode, (p as any).barcodeType);
       const id = `bc${idx}`;
       entries.push({ id, code: rawCode, fmt });
       const safeName = escapeHtml((p.name || 'Product').slice(0, 42));

@@ -20,6 +20,7 @@ import { productService } from '@/services/product.service';
 import { categoryService } from '@/services/category.service';
 import { brandService } from '@/services/brand.service';
 import { barcodeService, type BarcodeType } from '@/services/barcode.service';
+import { barcodeTypeHint, normalizeBarcodeValue } from '@/lib/barcode-utils';
 import type { Category, Brand } from '@/types';
 
 const schema = z.object({
@@ -199,6 +200,12 @@ export function ProductForm({ productId }: Props) {
         return;
       }
 
+      const barcodeType = (data.barcodeType as BarcodeType) || 'CODE128';
+      const rawBarcode = data.barcode?.trim();
+      const normalizedBarcode = rawBarcode
+        ? normalizeBarcodeValue(rawBarcode, barcodeType)
+        : undefined;
+
       const payload: any = {
         name: data.name,
         slug: data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
@@ -219,8 +226,8 @@ export function ProductForm({ productId }: Props) {
         warranty: data.warranty || '',
         images: existingImages.length > 0 ? existingImages : [],
         thumbnail: existingImages[0] || '',
-        barcodeType: data.barcodeType,
-        ...(data.barcode?.trim() ? { barcode: data.barcode.trim() } : {}),
+        barcodeType,
+        ...(normalizedBarcode ? { barcode: normalizedBarcode } : {}),
       };
 
       // Log purchase price for debugging
@@ -441,9 +448,7 @@ export function ProductForm({ productId }: Props) {
                         <p className="text-xs text-muted-foreground mt-1">SKU: <code className="font-mono">{productSku}</code></p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        {barcodeType === 'CODE128'
-                          ? 'Leave empty on create to auto-use SKU. Max 20 characters.'
-                          : `Leave empty to auto-generate ${barcodeType} on save.`}
+                        {barcodeTypeHint(barcodeType as BarcodeType)}
                       </p>
                     </div>
                   </div>

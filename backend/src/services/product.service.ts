@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { generateSku } from '../models/product.model';
 import { generateProductBarcode, isBarcodeExists, validateBarcode, BarcodeType } from '../utils/barcode.util';
@@ -227,12 +227,13 @@ class ProductService {
         throw new BadRequestError(validation.error || 'Invalid barcode format');
       }
 
-      const exists = await isBarcodeExists(trimmed);
+      const finalBarcode = validation.normalized || trimmed;
+      const exists = await isBarcodeExists(finalBarcode);
       if (exists) {
         throw new BadRequestError('Barcode already exists in database');
       }
 
-      barcode = trimmed;
+      barcode = finalBarcode;
       barcodeType = type;
     } else {
       const type = (data.barcodeType as BarcodeType) || 'CODE128';
@@ -341,12 +342,13 @@ class ProductService {
           throw new BadRequestError(validation.error || 'Invalid barcode format');
         }
 
-        const exists = await isBarcodeExists(nextBarcode, productId);
+        const finalBarcode = validation.normalized || nextBarcode;
+        const exists = await isBarcodeExists(finalBarcode, productId);
         if (exists) {
           throw new BadRequestError('Barcode already exists in database');
         }
 
-        mapped.barcode = nextBarcode;
+        mapped.barcode = finalBarcode;
         mapped.barcodeType = type;
       }
     }

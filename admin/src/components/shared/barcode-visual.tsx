@@ -1,8 +1,13 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
+import {
+  type BarcodeFormat,
+  getBarcodePreviewError,
+  toJsBarcodeFormat,
+} from '@/lib/barcode-utils';
 
-export type BarcodeFormat = 'EAN13' | 'EAN8' | 'UPCA' | 'CODE128' | 'CODE39';
+export type { BarcodeFormat };
 
 interface BarcodeVisualProps {
   code?: string;
@@ -16,16 +21,10 @@ interface BarcodeVisualProps {
 
 function detectFormat(code: string): BarcodeFormat {
   if (/^\d{13}$/.test(code)) return 'EAN13';
-  if (/^\d{8}$/.test(code)) return 'EAN8';
   if (/^\d{12}$/.test(code)) return 'UPCA';
+  if (/^\d{8}$/.test(code)) return 'EAN8';
   return 'CODE128';
 }
-
-const TYPE_MISMATCH_HINT: Partial<Record<BarcodeFormat, string>> = {
-  EAN13: 'EAN-13 needs exactly 13 digits',
-  EAN8: 'EAN-8 needs exactly 8 digits',
-  UPCA: 'UPC-A needs exactly 12 digits',
-};
 
 /**
  * Renders a machine-readable barcode using JsBarcode.
@@ -54,6 +53,7 @@ export function BarcodeVisual({
 
     let cancelled = false;
     const svg = svgRef.current;
+    const format = type || detectFormat(trimmed);
     setError(null);
     setLoading(true);
 
@@ -61,7 +61,6 @@ export function BarcodeVisual({
       .then(({ default: JsBarcode }) => {
         if (cancelled || !svgRef.current) return;
 
-        const format = type || detectFormat(trimmed);
         const opts = {
           lineColor: '#111827',
           width: width ?? (compact ? 1 : 1.5),
@@ -72,34 +71,29 @@ export function BarcodeVisual({
           background: 'transparent',
         };
 
-        const attemptRender = (tryFormat: BarcodeFormat): boolean => {
-          try {
-            svg.innerHTML = '';
-            let valid = true;
-            JsBarcode(svg, trimmed, {
-              format: tryFormat,
-              ...opts,
-              valid: (ok: boolean) => {
-                valid = ok;
-              },
-            });
-            return valid;
-          } catch {
-            svg.innerHTML = '';
-            return false;
-          }
-        };
+        const jsFormat = toJsBarcodeFormat(format);
+        let valid = true;
 
-        if (attemptRender(format)) {
-          if (!cancelled) {
-            setError(null);
-            setLoading(false);
-          }
-          return;
+        try {
+          svg.innerHTML = '';
+          JsBarcode(svg, trimmed, {
+            format: jsFormat,
+            ...opts,
+            valid: (ok: boolean) => {
+              valid = ok;
+            },
+          });
+        } catch {
+          svg.innerHTML = '';
+          valid = false;
         }
 
         if (!cancelled) {
-          setError(TYPE_MISMATCH_HINT[format] || 'Invalid barcode format');
+          if (valid) {
+            setError(null);
+          } else {
+            setError(getBarcodePreviewError(trimmed, format));
+          }
           setLoading(false);
         }
       })
