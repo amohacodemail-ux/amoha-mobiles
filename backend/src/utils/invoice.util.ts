@@ -61,65 +61,89 @@ export function generateInvoicePDF(res: Response, data: InvoiceData) {
   const footerNote = data.footerNote || 'Thank you for shopping with us!';
 
   // ── Header ──────────────────────────────────────────────
+  const LEFT_COL_WIDTH = 250;
+  const RIGHT_COL_WIDTH = 195;
   doc.fontSize(20).font('Helvetica-Bold').text(businessName.toUpperCase(), 50, 50);
   let headerY = 75;
   if (data.gstin) {
-    doc.fontSize(9).font('Helvetica').text(`GSTIN: ${data.gstin}`, 50, headerY);
-    headerY += 13;
+    doc.fontSize(9).font('Helvetica').text(`GSTIN: ${data.gstin}`, 50, headerY, { width: LEFT_COL_WIDTH });
+    headerY = doc.y + 2;
   }
   if (data.panNumber) {
-    doc.fontSize(9).font('Helvetica').text(`PAN: ${data.panNumber}`, 50, headerY);
-    headerY += 13;
+    doc.fontSize(9).font('Helvetica').text(`PAN: ${data.panNumber}`, 50, headerY, { width: LEFT_COL_WIDTH });
+    headerY = doc.y + 2;
   }
   if (data.businessAddress) {
-    doc.fontSize(9).font('Helvetica').text(data.businessAddress, 50, headerY, { width: 250 });
-    headerY += 13;
+    doc.fontSize(9).font('Helvetica').text(data.businessAddress, 50, headerY, { width: LEFT_COL_WIDTH });
+    headerY = doc.y + 2;
   }
   if (data.businessPhone) {
-    doc.fontSize(9).font('Helvetica').text(`Phone: ${data.businessPhone}`, 50, headerY);
-    headerY += 13;
+    doc.fontSize(9).font('Helvetica').text(`Phone: ${data.businessPhone}`, 50, headerY, { width: LEFT_COL_WIDTH });
+    headerY = doc.y + 2;
   }
   if (data.businessEmail) {
-    doc.fontSize(9).font('Helvetica').text(data.businessEmail, 50, headerY);
+    doc.fontSize(9).font('Helvetica').text(data.businessEmail, 50, headerY, { width: LEFT_COL_WIDTH });
+    headerY = doc.y;
   }
 
   // Invoice title (right-aligned)
   const invoiceTitle = data.gstAmount && data.gstAmount > 0 ? 'TAX INVOICE' : 'INVOICE';
-  doc.fontSize(16).font('Helvetica-Bold').text(invoiceTitle, 350, 50, { width: 195, align: 'right' });
-  doc.fontSize(9).font('Helvetica').text(`Invoice #: ${invoiceRef}`, 350, 72, { width: 195, align: 'right' });
+  doc.fontSize(16).font('Helvetica-Bold').text(invoiceTitle, 350, 50, { width: RIGHT_COL_WIDTH, align: 'right' });
+  let rightY = doc.y + 6;
+  doc.fontSize(9).font('Helvetica').text(`Invoice #: ${invoiceRef}`, 350, rightY, { width: RIGHT_COL_WIDTH, align: 'right' });
+  rightY = doc.y + 2;
   doc.text(
     `Date: ${new Date(data.orderDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
-    350, 85, { width: 195, align: 'right' },
+    350, rightY, { width: RIGHT_COL_WIDTH, align: 'right' },
   );
+  rightY = doc.y + 2;
   if (data.invoiceNumber && data.orderNumber && data.invoiceNumber !== data.orderNumber) {
-    doc.text(`Order: ${data.orderNumber}`, 350, 98, { width: 195, align: 'right' });
+    doc.text(`Order: ${data.orderNumber}`, 350, rightY, { width: RIGHT_COL_WIDTH, align: 'right' });
+    rightY = doc.y;
   }
 
-  // Separator
-  const sep1 = 120;
+  // Separator — positioned dynamically below whichever header column is taller
+  const sep1 = Math.max(headerY, rightY) + 10;
   doc.moveTo(50, sep1).lineTo(545, sep1).stroke('#e5e7eb');
 
   // ── Bill To / Ship To ───────────────────────────────────
   const y1 = sep1 + 12;
+  const BILL_COL_WIDTH = 230;
+  const SHIP_COL_WIDTH = 245;
   doc.fontSize(9).font('Helvetica-Bold').text('BILL TO:', 50, y1);
-  doc.fontSize(9).font('Helvetica')
-    .text(data.customerName, 50, y1 + 13)
-    .text(data.customerEmail || '', 50, y1 + 25)
-    .text(data.customerPhone || '', 50, y1 + 37);
+  let billY = doc.y + 3;
+  doc.fontSize(9).font('Helvetica').text(data.customerName, 50, billY, { width: BILL_COL_WIDTH });
+  billY = doc.y + 2;
+  if (data.customerEmail) {
+    doc.text(data.customerEmail, 50, billY, { width: BILL_COL_WIDTH });
+    billY = doc.y + 2;
+  }
+  if (data.customerPhone) {
+    doc.text(data.customerPhone, 50, billY, { width: BILL_COL_WIDTH });
+    billY = doc.y;
+  }
 
   doc.fontSize(9).font('Helvetica-Bold').text('SHIP TO / SOLD TO:', 300, y1);
+  let shipY = doc.y + 3;
   const addr = data.shippingAddress;
-  doc.fontSize(9).font('Helvetica')
-    .text(addr.fullName, 300, y1 + 13)
-    .text(addr.addressLine1, 300, y1 + 25);
+  doc.fontSize(9).font('Helvetica').text(addr.fullName, 300, shipY, { width: SHIP_COL_WIDTH });
+  shipY = doc.y + 2;
+  doc.text(addr.addressLine1, 300, shipY, { width: SHIP_COL_WIDTH });
+  shipY = doc.y + 2;
+  if (addr.addressLine2) {
+    doc.text(addr.addressLine2, 300, shipY, { width: SHIP_COL_WIDTH });
+    shipY = doc.y + 2;
+  }
   let addrLine = `${addr.city}`;
   if (addr.state) addrLine += `, ${addr.state}`;
   if (addr.pincode) addrLine += ` - ${addr.pincode}`;
-  doc.text(addrLine, 300, y1 + 37);
-  doc.text(`Phone: ${addr.phone || '—'}`, 300, y1 + 49);
+  doc.text(addrLine, 300, shipY, { width: SHIP_COL_WIDTH });
+  shipY = doc.y + 2;
+  doc.text(`Phone: ${addr.phone || '—'}`, 300, shipY, { width: SHIP_COL_WIDTH });
+  shipY = doc.y;
 
   // ── Items table ──────────────────────────────────────────
-  const tableTop = y1 + 72;
+  const tableTop = Math.max(billY, shipY) + 20;
   doc.moveTo(50, tableTop).lineTo(545, tableTop).stroke('#d1d5db');
   doc.rect(50, tableTop, 495, 20).fill('#f9fafb').stroke('#e5e7eb');
   doc.fontSize(8).font('Helvetica-Bold').fillColor('#374151');
