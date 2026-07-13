@@ -8,6 +8,7 @@ import { notifyOrder } from '../utils/notify';
 import { sendOrderConfirmationEmail, sendOrderStatusEmail, sendOrderCancellationEmail } from '../utils/email.util';
 import { generateInvoicePDF } from '../utils/invoice.util';
 import activityLogService from '../services/activity-log.service';
+import settingsService from '../services/settings.service';
 
 class OrderController {
   async create(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -74,6 +75,14 @@ class OrderController {
     try {
       const order: any = await orderService.getOrderById(req.params.id);
       const { data: user } = await supabase.from('users').select('name, email, phone').eq('id', req.user!.userId).maybeSingle();
+
+      // Business/billing info — same source the admin invoice endpoint uses,
+      // so customer-downloaded invoices show the company name/address/GST too.
+      const settings: any = await settingsService.getSettings().catch(() => null);
+      const billing: any = settings?.billing || {};
+      const bizAddrParts = [billing.billingAddress, billing.billingCity, billing.billingState, billing.billingPincode].filter(Boolean);
+      const businessAddress = bizAddrParts.join(', ') || settings?.address || '';
+
       generateInvoicePDF(res, {
         orderNumber: order.orderNumber,
         orderDate: order.createdAt,
@@ -90,6 +99,15 @@ class OrderController {
         paymentMethod: order.paymentMethod,
         paymentStatus: order.paymentStatus,
         couponCode: order.couponCode,
+        businessName: billing.businessName || settings?.siteName || 'AMOHA MOBILES',
+        gstin: billing.gstin || '',
+        panNumber: billing.panNumber || '',
+        businessAddress,
+        businessPhone: billing.billingPhone || settings?.contactPhone || '',
+        businessEmail: billing.billingEmail || settings?.contactEmail || '',
+        termsOnInvoice: billing.termsOnInvoice || '',
+        footerNote: billing.footerNote || 'Thank you for shopping with us!',
+        hsnCode: billing.hsnCode || '',
       });
     } catch (error) { next(error); }
   }
