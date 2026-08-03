@@ -3,9 +3,19 @@ import * as XLSX from 'xlsx';
 /**
  * Convert a CSV string to an Excel (.xlsx) file and trigger browser download.
  */
-export function downloadExcelFromCsv(csvText: string, filename: string): void {
+/*export function downloadExcelFromCsv(csvText: string, filename: string): void {
   const workbook = XLSX.read(csvText, { type: 'string' });
   const excelFilename = filename.replace(/\.csv$/i, '') + '.xlsx';
+  XLSX.writeFile(workbook, excelFilename);
+}*/
+export function downloadExcelFromCsv(csvText: string, filename: string): void {
+  const workbook = XLSX.read(csvText, {
+    type: "string",
+    raw: true,
+    cellDates: false,
+  });
+
+  const excelFilename = filename.replace(/\.csv$/i, "") + ".xlsx";
   XLSX.writeFile(workbook, excelFilename);
 }
 

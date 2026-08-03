@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { IUser } from '../models/user.model';
 import { hashPassword, comparePassword } from '../utils/password.util';
 import { generateTokenPair, verifyRefreshToken, TokenPayload } from '../utils/jwt.util';
@@ -33,17 +33,37 @@ function resolvePortalBaseUrl(portal: 'admin' | 'store'): string {
 
 class AuthService {
   async register(data: { name: string; email: string; phone: string; password: string }) {
-    const { data: existing } = await supabase
-      .from('users').select('id').eq('email', data.email.toLowerCase()).maybeSingle();
-    if (existing) throw new ConflictError('Email already registered');
+    const email = data.email.trim().toLowerCase();
+    const phone = data.phone.trim().replace(/\s+/g, '');
+
+    const { data: existingUsers } = await supabase
+      .from('users')
+      .select('email, phone')
+      .or(`email.eq.${email},phone.eq.${phone}`);
+
+    if (existingUsers && existingUsers.length > 0) {
+      const emailExists = existingUsers.some(u => u.email === email);
+      const phoneExists = existingUsers.some(u => u.phone === phone);
+
+      if (emailExists && phoneExists) {
+        throw new ConflictError('An account with this email and phone number already exists.');
+      } else if (emailExists) {
+        throw new ConflictError('An account with this email already exists.');
+      } else if (phoneExists) {
+        throw new ConflictError('An account with this phone number already exists.');
+      }
+    }
 
     const hashedPassword = await hashPassword(data.password);
     const { data: user, error } = await supabase
       .from('users')
-      .insert({ name: data.name, email: data.email.toLowerCase(), phone: data.phone, password: hashedPassword })
+      .insert({ name: data.name.trim(), email, phone, password: hashedPassword })
       .select('*')
       .single();
-    if (error) throw error;
+    if (error) {
+      if (error.code === '23505') throw new ConflictError('User with this email or phone already exists');
+      throw error;
+    }
 
     const payload: TokenPayload = { userId: user.id, role: user.role };
     const tokens = generateTokenPair(payload);
@@ -53,9 +73,21 @@ class AuthService {
     return { user: transformUser(user), token: tokens.accessToken, refreshToken: tokens.refreshToken };
   }
 
-  async login(email: string, password: string) {
-    const { data: user, error } = await supabase
-      .from('users').select('*').eq('email', email.toLowerCase()).maybeSingle();
+  async login(identifier: string, password: string) {
+    const isEmail = identifier.includes('@');
+    const searchValue = isEmail 
+      ? identifier.trim().toLowerCase() 
+      : identifier.trim().replace(/\s+/g, '');
+
+    const query = supabase.from('users').select('*');
+    if (isEmail) {
+      query.eq('email', searchValue);
+    } else {
+      query.eq('phone', searchValue);
+    }
+
+    const { data: user, error } = await query.maybeSingle();
+
     if (!user || error) throw new UnauthorizedError('Invalid email or password');
     if (user.is_blocked) throw new UnauthorizedError('Your account has been blocked. Please contact support.');
 
@@ -200,17 +232,28 @@ class AuthService {
     password: string;
     role: UserRole;
   }) {
-    const { name, email, phone, password, role } = data;
+    const { password, role } = data;
+    const name = data.name.trim();
+    const email = data.email.trim().toLowerCase();
+    const phone = data.phone.trim().replace(/\s+/g, '');
 
-    // Check if email already exists
-    const { data: existingEmail } = await supabase
-      .from('users').select('id').eq('email', email.toLowerCase()).maybeSingle();
-    if (existingEmail) throw new ConflictError('Email already registered');
+    const { data: existingUsers } = await supabase
+      .from('users')
+      .select('email, phone')
+      .or(`email.eq.${email},phone.eq.${phone}`);
 
-    // Check if phone already exists
-    const { data: existingPhone } = await supabase
-      .from('users').select('id').eq('phone', phone).maybeSingle();
-    if (existingPhone) throw new ConflictError('Phone number already registered');
+    if (existingUsers && existingUsers.length > 0) {
+      const emailExists = existingUsers.some(u => u.email === email);
+      const phoneExists = existingUsers.some(u => u.phone === phone);
+
+      if (emailExists && phoneExists) {
+        throw new ConflictError('An account with this email and phone number already exists.');
+      } else if (emailExists) {
+        throw new ConflictError('An account with this email already exists.');
+      } else if (phoneExists) {
+        throw new ConflictError('An account with this phone number already exists.');
+      }
+    }
 
     // Validate role is allowed for admin panel
     const allowedRoles: UserRole[] = ['admin', 'sales', 'purchase', 'marketing', 'logistics', 'supplier', 'service_engineer', 'digital_marketing', 'purchase_inventory'];
@@ -223,9 +266,9 @@ class AuthService {
     const { data: user, error } = await supabase
       .from('users')
       .insert({
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        phone: phone.trim(),
+        name,
+        email,
+        phone,
         password: hashedPassword,
         role: role,
         is_verified: true,

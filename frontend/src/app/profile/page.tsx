@@ -37,6 +37,11 @@ export default function ProfilePage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const avatarFileRef = useRef<HTMLInputElement>(null);
 
+  // Profile Edit State
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
   // KYC state
   const [kycInfo, setKycInfo] = useState<KycInfo | null>(null);
   const [showKycForm, setShowKycForm] = useState(false);
@@ -90,6 +95,23 @@ export default function ProfilePage() {
     logout();
     toast.success('Logged out successfully');
     router.push('/');
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profileForm.name.trim()) {
+      toast.error('Name cannot be empty');
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      await updateProfile({ name: profileForm.name, phone: profileForm.phone });
+      toast.success('Profile updated successfully');
+      setIsEditingProfile(false);
+    } catch {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleAvatarUpload = async (file: File) => {

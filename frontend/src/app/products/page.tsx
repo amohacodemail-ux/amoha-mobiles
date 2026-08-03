@@ -8,7 +8,7 @@ import { HiOutlineChevronRight, HiOutlineViewGrid, HiOutlineX, HiChevronDown } f
 import type { Product, Category, ProductFilters } from '@/types';
 import { productService } from '@/services/product.service';
 import { categoryService } from '@/services/category.service';
-import ProductCard from '@/components/ui/ProductCard';
+import ListingProductCard from '@/components/ui/ListingProductCard';
 import FilterSidebar from '@/components/ui/FilterSidebar';
 import Pagination from '@/components/ui/Pagination';
 import { ProductGridSkeleton } from '@/components/ui/Skeletons';

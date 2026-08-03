@@ -43,6 +43,10 @@ export const serviceRequestService = {
   },
   async getMyRequests(): Promise<ServiceRequest[]> {
     const res = await apiClient.get('/service-requests/my-requests');
+    return res.data.data?.requests || res.data.data;
+  },
+  async getRequestById(id: string): Promise<ServiceRequest> {
+    const res = await apiClient.get(`/service-requests/my-requests/${id}`);
     return res.data.data;
   },
 };

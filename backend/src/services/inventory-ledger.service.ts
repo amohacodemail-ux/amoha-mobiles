@@ -19,27 +19,47 @@ class InventoryLedgerService {
     costPrice: number,
     performedBy: string,
   ) {
-    // Check no duplicate
+    // The database trigger 'trg_auto_create_inventory' automatically creates an inventory row
+    // when the product is created. So we just need to update it with the extra supplier info.
     const { data: existing } = await supabase
-      .from('inventory').select('id').eq('product_id', productId).maybeSingle();
-    if (existing) throw new BadRequestError('Inventory record already exists for this product');
+      .from('inventory').select('id, total_stock, available_stock').eq('product_id', productId).maybeSingle();
+    
+    let inv;
+    if (!existing) {
+      // Fallback just in case the trigger didn't run
+      const record = {
+        product_id: productId,
+        supplier_id: null,
+        supplier_entry_id: supplierEntryId,
+        total_stock: quantity,
+        available_stock: quantity,
+        reserved_stock: 0,
+        sold_stock: 0,
+        damaged_stock: 0,
+        cost_price: costPrice || 0,
+        last_restocked_at: new Date().toISOString(),
+      };
+      
+      const { data: newInv, error } = await supabase.from('inventory').insert(record).select('*').single();
+      if (error) throw error;
+      inv = newInv;
+    } else {
+      // Update the existing record with supplier details and cost price
+      const { data: updatedInv, error } = await supabase
+        .from('inventory')
+        .update({
+          supplier_id: null,
+          supplier_entry_id: supplierEntryId,
+          cost_price: costPrice || 0,
+          last_restocked_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+        .select('*')
+        .single();
 
-    const record = {
-      product_id: productId,
-      supplier_id: null,
-      supplier_entry_id: supplierEntryId,
-      total_stock: quantity,
-      available_stock: quantity,
-      reserved_stock: 0,
-      sold_stock: 0,
-      damaged_stock: 0,
-      cost_price: costPrice || 0,
-      last_restocked_at: new Date().toISOString(),
-    };
-
-    const { data: inv, error } = await supabase
-      .from('inventory').insert(record).select('*').single();
-    if (error) throw error;
+      if (error) throw error;
+      inv = updatedInv;
+    }
 
     // Sync product stock column
     await supabase.from('products').update({ stock: quantity }).eq('id', productId);

@@ -19,6 +19,7 @@ router.post('/', (req, res, next) => {
 
 // Authenticated: get my requests
 router.get('/my-requests', authenticate, serviceRequestController.getMyRequests);
+router.get('/my-requests/:id', authenticate, serviceRequestController.getMyRequestById);
 
 // Admin & Service Engineer routes (view and update)
 router.get('/', authenticate, canAccessServiceEngineer, serviceRequestController.getAll);

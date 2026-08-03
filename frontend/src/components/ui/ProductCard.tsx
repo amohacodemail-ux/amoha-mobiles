@@ -4,13 +4,14 @@ import { memo, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { HiOutlineHeart, HiHeart, HiStar, HiOutlineShoppingCart, HiOutlineSwitchHorizontal } from 'react-icons/hi';
+import { HiOutlineHeart, HiHeart, HiOutlineShoppingCart, HiOutlineShieldCheck } from 'react-icons/hi';
+import { ArrowRightLeft } from 'lucide-react';
 import type { Product } from '@/types';
-import { formatPrice, getRatingColor, safeImageSrc } from '@/lib/utils';
+import { formatPrice, safeImageSrc } from '@/lib/utils';
 import { useWishlistStore } from '@/store/wishlist.store';
+import { useCompareStore } from '@/store/compare.store';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
-import { useCompareStore } from '@/store/compare.store';
 import toast from 'react-hot-toast';
 
 const PLACEHOLDER_IMG = '/images/no-product.svg';
@@ -23,30 +24,16 @@ function ProductCard({ product }: ProductCardProps) {
   const addToWishlist = useWishlistStore((s) => s.addToWishlist);
   const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
   const wishlisted = useWishlistStore((s) => s.items.some((item) => item?.product?._id === product._id));
+  const addToCompare = useCompareStore((s) => s.addToCompare);
+  const removeFromCompare = useCompareStore((s) => s.removeFromCompare);
+  const compared = useCompareStore((s) => s.items.some((item) => item._id === product._id));
   const addToCart = useCartStore((s) => s.addToCart);
   const isProductPending = useCartStore((s) => s.isProductPending);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const addToCompare = useCompareStore((s) => s.addToCompare);
-  const removeFromCompare = useCompareStore((s) => s.removeFromCompare);
-  const isInCompare = useCompareStore((s) => s.isInCompare);
   const router = useRouter();
+  
   const inStock = typeof (product as any).inStock === 'boolean' ? (product as any).inStock : (product.stock ?? 0) > 0;
-  const ratingValue = Number((product as any).ratings ?? (product as any).averageRating ?? 0);
-  const reviewCount = Number((product as any).numReviews ?? (product as any).reviewCount ?? 0);
-  const compared = isInCompare(product._id);
   const addPending = isProductPending(product._id);
-
-  const handleCompare = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (compared) {
-      removeFromCompare(product._id);
-      toast.success('Removed from compare');
-    } else {
-      addToCompare(product);
-      toast.success('Added to compare');
-    }
-  }, [compared, product, removeFromCompare, addToCompare]);
 
   const handleWishlist = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -67,6 +54,18 @@ function ProductCard({ product }: ProductCardProps) {
       toast.error('Failed to update wishlist');
     }
   }, [isAuthenticated, wishlisted, product._id, product.slug, removeFromWishlist, addToWishlist, router]);
+
+  const handleCompare = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (compared) {
+      removeFromCompare(product._id);
+      toast.success('Removed from compare');
+    } else {
+      addToCompare(product);
+      toast.success('Added to compare');
+    }
+  }, [compared, product, removeFromCompare, addToCompare]);
 
   const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -103,6 +102,7 @@ function ProductCard({ product }: ProductCardProps) {
             loading="lazy"
             onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
           />
+        </div>
 
           {/* Discount badge */}
           {discountPercent > 0 && inStock && (
@@ -168,6 +168,7 @@ function ProductCard({ product }: ProductCardProps) {
           <h3 className="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100 sm:text-[15px]">
             {product.name}
           </h3>
+        </Link>
 
           {/* Specs — always reserve one row of height */}
           <div className="mt-2 flex min-h-[1.5rem] flex-wrap gap-1">
@@ -209,7 +210,7 @@ function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 

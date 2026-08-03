@@ -191,33 +191,65 @@ export default function HomePage() {
 
       {/* Shop by Category */}
       {categories.length > 0 && (
-        <section className="py-6 sm:py-8">
-          <div className="page-container">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Shop by Category</h2>
-            </div>
-            {/* Mobile/tablet: horizontal scroll | Desktop: grid */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x-mandatory pb-1 lg:grid lg:grid-cols-5 xl:grid-cols-6 lg:overflow-visible lg:pb-0">
+        <section className="py-10 sm:py-14 bg-white dark:bg-transparent overflow-hidden">
+          <div className="page-container mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl text-left">
+              Shop by Category
+            </h2>
+          </div>
+          <div className="relative">
+            <style jsx global>{`
+              .category-carousel .swiper-wrapper {
+                transition-timing-function: linear !important;
+              }
+            `}</style>
+            <Swiper
+              modules={[Autoplay]}
+              spaceBetween={30}
+              loop={true}
+              speed={4000}
+              autoplay={{
+                delay: 0,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }}
+              allowTouchMove={true}
+              breakpoints={{
+                0: {
+                  slidesPerView: 3,
+                },
+                640: {
+                  slidesPerView: 5,
+                },
+                1024: {
+                  slidesPerView: 7.5,
+                },
+              }}
+              className="category-carousel"
+            >
               {categories.map((cat) => (
-                <Link
-                  key={cat._id}
-                  href={`/products?category=${cat.slug}`}
-                  className="group flex flex-shrink-0 snap-start lg:flex-shrink items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 transition-all hover:border-slate-300 hover:shadow-sm dark:border-white/[0.05] dark:bg-white/[0.02] dark:hover:border-white/[0.10]"
-                >
-                  <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50 dark:bg-white/5">
-                    <Image src={getSafeImage(cat.image, PLACEHOLDER_CATEGORY)} alt={cat.name} fill className="object-cover" sizes="40px" onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_CATEGORY; }} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="whitespace-nowrap lg:whitespace-normal lg:truncate text-sm font-medium text-slate-700 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-white">
+                <SwiperSlide key={cat._id}>
+                  <Link
+                    href={`/products?category=${cat.slug}`}
+                    className="group flex flex-col items-center justify-center gap-4 transition-transform duration-300 hover:scale-[1.08] hover:-translate-y-1"
+                  >
+                    <div className="relative h-[100px] w-[100px] sm:h-[120px] sm:w-[120px] lg:h-[140px] lg:w-[140px] flex-shrink-0 overflow-hidden rounded-full bg-white shadow-[0_4px_15px_rgba(0,0,0,0.06)] group-hover:shadow-[0_8px_30px_rgba(59,130,246,0.3)] transition-shadow duration-300 dark:bg-[#1e293b] dark:shadow-[0_4px_15px_rgba(0,0,0,0.4)] border border-transparent dark:border-white/5">
+                      <Image
+                        src={getSafeImage(cat.image, PLACEHOLDER_CATEGORY)}
+                        alt={cat.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 100px, (max-width: 1024px) 120px, 140px"
+                        onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_CATEGORY; }}
+                      />
+                    </div>
+                    <p className="text-[14px] sm:text-[16px] font-semibold text-slate-800 group-hover:text-blue-600 dark:text-slate-200 dark:group-hover:text-blue-400 text-center transition-colors max-w-full truncate px-2">
                       {cat.name}
                     </p>
-                    {(cat.productCount ?? 0) > 0 && (
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{cat.productCount} products</p>
-                    )}
-                  </div>
-                </Link>
+                  </Link>
+                </SwiperSlide>
               ))}
-            </div>
+            </Swiper>
           </div>
         </section>
       )}
