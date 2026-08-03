@@ -191,7 +191,7 @@ export default function OrdersPage() {
   const totalSpent = allOrders.filter((o) => o.orderStatus !== 'cancelled').reduce((s, o) => s + o.totalAmount, 0);
 
   // ── Filter tabs ────────────────────────────────────────────────────────────
-  const FILTERS = [
+  const FILTERS: { key: string; label: string; icon?: any }[] = [
     { key: 'all', label: 'All Orders' },
     { key: 'active', label: 'Active' },
     { key: 'delivered', label: 'Delivered' },

@@ -9,6 +9,7 @@ import type { Product, Category, ProductFilters } from '@/types';
 import { productService } from '@/services/product.service';
 import { categoryService } from '@/services/category.service';
 import ListingProductCard from '@/components/ui/ListingProductCard';
+import ProductCard from '@/components/ui/ProductCard';
 import FilterSidebar from '@/components/ui/FilterSidebar';
 import Pagination from '@/components/ui/Pagination';
 import { ProductGridSkeleton } from '@/components/ui/Skeletons';
