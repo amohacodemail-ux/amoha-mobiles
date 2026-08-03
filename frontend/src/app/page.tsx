@@ -179,7 +179,7 @@ export default function HomePage() {
           onTouchEnd={handleTouchEnd}
         >
           <video
-            src="/PixVerse_V6_Image_Text_540P_Create_an_ultrapre.mp4"
+            src="/hero-video.mp4"
             className="w-full max-w-none h-auto block"
             autoPlay
             loop
@@ -209,7 +209,7 @@ export default function HomePage() {
             <Swiper
               modules={[Autoplay]}
               spaceBetween={30}
-              loop={true}
+              loop={categories.length > 8}
               speed={4000}
               autoplay={{
                 delay: 0,
