@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { HiOutlineShoppingBag, HiOutlineHeart, HiOutlineUser, HiOutlineMenu, HiOutlineX, HiOutlineSearch, HiOutlineClipboardList, HiOutlineLogout, HiOutlineCollection, HiOutlineCog, HiOutlineSwitchHorizontal, HiOutlineRefresh, HiOutlineCreditCard } from 'react-icons/hi';
+import { Smartphone, Wrench, Package, FileText, Home, ShoppingBag, ArrowRightLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
