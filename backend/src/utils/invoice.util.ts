@@ -238,8 +238,11 @@ export function generateInvoicePDF(res: Response, data: InvoiceData) {
   }
 
   // ── Footer ─────────────────────────────────────────────
-  // If content has pushed past the footer zone, add a new page
-  const footerY = doc.page.height - 70;
+  // If content has pushed past the footer zone, add a new page.
+  // Reserve enough headroom above the bottom margin (default 50pt) that
+  // the two footer lines never themselves get pushed onto a page 2 by
+  // PDFKit's own auto-pagination.
+  const footerY = doc.page.height - 100;
   if (rowY > footerY - 20) {
     doc.addPage();
   }
@@ -254,5 +257,7 @@ export function generateInvoicePDF(res: Response, data: InvoiceData) {
 }
 
 function formatINR(amount: number): string {
-  return `\u20B9${Number(amount || 0).toLocaleString('en-IN')}`;
+  // PDFKit's built-in Helvetica font has no glyph for U+20B9 (\u20B9) \u2014 it renders
+  // as a broken/missing character. "Rs." is the safe, universally-rendering choice.
+  return `Rs. ${Number(amount || 0).toLocaleString('en-IN')}`;
 }
