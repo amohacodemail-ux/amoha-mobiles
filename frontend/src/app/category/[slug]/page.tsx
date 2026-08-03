@@ -132,7 +132,7 @@ export default function CategoryPage() {
                   <HiOutlineViewGrid className="h-8 w-8 text-gray-400" />
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No products in this category</h3>
-                <p className="mt-1 text-sm text-gray-500">Check back later or browse other categories.</p>
+                <p className="mt-1 text-sm text-gray-500">Check back later or browse other categories</p>
                 <Link href="/products" className="mt-4 rounded-xl bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white">
                   Browse All
                 </Link>
