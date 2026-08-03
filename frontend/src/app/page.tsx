@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { HiOutlineArrowRight, HiOutlineTruck, HiOutlineShieldCheck, HiOutlineRefresh, HiX, HiStar } from 'react-icons/hi';
+import { HiOutlineArrowRight, HiOutlineTruck, HiOutlineShieldCheck, HiOutlineRefresh, HiX, HiStar, HiOutlineCheck, HiOutlineLockClosed } from 'react-icons/hi';
 import { HiOutlineBolt } from 'react-icons/hi2';
 import type { Product, Banner, Category, HomepageReview } from '@/types';
 import { productService } from '@/services/product.service';
@@ -15,6 +15,8 @@ import { useSettingsStore } from '@/store/settings.store';
 import ProductCard from '@/components/ui/ProductCard';
 import RecentlyViewed from '@/components/ui/RecentlyViewed';
 import { ProductGridSkeleton, BannerSkeleton } from '@/components/ui/Skeletons';
+import TrustSection from '@/components/ui/TrustSection';
+import TestimonialSection from '@/components/ui/TestimonialSection';
 import { safeImageSrc } from '@/lib/utils';
 
 const PLACEHOLDER_BANNER = '/images/no-banner.svg';
@@ -33,6 +35,24 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeBanner, setActiveBanner] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX;
+    if (diff > 50) {
+      setActiveBanner((prev) => (prev + 1) % banners.length);
+    } else if (diff < -50) {
+      setActiveBanner((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
+    }
+    touchStartX.current = null;
+  };
 
   const toArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
 
@@ -73,12 +93,12 @@ export default function HomePage() {
   }, [fetchCart, fetchWishlist, isAuthenticated]);
 
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (banners.length <= 1 || isPaused) return;
     const interval = setInterval(() => {
       setActiveBanner((prev) => (prev + 1) % banners.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, [banners.length]);
+  }, [banners.length, isPaused]);
 
   // Show popup after 3 seconds if enabled and not dismissed this session
   useEffect(() => {
@@ -94,12 +114,7 @@ export default function HomePage() {
     sessionStorage.setItem('popup_dismissed', '1');
   };
 
-  const features = [
-    { icon: HiOutlineBolt, title: 'Fast Delivery', desc: 'Within 2-3 days' },
-    { icon: HiOutlineShieldCheck, title: 'Warranty', desc: 'Product warranty included' },
-    { icon: HiOutlineTruck, title: 'Free Shipping', desc: 'On orders above Rs.999' },
-    { icon: HiOutlineRefresh, title: 'Easy Returns', desc: '7 day return policy' },
-  ];
+
 
   const activeDiscoverBanners = (settings?.discoverBanners || [])
     .filter((b: any) => b.isActive && b.image && b.image.trim() !== '')
@@ -129,9 +144,9 @@ export default function HomePage() {
     };
 
     const defaults = [
-      { title: fallbackTitle(0, 'Latest Launches'),   image: fallbackImg(0), link: catList[0] ? `/products?category=${catList[0].slug}` : '/products?sort=newest' },
-      { title: fallbackTitle(1, 'Trending Deals'),     image: fallbackImg(1), link: catList[1] ? `/products?category=${catList[1].slug}` : '/products?sort=popular' },
-      { title: fallbackTitle(2, 'Featured Picks'),     image: fallbackImg(2), link: catList[2] ? `/products?category=${catList[2].slug}` : '/products?isFeatured=true' },
+      { title: fallbackTitle(0, 'Latest Launches'), image: fallbackImg(0), link: catList[0] ? `/products?category=${catList[0].slug}` : '/products?sort=newest' },
+      { title: fallbackTitle(1, 'Trending Deals'), image: fallbackImg(1), link: catList[1] ? `/products?category=${catList[1].slug}` : '/products?sort=popular' },
+      { title: fallbackTitle(2, 'Featured Picks'), image: fallbackImg(2), link: catList[2] ? `/products?category=${catList[2].slug}` : '/products?isFeatured=true' },
       { title: fallbackTitle(3, 'Accessories & More'), image: fallbackImg(3), link: catList[3] ? `/products?category=${catList[3].slug}` : '/products' },
     ];
 
@@ -152,105 +167,27 @@ export default function HomePage() {
       <h1 className="sr-only">Amohamobiles – Best Mobile Shop in Idikarai, Coimbatore | Smartphones, Accessories & Repairs</h1>
 
       {/* Hero Banner */}
-      <section className="bg-gray-50 dark:bg-surface-50">
-        <div className="page-container py-3 sm:py-5 lg:py-6">
-          {isLoading ? (
-            <BannerSkeleton />
-          ) : banners.length > 0 ? (
-            <div className="relative mx-auto max-w-7xl">
-              <div className="relative aspect-[16/9] sm:aspect-[21/8] lg:aspect-[24/8] overflow-visible">
-                {banners.length > 1 && (
-                  <>
-                    <div className="pointer-events-none absolute inset-y-4 left-0 hidden w-[18%] -translate-x-2 rotate-[-7deg] overflow-hidden rounded-2xl opacity-40 blur-[1px] shadow-2xl lg:block">
-                      <Image
-                        src={getSafeImage(banners[(activeBanner - 1 + banners.length) % banners.length]?.image, PLACEHOLDER_BANNER)}
-                        alt="Previous banner preview"
-                        fill
-                        className="object-cover"
-                        sizes="20vw"
-                        onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
-                      />
-                    </div>
-                    <div className="pointer-events-none absolute inset-y-4 right-0 hidden w-[18%] translate-x-2 rotate-[7deg] overflow-hidden rounded-2xl opacity-40 blur-[1px] shadow-2xl lg:block">
-                      <Image
-                        src={getSafeImage(banners[(activeBanner + 1) % banners.length]?.image, PLACEHOLDER_BANNER)}
-                        alt="Next banner preview"
-                        fill
-                        className="object-cover"
-                        sizes="20vw"
-                        onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="absolute inset-2 rounded-[22px] bg-gradient-to-br from-accent-500/10 via-transparent to-slate-500/10 blur-2xl" />
-
-                <Link
-                  href={banners[activeBanner]?.link || '/products'}
-                  className="relative h-full overflow-hidden rounded-[20px] border border-white/60 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] ring-1 ring-black/5 dark:border-white/10 dark:bg-white/[0.02] dark:ring-white/10 block"
-                >
-                  <Image
-                    key={banners[activeBanner]?._id || activeBanner}
-                    src={getSafeImage(banners[activeBanner]?.image, PLACEHOLDER_BANNER)}
-                    alt={banners[activeBanner]?.title ? `${banners[activeBanner].title} – Amohamobiles Coimbatore` : 'Amohamobiles – Best Mobile Shop in Idikarai, Coimbatore'}
-                    fill
-                    priority
-                    className="object-cover transition-all duration-700 ease-out"
-                    sizes="100vw"
-                    onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/10 dark:from-black/20 dark:to-transparent" />
-                </Link>
-              </div>
-
-              {banners.length > 1 && (
-                <div className="mt-3 flex items-center justify-center gap-2">
-                  {banners.map((banner, idx) => (
-                    <button
-                      key={banner._id || idx}
-                      type="button"
-                      aria-label={`Show slide ${idx + 1}`}
-                      onClick={() => setActiveBanner(idx)}
-                      className={`h-2 rounded-full transition-all duration-300 ${idx === activeBanner ? 'w-8 bg-slate-700 dark:bg-accent-400' : 'w-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/25 dark:hover:bg-white/45'}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="relative overflow-hidden rounded-[20px] border border-white/60 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] ring-1 ring-black/5 dark:border-white/10 dark:bg-white/[0.02] dark:ring-white/10">
-              <div className="relative aspect-[16/9] sm:aspect-[21/8] lg:aspect-[24/8]">
-                <Image
-                  src={PLACEHOLDER_BANNER}
-                  alt="Hero banner"
-                  fill
-                  priority
-                  className="object-cover"
-                  sizes="100vw"
-                />
-              </div>
-            </div>
-          )}
+      <section className="w-full bg-black">
+        <div
+          className="relative w-full max-w-none overflow-hidden flex justify-center items-center"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <video
+            src="/PixVerse_V6_Image_Text_540P_Create_an_ultrapre.mp4"
+            className="w-full max-w-none h-auto block"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
         </div>
       </section>
 
-      {/* Features Bar */}
-      <section className="border-y border-gray-100 dark:border-white/5">
-        <div className="page-container grid grid-cols-2 gap-2 sm:gap-3 py-2 sm:py-3 lg:grid-cols-4 lg:py-4">
-          {features.map((feature) => (
-            <div key={feature.title} className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-surface-200 dark:text-slate-400">
-                <feature.icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-bold text-gray-900 dark:text-white sm:text-sm">{feature.title}</p>
-                <p className="truncate text-[11px] text-gray-500 dark:text-gray-400 sm:text-xs">{feature.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Trust Section */}
+      <TrustSection />
 
       {/* Shop by Category */}
       {categories.length > 0 && (
@@ -441,47 +378,7 @@ export default function HomePage() {
       </section>
 
       {/* Customer Reviews */}
-      {topReviews.length > 0 && (
-        <section className="py-6 sm:py-8 border-t border-gray-50 dark:border-white/5">
-          <div className="page-container">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">What Our Customers Say</h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Real reviews from verified buyers</p>
-            </div>
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x-mandatory pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
-              {topReviews.map((review) => (
-                <div key={review._id} className="w-[220px] flex-shrink-0 snap-start sm:w-[260px] lg:w-auto rounded-xl border border-gray-100 bg-white p-3 sm:p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 font-bold text-sm dark:bg-surface-200 dark:text-slate-300">
-                      {review.user.avatar ? (
-                        <Image src={getSafeImage(review.user.avatar, PLACEHOLDER_PRODUCT)} alt={review.user.name || 'User'} width={36} height={36} className="rounded-full object-cover" />
-                      ) : (
-                        (review.user.name || 'U').charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{review.user.name}</p>
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <HiStar key={i} className={`h-3 w-3 ${i < review.rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'}`} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {review.title && <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">{review.title}</p>}
-                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{review.comment}</p>
-                  <Link href={`/product/${review.productSlug}`} className="mt-3 flex items-center gap-2">
-                    <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-md bg-gray-50 dark:bg-white/5">
-                      <Image src={getSafeImage(review.productThumbnail, PLACEHOLDER_PRODUCT)} alt={review.productName} fill className="object-cover" sizes="32px" onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_PRODUCT; }} />
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{review.productName}</p>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {topReviews.length > 0 && <TestimonialSection reviews={topReviews} />}
 
       {/* New Arrivals Grid */}
       {!isLoading && newArrivals.length > 0 && (

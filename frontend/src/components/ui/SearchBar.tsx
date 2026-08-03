@@ -81,7 +81,7 @@ export default function SearchBar({ onSelect }: SearchBarProps) {
                         src={item.thumbnail || '/images/no-product.svg'}
                         alt={item.name || 'Product'}
                         fill
-                       
+
                         className="object-cover"
                         sizes="40px"
                       />

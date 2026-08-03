@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -35,7 +35,7 @@ export default function ProductsPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [gridCols, setGridCols] = useState<3 | 4>(3);
+  const [gridCols, setGridCols] = useState<3 | 4>(4);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -84,7 +84,7 @@ export default function ProductsPage() {
   useEffect(() => {
     categoryService.getAll().then((cats) => {
       setCategories(cats.filter((c) => !c.name?.startsWith('PW-Cat-') && !c.slug?.startsWith('pw-cat-')));
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   // Fetch products
@@ -132,7 +132,7 @@ export default function ProductsPage() {
       setTotalPages(data.totalPages);
       setTotalProducts(data.totalProducts);
       setCurrentPage(data.currentPage);
-    }).catch(() => {}).finally(() => setIsLoading(false));
+    }).catch(() => { }).finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -277,11 +277,10 @@ export default function ProductsPage() {
             <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-hide md:scrollbar-thin-desktop">
               <button
                 onClick={() => handleCategoryFilter(null)}
-                className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                  !activeCategory
-                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
-                    : 'border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${!activeCategory
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
+                  : 'border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
+                  }`}
               >
                 All
               </button>
@@ -289,11 +288,10 @@ export default function ProductsPage() {
                 <button
                   key={cat._id}
                   onClick={() => handleCategoryFilter(cat.slug)}
-                  className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                    activeCategory === cat.slug
-                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
-                      : 'border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
-                  }`}
+                  className={`flex flex-shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${activeCategory === cat.slug
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
+                    : 'border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
+                    }`}
                 >
                   <div className="relative h-5 w-5 overflow-hidden rounded-full ring-1 ring-white/10">
                     <Image
@@ -386,62 +384,61 @@ export default function ProductsPage() {
 
         {/* ===== Products Grid ===== */}
         <div className="min-w-0">
-            {isLoading || isProductsLoading || isPending ? (
-              <ProductGridSkeleton count={12} />
-            ) : products.length > 0 ? (
-              <>
-                <div className={`grid grid-cols-2 gap-3 sm:gap-5 ${
-                  gridCols === 4 ? 'md:grid-cols-3 lg:grid-cols-4' : 'md:grid-cols-2 lg:grid-cols-3'
+          {isLoading || isProductsLoading || isPending ? (
+            <ProductGridSkeleton count={12} />
+          ) : products.length > 0 ? (
+            <>
+              <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${gridCols === 4 ? 'md:grid-cols-3 lg:grid-cols-4' : 'md:grid-cols-2 lg:grid-cols-3'
                 }`}>
-                  {products.map((product, index) => (
-                    <div
-                      key={product._id}
-                      className="animate-fade-in"
-                      style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'both' }}
-                    >
-                      <ProductCard product={product} />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-10 flex flex-col items-center gap-3">
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-                    <p className="text-xs text-gray-600">
-                      Page {currentPage} of {totalPages}
-                    </p>
+                {products.map((product, index) => (
+                  <div
+                    key={product._id}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'both' }}
+                  >
+                    <ProductCard product={product} />
                   </div>
-                )}
-              </>
-            ) : (
-              /* ===== Empty State ===== */
-              <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] py-24 text-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/5">
-                  <HiOutlineViewGrid className="h-8 w-8 text-gray-400" />
-                </div>
-                <h3 className="mt-6 text-xl font-bold text-gray-900 dark:text-white">No products found</h3>
-                <p className="mt-2 max-w-sm text-sm text-gray-500">
-                  {filters.search
-                    ? `We couldn't find results for "${filters.search}". Try a different search term.`
-                    : 'Try adjusting your filters or browse a different category to discover products.'}
-                </p>
-                <div className="mt-6 flex gap-3">
-                  <button
-                    onClick={handleClearFilters}
-                    className="rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-600/25 transition-all hover:shadow-xl hover:shadow-primary-600/30"
-                  >
-                    Clear All Filters
-                  </button>
-                  <Link
-                    href="/"
-                    className="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 px-6 py-3 text-sm font-medium text-gray-600 dark:text-gray-300 transition-all hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white"
-                  >
-                    Go Home
-                  </Link>
-                </div>
+                ))}
               </div>
-            )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-10 flex flex-col items-center gap-3">
+                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+                  <p className="text-xs text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            /* ===== Empty State ===== */
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] py-24 text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-100 dark:bg-white/5">
+                <HiOutlineViewGrid className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="mt-6 text-xl font-bold text-gray-900 dark:text-white">No products found</h3>
+              <p className="mt-2 max-w-sm text-sm text-gray-500">
+                {filters.search
+                  ? `We couldn't find results for "${filters.search}". Try a different search term.`
+                  : 'Try adjusting your filters or browse a different category to discover products.'}
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleClearFilters}
+                  className="rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary-600/25 transition-all hover:shadow-xl hover:shadow-primary-600/30"
+                >
+                  Clear All Filters
+                </button>
+                <Link
+                  href="/"
+                  className="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 px-6 py-3 text-sm font-medium text-gray-600 dark:text-gray-300 transition-all hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white"
+                >
+                  Go Home
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

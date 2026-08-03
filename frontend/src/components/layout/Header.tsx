@@ -98,11 +98,10 @@ export default function Header() {
             <Link
               href="/products"
               prefetch={true}
-              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
-                pathname === '/products' || pathname.startsWith('/products?')
+              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${pathname === '/products' || pathname.startsWith('/products?')
                   ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'
-              }`}
+                }`}
             >
               <HiOutlineCollection className="h-4 w-4" />
               <span className="hidden md:inline">Products</span>
@@ -112,11 +111,10 @@ export default function Header() {
             <Link
               href="/services"
               prefetch={true}
-              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
-                pathname === '/services'
+              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${pathname === '/services'
                   ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'
-              }`}
+                }`}
             >
               <HiOutlineCog className="h-4 w-4" />
               <span className="hidden md:inline">Services</span>
@@ -126,11 +124,10 @@ export default function Header() {
             <Link
               href="/orders"
               prefetch={true}
-              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
-                pathname === '/orders'
+              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${pathname === '/orders'
                   ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'
-              }`}
+                }`}
             >
               <HiOutlineClipboardList className="h-4 w-4" />
               <span className="hidden md:inline">Orders</span>
