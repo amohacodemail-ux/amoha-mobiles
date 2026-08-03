@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -44,6 +44,20 @@ export default function Header() {
     router.replace('/login');
   };
 
+  const navLinks = [
+    { name: 'Products', href: '/products', icon: Smartphone },
+    { name: 'Services', href: '/services', icon: Wrench },
+    { name: 'Orders', href: '/orders', icon: Package },
+    { name: 'Requests', href: '/my-requests', icon: FileText },
+  ];
+
+  const desktopNavLinks = [
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Service', href: '/services', icon: Wrench },
+    { name: 'Orders', href: '/orders', icon: Package },
+    { name: 'cart', href: '/cart', icon: ShoppingBag },
+    { name: 'Compare', href: '/compare', icon: ArrowRightLeft },
+  ];
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/98 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[var(--header-bg)] dark:backdrop-blur-xl">
       {/* Top bar - Dark mode visibility fix */}
