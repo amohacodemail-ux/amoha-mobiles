@@ -29,7 +29,7 @@ class AuthController {
       const { email, password } = req.body;
       const result = await authService.login(email, password);
       activityLogService.log({ userId: result.user._id, action: 'login', entity: 'user', entityId: result.user._id, details: `User logged in: ${email}`, ipAddress: req.ip }).catch(() => {});
-      sendLoginEmail(email, result.user.name).catch((err) => logger.error('Failed to send login email:', err?.message));
+      sendLoginEmail(result.user.email, result.user.name).catch((err) => logger.error('Failed to send login email:', err?.message));
       res.status(200).json({
         success: true,
         message: 'Login successful',

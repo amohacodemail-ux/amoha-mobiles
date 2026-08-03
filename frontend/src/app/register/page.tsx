@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -55,7 +55,8 @@ export default function RegisterPage() {
       return;
     }
     try {
-      await register(form.name, form.email, form.phone, form.password, form.confirmPassword);
+      const normalizedPhone = form.phone.trim().replace(/\s+/g, '');
+      await register(form.name.trim(), form.email.trim(), normalizedPhone, form.password, form.confirmPassword);
 
       // Upload avatar if selected (user now has token from register)
       if (avatarFile) {
@@ -79,8 +80,8 @@ export default function RegisterPage() {
 
       toast.success('Account created successfully!');
       router.push('/');
-    } catch {
-      toast.error('Registration failed');
+    } catch (err: any) {
+      toast.error(err.message || 'Registration failed');
     }
   };
 

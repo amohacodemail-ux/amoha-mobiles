@@ -46,8 +46,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <div className="relative overflow-hidden border-b border-gray-200 dark:border-white/5 bg-gradient-to-b from-primary-50 to-white dark:from-primary-950 dark:to-surface-50">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.15),transparent_50%)]" />
+      <div className="relative overflow-hidden border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-surface-50">
         <div className="page-container relative py-12 sm:py-16 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
             Contact <span className="text-primary-500 dark:text-primary-400">Amohamobiles</span>
@@ -63,33 +62,33 @@ export default function ContactPage() {
           {/* Contact Form */}
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">Send us a Message</h2>
-            <form onSubmit={handleSubmit} className="glass-card p-5 sm:p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="rounded-xl border border-gray-100 bg-white p-5 sm:p-6 space-y-4 dark:border-white/5 dark:bg-surface-50">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Name *</label>
-                  <input name="name" value={form.name} onChange={handleChange} className="glass-input py-3 text-sm" placeholder="Your name" />
+                  <input name="name" value={form.name} onChange={handleChange} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-white/10 dark:bg-[var(--background)] dark:text-white" placeholder="Your name" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Phone</label>
-                  <input name="phone" value={form.phone} onChange={handleChange} className="glass-input py-3 text-sm" placeholder="Phone number" />
+                  <input name="phone" value={form.phone} onChange={handleChange} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-white/10 dark:bg-[var(--background)] dark:text-white" placeholder="Phone number" />
                 </div>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Email *</label>
-                <input name="email" type="email" value={form.email} onChange={handleChange} className="glass-input py-3 text-sm" placeholder="Email address" />
+                <input name="email" type="email" value={form.email} onChange={handleChange} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-white/10 dark:bg-[var(--background)] dark:text-white" placeholder="Email address" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Subject *</label>
-                <input name="subject" value={form.subject} onChange={handleChange} className="glass-input py-3 text-sm" placeholder="What is this about?" />
+                <input name="subject" value={form.subject} onChange={handleChange} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-white/10 dark:bg-[var(--background)] dark:text-white" placeholder="What is this about?" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Message *</label>
-                <textarea name="message" value={form.message} onChange={handleChange} className="glass-input py-3 text-sm min-h-[100px] resize-none" placeholder="Write your message..." rows={4} />
+                <textarea name="message" value={form.message} onChange={handleChange} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm min-h-[100px] resize-none outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-white/10 dark:bg-[var(--background)] dark:text-white" placeholder="Write your message..." rows={4} />
               </div>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full rounded-xl bg-primary-600 py-3.5 text-sm font-semibold text-white transition-all hover:bg-primary-500 hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-xl bg-primary-600 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSubmitting ? 'Sending...' : 'Send Message'}
               </button>
@@ -100,7 +99,7 @@ export default function ContactPage() {
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5">Our Store</h2>
             <div className="space-y-5">
-              <div className="glass-card p-5">
+              <div className="rounded-xl border border-gray-100 bg-white p-5 dark:border-white/5 dark:bg-surface-50">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">{siteName}</h3>
                 <div className="mt-3 space-y-2.5">
                   <div className="flex items-start gap-2.5 text-sm text-gray-500 dark:text-gray-400">
@@ -156,7 +155,7 @@ export default function ContactPage() {
             </div>
 
             {/* General Contact */}
-            <div className="glass-card-sm p-5 mt-5">
+            <div className="rounded-xl border border-gray-100 bg-white p-5 mt-5 dark:border-white/5 dark:bg-surface-50">
               <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">General Inquiries</h3>
               <div className="space-y-2">
                 <a href={`mailto:${contactEmail}`} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-400 transition-colors">

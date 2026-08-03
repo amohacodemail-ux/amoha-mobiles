@@ -23,7 +23,7 @@ export default function AboutPage() {
   return (
     <main className="min-h-screen">
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-gray-100 bg-gradient-to-br from-primary-50 via-white to-accent-50 dark:border-white/5 dark:from-primary-950/50 dark:via-[var(--background)] dark:to-accent-950/30">
+      <section className="relative overflow-hidden border-b border-gray-100 bg-gray-50 dark:border-white/5 dark:bg-surface-50">
         <div className="page-container py-16 text-center sm:py-20 lg:py-24">
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl lg:text-5xl">
             About {siteName} &ndash; Mobile Shop in Idikarai, Coimbatore
@@ -53,7 +53,7 @@ export default function AboutPage() {
       </section>
 
       {/* Values */}
-      <section className="border-y border-gray-100 bg-gray-50/50 py-12 dark:border-white/5 dark:bg-white/[0.01] sm:py-16">
+      <section className="border-y border-gray-100 bg-gray-50 py-12 dark:border-white/5 dark:bg-surface-50 sm:py-16">
         <div className="page-container">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">Why Choose Us</h2>
@@ -61,7 +61,7 @@ export default function AboutPage() {
           </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
             {values.map((item) => (
-              <div key={item.title} className="rounded-xl border border-gray-100 bg-white p-5 transition-shadow hover:shadow-md dark:border-white/[0.06] dark:bg-white/[0.02] sm:p-6">
+              <div key={item.title} className="rounded-xl border border-gray-100 bg-white p-5 dark:border-white/[0.06] dark:bg-white/[0.02] sm:p-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400">
                   <item.icon className="h-5 w-5" />
                 </div>

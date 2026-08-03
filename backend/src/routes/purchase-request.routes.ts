@@ -6,7 +6,7 @@ import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
 import { NotFoundError } from '../errors/app-error';
 import { AuthenticatedRequest } from '../types';
-
+import { sendEmail } from '../utils/email.util';
 const router = Router();
 router.use(authenticate, canAccessPurchase);
 
@@ -198,9 +198,8 @@ router.post('/:id/convert-to-po', async (req: AuthenticatedRequest, res: Respons
         po_number: poNumber,
         supplier_id: targetSupplierId,
         purchase_request_id: pr.id,
-        items: poItems,
         total_amount: totalAmount,
-        expected_delivery_date: expectedDeliveryDate || null,
+        expected_delivery: expectedDeliveryDate ? new Date(expectedDeliveryDate).toISOString() : null,
         notes: notes || pr.reason,
         status: 'sent',
       })
@@ -209,11 +208,39 @@ router.post('/:id/convert-to-po', async (req: AuthenticatedRequest, res: Respons
 
     if (poError) throw poError;
 
+    // Insert items into purchase_order_items
+    const poItemsToInsert = poItems.map((item: any) => ({
+      purchase_order_id: po.id,
+      product_id: item.product_id || null,
+      quantity: item.quantity,
+      unit_cost: item.unit_price,
+      total_cost: item.total_price,
+    })).filter((item: any) => item.product_id); // product_id is REQUIRED by schema
+
+    if (poItemsToInsert.length > 0) {
+      const { error: itemsError } = await supabase
+        .from('purchase_order_items')
+        .insert(poItemsToInsert);
+      if (itemsError) throw itemsError;
+    }
+
     // Mark PR as converted
     await supabase
       .from('purchase_requests')
       .update({ status: 'converted', po_id: po.id, updated_at: new Date().toISOString() })
       .eq('id', pr.id);
+
+    // Send email to supplier
+    if (targetSupplierId) {
+      const { data: supplier } = await supabase.from('suppliers').select('name, email').eq('id', targetSupplierId).maybeSingle();
+      if (supplier?.email) {
+        sendEmail({
+          to: supplier.email,
+          subject: `Purchase Order ${poNumber} - AMOHA Mobiles`,
+          html: `<p>Dear ${supplier.name},</p><p>A new purchase order <strong>${poNumber}</strong> has been created for your review.</p><p>Total Amount: ₹${totalAmount.toLocaleString('en-IN')}</p><p>Please contact us if you have any questions.</p>`,
+        }).catch(() => {}); // fire and forget
+      }
+    }
 
     sendCreated(res, transformRow(po), 'Purchase Order generated from Purchase Request');
   } catch (error) {

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback, useTransition, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -8,7 +8,7 @@ import { HiOutlineChevronRight, HiOutlineViewGrid, HiOutlineX, HiChevronDown } f
 import type { Product, Category, ProductFilters } from '@/types';
 import { productService } from '@/services/product.service';
 import { categoryService } from '@/services/category.service';
-import ProductCard from '@/components/ui/ProductCard';
+import ListingProductCard from '@/components/ui/ListingProductCard';
 import FilterSidebar from '@/components/ui/FilterSidebar';
 import Pagination from '@/components/ui/Pagination';
 import { ProductGridSkeleton } from '@/components/ui/Skeletons';
@@ -399,7 +399,7 @@ export default function ProductsPage() {
                       className="animate-fade-in"
                       style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'both' }}
                     >
-                      <ProductCard product={product} />
+                      <ListingProductCard product={product} />
                     </div>
                   ))}
                 </div>

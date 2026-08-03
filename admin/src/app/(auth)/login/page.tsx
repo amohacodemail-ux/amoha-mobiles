@@ -12,7 +12,7 @@ import { authService } from '@/services/auth.service';
 import { useAuthStore } from '@/store/auth.store';
 
 const schema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().min(1, 'Email or mobile number is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 type FormData = z.infer<typeof schema>;
@@ -65,9 +65,9 @@ export default function LoginPage() {
         <div className="bg-card border border-border rounded-2xl p-8 shadow-xl">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <Input
-              label="Email Address"
-              type="email"
-              placeholder="admin@amoha.com"
+              label="Email or Mobile Number"
+              type="text"
+              placeholder="Enter your email or mobile number"
               icon={<Mail className="h-4 w-4" />}
               error={errors.email?.message}
               {...register('email')}

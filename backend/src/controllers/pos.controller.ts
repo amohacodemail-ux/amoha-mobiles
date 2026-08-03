@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
 import { AuthenticatedRequest } from '../types';
@@ -68,8 +68,59 @@ class PosController {
       const posSuffix = Math.random().toString(36).slice(2, 5).toUpperCase();
       const invoiceNumber = `${prefix}-${todayStr}-${String((countToday || 0) + 1).padStart(4, '0')}-${posSuffix}`;
 
+      let customerId = req.user!.userId;
+      if (customerPhone) {
+        // 1. Check if user exists with this phone and role='user'
+        const { data: existingUsers } = await supabase
+          .from('users')
+          .select('id')
+          .eq('phone', customerPhone)
+          .eq('role', 'user')
+          .limit(1);
+
+        if (existingUsers && existingUsers.length > 0) {
+          customerId = existingUsers[0].id;
+        } else {
+          // 2. Create new customer
+          const newUserId = uuidv4();
+          const { error: userError } = await supabase.from('users').insert({
+            id: newUserId,
+            name: customerName || 'Walk-in Customer',
+            phone: customerPhone,
+            email: customerEmail || `walkin_${Date.now()}@example.com`,
+            role: 'user',
+            password: uuidv4(), // generate a random password for walk-in
+            is_verified: true,
+          });
+
+          if (userError) {
+            logger.error(`[POS] Failed to create walk-in customer: ${userError.message}`);
+          } else {
+            customerId = newUserId;
+            // Add a default segment for the new customer
+            await supabase.from('customer_segments').insert({
+               user_id: customerId,
+               segment: 'new',
+               assigned_by: req.user!.userId
+            });
+            // Add tags to denote source and type
+            await supabase.from('customer_tags').insert([
+               { user_id: customerId, tag: 'Walk-in', created_by: req.user!.userId },
+               { user_id: customerId, tag: 'POS', created_by: req.user!.userId }
+            ]);
+            // Add a note
+            await supabase.from('customer_notes').insert({
+               user_id: customerId,
+               admin_id: req.user!.userId,
+               note: 'Customer created from POS Walk-in.',
+               type: 'note'
+            });
+          }
+        }
+      }
+
       const { data: order, error } = await supabase.from('orders').insert({
-        order_number: orderNumber, user_id: req.user!.userId,
+        order_number: orderNumber, user_id: customerId,
         shipping_address: { fullName: customerName || 'Walk-in Customer', phone: customerPhone || '0000000000', addressLine1: billing?.billingAddress || 'Counter Sale', city: billing?.billingCity || 'Store', state: billing?.billingState || 'Store', pincode: billing?.billingPincode || '000000' },
         payment_method: 'cod', payment_status: 'paid', status: 'delivered',
         subtotal, discount, shipping_fee: 0, total: totalAmount,

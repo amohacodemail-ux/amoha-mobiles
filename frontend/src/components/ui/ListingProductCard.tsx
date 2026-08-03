@@ -5,11 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { HiOutlineHeart, HiHeart, HiOutlineShoppingCart, HiOutlineShieldCheck } from 'react-icons/hi';
-import { ArrowRightLeft } from 'lucide-react';
 import type { Product } from '@/types';
 import { formatPrice, safeImageSrc } from '@/lib/utils';
 import { useWishlistStore } from '@/store/wishlist.store';
-import { useCompareStore } from '@/store/compare.store';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
 import toast from 'react-hot-toast';
@@ -20,13 +18,10 @@ interface ProductCardProps {
   product: Product;
 }
 
-function ProductCard({ product }: ProductCardProps) {
+function ListingProductCard({ product }: ProductCardProps) {
   const addToWishlist = useWishlistStore((s) => s.addToWishlist);
   const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
   const wishlisted = useWishlistStore((s) => s.items.some((item) => item?.product?._id === product._id));
-  const addToCompare = useCompareStore((s) => s.addToCompare);
-  const removeFromCompare = useCompareStore((s) => s.removeFromCompare);
-  const compared = useCompareStore((s) => s.items.some((item) => item._id === product._id));
   const addToCart = useCartStore((s) => s.addToCart);
   const isProductPending = useCartStore((s) => s.isProductPending);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -54,18 +49,6 @@ function ProductCard({ product }: ProductCardProps) {
       toast.error('Failed to update wishlist');
     }
   }, [isAuthenticated, wishlisted, product._id, product.slug, removeFromWishlist, addToWishlist, router]);
-
-  const handleCompare = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (compared) {
-      removeFromCompare(product._id);
-      toast.success('Removed from compare');
-    } else {
-      addToCompare(product);
-      toast.success('Added to compare');
-    }
-  }, [compared, product, removeFromCompare, addToCompare]);
 
   const handleAddToCart = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -97,7 +80,7 @@ function ProductCard({ product }: ProductCardProps) {
             src={safeImageSrc(product.thumbnail || product.images?.[0], PLACEHOLDER_IMG)}
             alt={product.name}
             fill
-            className="object-contain p-2 transition-transform duration-300 group-hover:scale-[1.05]"
+            className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             loading="lazy"
             onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
@@ -106,7 +89,7 @@ function ProductCard({ product }: ProductCardProps) {
 
         {/* Discount Badge */}
         {discountPercent > 0 && inStock && (
-          <div className="absolute left-2 top-2 z-10 rounded-full bg-[#5264F9] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm sm:left-3 sm:top-3 sm:px-2.5 sm:py-1 sm:text-[11px]">
+          <div className="absolute left-2 top-2 z-10 rounded-full bg-[#5264F9] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm sm:left-2.5 sm:top-2.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
             -{discountPercent}%
           </div>
         )}
@@ -114,22 +97,11 @@ function ProductCard({ product }: ProductCardProps) {
         {/* Wishlist Button */}
         <button
           onClick={handleWishlist}
-          className={`absolute right-2 top-2 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-200 hover:scale-110 dark:bg-surface-200 sm:right-3 sm:top-3 ${
+          className={`absolute right-2 top-2 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-200 hover:scale-110 dark:bg-surface-200 sm:right-2.5 sm:top-2.5 ${
             wishlisted ? 'text-red-500' : 'text-gray-900 hover:text-red-500 dark:text-gray-100'
           }`}
         >
           {wishlisted ? <HiHeart className="h-4 w-4" /> : <HiOutlineHeart className="h-4 w-4 stroke-[2]" />}
-        </button>
-
-        {/* Compare Button */}
-        <button
-          onClick={handleCompare}
-          className={`absolute right-2 top-[40px] sm:top-[52px] z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-200 hover:scale-110 dark:bg-surface-200 sm:right-3 ${
-            compared ? 'text-blue-600' : 'text-gray-900 hover:text-blue-600 dark:text-gray-100'
-          }`}
-          title="Compare"
-        >
-          <ArrowRightLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={compared ? 3 : 2} />
         </button>
       </Link>
 
@@ -139,7 +111,7 @@ function ProductCard({ product }: ProductCardProps) {
         <div className="mb-2 flex flex-wrap gap-1.5">
           {/* Warranty Badge */}
           <span className="flex items-center gap-1 rounded-full bg-[#EEEDFF] px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#6D63FF] dark:bg-purple-900/30 dark:text-purple-300">
-            <HiOutlineShieldCheck className="h-3 w-3 stroke-[2]" />
+            <HiOutlineShieldCheck className="h-2.5 w-2.5 stroke-[2]" />
             Warranty
           </span>
           {/* Stock Badge */}
@@ -156,18 +128,18 @@ function ProductCard({ product }: ProductCardProps) {
 
         {/* Product Name */}
         <Link href={`/product/${product.slug}`} prefetch={true} className="mb-1">
-          <h3 className="line-clamp-2 text-[13px] sm:text-[14px] font-bold leading-snug text-gray-900 dark:text-white">
+          <h3 className="line-clamp-2 text-[12px] sm:text-[13px] font-bold leading-tight text-gray-900 dark:text-white">
             {product.name}
           </h3>
         </Link>
 
         {/* Price Row (Now naturally sitting under the title) */}
-        <div className="mb-3 flex flex-wrap items-baseline gap-1.5 sm:gap-2">
-          <span className="text-[17px] sm:text-[19px] font-extrabold text-gray-900 dark:text-white">
+        <div className="mb-3 flex flex-wrap items-baseline gap-1 sm:gap-1.5">
+          <span className="text-[16px] sm:text-[17px] font-extrabold text-gray-900 dark:text-white">
             {formatPrice(product.price)}
           </span>
           {product.originalPrice > product.price && (
-            <span className="text-[11px] sm:text-[12px] font-semibold text-gray-400 line-through">
+            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-400 line-through">
               {formatPrice(product.originalPrice)}
             </span>
           )}
@@ -178,7 +150,7 @@ function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleAddToCart}
             disabled={addPending || !inStock}
-            className="group/btn flex w-full h-[36px] sm:h-[40px] items-center justify-center gap-1.5 rounded-full bg-[#5264F9] text-[12px] font-bold text-white shadow-sm transition-all duration-300 hover:bg-[#4352D4] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+            className="group/btn flex w-full h-[36px] sm:h-[40px] items-center justify-center gap-1.5 rounded-full bg-[#5264F9] text-[11px] sm:text-[12px] font-bold text-white shadow-sm transition-all duration-300 hover:bg-[#4352D4] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             <HiOutlineShoppingCart className="h-4 w-4 stroke-[2]" />
             {addPending ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}
@@ -189,4 +161,4 @@ function ProductCard({ product }: ProductCardProps) {
   );
 }
 
-export default memo(ProductCard);
+export default memo(ListingProductCard);

@@ -1,10 +1,10 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { HiOutlineUser, HiOutlineMail, HiOutlinePhone, HiOutlineLogout, HiOutlineShoppingBag, HiOutlineHeart, HiOutlineLocationMarker, HiOutlinePencil, HiOutlineTrash, HiOutlinePlus, HiX, HiOutlineShieldCheck, HiOutlineIdentification, HiOutlineUpload, HiOutlinePhotograph } from 'react-icons/hi';
+import { HiOutlineUser, HiOutlineMail, HiOutlinePhone, HiOutlineLogout, HiOutlineShoppingBag, HiOutlineHeart, HiOutlineLocationMarker, HiOutlinePencil, HiOutlineTrash, HiOutlinePlus, HiX, HiOutlineShieldCheck, HiOutlineIdentification, HiOutlineUpload, HiOutlinePhotograph, HiOutlineDocumentText } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth.store';
 import { userService } from '@/services/user.service';
@@ -33,6 +33,11 @@ export default function ProfilePage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const avatarFileRef = useRef<HTMLInputElement>(null);
+
+  // Profile Edit State
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // KYC state
   const [kycInfo, setKycInfo] = useState<KycInfo | null>(null);
@@ -65,6 +70,23 @@ export default function ProfilePage() {
     logout();
     toast.success('Logged out successfully');
     router.push('/');
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profileForm.name.trim()) {
+      toast.error('Name cannot be empty');
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      await updateProfile({ name: profileForm.name, phone: profileForm.phone });
+      toast.success('Profile updated successfully');
+      setIsEditingProfile(false);
+    } catch {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleAvatarUpload = async (file: File) => {
@@ -168,6 +190,7 @@ export default function ProfilePage() {
 
   const quickLinks = [
     { href: '/orders', icon: HiOutlineShoppingBag, label: 'My Orders', desc: 'Track & manage orders' },
+    { href: '/my-requests', icon: HiOutlineDocumentText, label: 'My Requests', desc: 'Track service requests' },
     { href: '/wishlist', icon: HiOutlineHeart, label: 'Wishlist', desc: 'Your saved items' },
   ];
 
@@ -277,27 +300,79 @@ export default function ProfilePage() {
                 )}
               </button>
             </div>
-            <h2 className="mt-4 text-lg font-bold text-gray-900 dark:text-white">{user.name || 'User'}</h2>
-            <p className="mt-0.5 text-sm text-gray-500">Member since {formatDate(user.createdAt)}</p>
-
-            <div className="mt-6 space-y-3 text-left">
-              <div className="flex items-center gap-3 rounded-lg bg-gray-100 dark:bg-white/5 p-3">
-                <HiOutlineMail className="h-4 w-4 text-primary-400" />
-                <span className="text-sm text-gray-600 dark:text-gray-300">{user.email}</span>
+            {isEditingProfile ? (
+              <div className="mt-4 text-left">
+                <div className="mb-3">
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Full Name</label>
+                  <input
+                    type="text"
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm(p => ({ ...p, name: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-surface-200 dark:text-white"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-surface-200 dark:text-white"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsEditingProfile(false)}
+                    className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-surface-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={isSavingProfile}
+                    className="flex-1 rounded-lg bg-primary-600 py-2 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50"
+                  >
+                    {isSavingProfile ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-3 rounded-lg bg-gray-100 dark:bg-white/5 p-3">
-                <HiOutlinePhone className="h-4 w-4 text-primary-400" />
-                <span className="text-sm text-gray-600 dark:text-gray-300">{user.phone || 'Not provided'}</span>
-              </div>
-            </div>
+            ) : (
+              <>
+                <h2 className="mt-4 text-lg font-bold text-gray-900 dark:text-white">{user.name || 'User'}</h2>
+                <p className="mt-0.5 text-sm text-gray-500">Member since {formatDate(user.createdAt)}</p>
 
-            <button
-              onClick={handleLogout}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20"
-            >
-              <HiOutlineLogout className="h-4 w-4" />
-              Sign Out
-            </button>
+                <div className="mt-6 space-y-3 text-left">
+                  <div className="flex items-center gap-3 rounded-lg bg-gray-100 dark:bg-white/5 p-3">
+                    <HiOutlineMail className="h-4 w-4 text-primary-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{user.email}</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg bg-gray-100 dark:bg-white/5 p-3">
+                    <HiOutlinePhone className="h-4 w-4 text-primary-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{user.phone || (user as any).mobileNumber || 'Not provided'}</span>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      setProfileForm({ name: user.name || '', phone: user.phone || (user as any).mobileNumber || '' });
+                      setIsEditingProfile(true);
+                    }}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
+                  >
+                    <HiOutlinePencil className="h-4 w-4" />
+                    Edit Profile
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20"
+                  >
+                    <HiOutlineLogout className="h-4 w-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

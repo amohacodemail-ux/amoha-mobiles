@@ -7,7 +7,7 @@ import { HiOutlineChevronRight, HiOutlineViewGrid } from 'react-icons/hi';
 import type { Category, Product, ProductFilters } from '@/types';
 import { categoryService } from '@/services/category.service';
 import { productService } from '@/services/product.service';
-import ProductCard from '@/components/ui/ProductCard';
+import ListingProductCard from '@/components/ui/ListingProductCard';
 import FilterSidebar from '@/components/ui/FilterSidebar';
 import Pagination from '@/components/ui/Pagination';
 import { ProductGridSkeleton } from '@/components/ui/Skeletons';
@@ -119,7 +119,7 @@ export default function CategoryPage() {
               <>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
                   {products.map((product) => (
-                    <ProductCard key={product._id} product={product} />
+                    <ListingProductCard key={product._id} product={product} />
                   ))}
                 </div>
                 <div className="mt-8">

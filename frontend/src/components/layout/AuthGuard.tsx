@@ -14,7 +14,7 @@ import { SafeComponent } from '@/components/ui/SafeComponent';
 const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 // Pages that REQUIRE authentication - only these will redirect to login
-const PROTECTED_PATHS = ['/cart', '/checkout', '/orders', '/profile', '/wishlist'];
+const PROTECTED_PATHS = ['/cart', '/checkout', '/orders', '/profile', '/wishlist', '/my-requests'];
 
 // Check if a pathname requires authentication
 function isProtectedPath(pathname: string): boolean {

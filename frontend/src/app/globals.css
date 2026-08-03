@@ -230,6 +230,10 @@
     background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     background-size: 24px 24px;
   }
+
+  .marquee-swiper .swiper-wrapper {
+    transition-timing-function: linear !important;
+  }
 }
 
 /* Disable hover-scale animations on touch-only devices to prevent tap-zoom */

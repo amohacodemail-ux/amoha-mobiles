@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { HiOutlineX, HiOutlineTrash, HiStar } from 'react-icons/hi';
+import { ArrowRightLeft } from 'lucide-react';
 import { useCompareStore } from '@/store/compare.store';
 import { formatPrice, getRatingColor } from '@/lib/utils';
 
@@ -36,12 +37,42 @@ export default function ComparePage() {
 
   if (items.length === 0) {
     return (
-      <div className="page-container flex flex-col items-center justify-center py-32 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">No products to compare</h2>
-        <p className="mt-2 text-sm text-gray-500">Add products using the compare button on product cards.</p>
-        <Link href="/products" className="mt-6 rounded-xl bg-primary-600 px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-500 hover:shadow-glow">
-          Browse Products
-        </Link>
+      <div className="page-container flex flex-col items-center justify-center animate-fade-in-up py-20 sm:py-32 w-full mx-auto">
+        <div className="text-center w-full max-w-md mx-auto flex flex-col items-center justify-center">
+          
+          {/* Circular Graphic */}
+          <div className="relative mb-6 flex justify-center">
+            {/* Outer light blue circle */}
+            <div className="relative flex h-[150px] w-[150px] items-center justify-center rounded-full bg-[#F3F7FC] dark:bg-surface-200">
+              {/* Colored dots */}
+              <div className="absolute top-[20%] right-[25%] h-2 w-2 rounded-full bg-[#82B1FF]"></div>
+              <div className="absolute bottom-[25%] left-[18%] h-2 w-2 rounded-full bg-[#FFD54F]"></div>
+              <div className="absolute top-[50%] right-[10%] h-1.5 w-1.5 rounded-full bg-[#69F0AE]"></div>
+              
+              {/* Inner white circle with shadow */}
+              <div className="relative flex h-[95px] w-[95px] items-center justify-center rounded-full bg-white dark:bg-surface-100 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+                <ArrowRightLeft className="h-9 w-9 text-blue-600 stroke-[2]" />
+                
+                {/* Orange Question mark badge */}
+                <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#FFA000] border-2 border-white dark:border-surface-100 text-white font-bold text-xs shadow-sm">
+                  ?
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <h3 className="text-[26px] font-extrabold text-[#0F172A] dark:text-white leading-snug mb-3 tracking-tight">Your compare list is empty</h3>
+          <p className="text-[15px] text-[#64748B] dark:text-gray-400 max-w-sm mx-auto mb-8 leading-relaxed">
+            Looks like you haven't added anything yet. Browse items and add them to compare.
+          </p>
+          
+          <Link 
+            href="/products" 
+            className="flex h-[46px] px-10 items-center justify-center rounded-full bg-[#2563EB] text-[15px] font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.39)] transition-all duration-300 hover:bg-[#1D4ED8] hover:shadow-[0_6px_20px_rgba(37,99,235,0.23)]"
+          >
+            Start Shopping
+          </Link>
+        </div>
       </div>
     );
   }
