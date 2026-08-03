@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay } from 'swiper/modules';
+import 'swiper/css';
 import { HiOutlineArrowRight, HiOutlineTruck, HiOutlineShieldCheck, HiOutlineRefresh, HiX, HiStar, HiOutlineCheck, HiOutlineLockClosed } from 'react-icons/hi';
 import { HiOutlineBolt } from 'react-icons/hi2';
 import type { Product, Banner, Category, HomepageReview } from '@/types';
