@@ -17,7 +17,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileSearchActive, setIsMobileSearchActive] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [promoIndex, setPromoIndex] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(108); // 68px height + 16px top margin + 24px bottom space
@@ -114,10 +114,10 @@ export default function Header() {
   return (
     <>
       <header ref={headerRef} className="fixed top-4 left-0 right-0 z-50 w-full max-w-[1400px] mx-auto px-4 transition-all duration-300">
-        <div className="flex items-center justify-between h-[68px] px-3 rounded-full bg-white dark:bg-[#121212] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-white/10">
+        <div className="relative flex items-center justify-between h-[68px] px-3 rounded-full bg-white dark:bg-[#121212] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-white/10">
         
         {/* Left: Logo */}
-        <div className="flex items-center gap-3 overflow-hidden">
+        <div className={`items-center gap-3 overflow-hidden ${isMobileSearchActive ? 'hidden lg:flex' : 'flex'}`}>
           <Link href="/" prefetch={true} className="flex items-center gap-2 group ml-1 sm:ml-2 overflow-hidden">
             <div className="flex h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] items-center justify-center rounded-xl bg-[#3b82f6] font-bold text-white shadow-sm text-lg sm:text-xl transition-transform group-hover:scale-105 shrink-0">
               {siteName.charAt(0)}
@@ -129,16 +129,18 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Middle Left: Compact Search */}
-        <div className="hidden lg:block ml-4 xl:ml-8 w-[180px] xl:w-[280px]">
-          <div className="h-[40px] rounded-full border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center px-4 text-slate-400 text-sm cursor-text hover:bg-slate-100 transition-colors" onClick={() => setIsSearchOpen(true)}>
-             <Search className="h-4 w-4 mr-2" />
-             <span className="truncate">Search...</span>
-          </div>
+        {/* Search Area */}
+        <div className={`transition-all duration-300 ${isMobileSearchActive ? 'absolute inset-0 px-3 bg-white dark:bg-[#121212] rounded-full z-50 flex items-center' : 'hidden lg:block lg:flex-1 lg:max-w-md xl:max-w-lg ml-4 xl:ml-8'}`}>
+          <SearchBar onSelect={() => setIsMobileSearchActive(false)} className="flex-1" />
+          {isMobileSearchActive && (
+            <button onClick={() => setIsMobileSearchActive(false)} className="lg:hidden ml-2 p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         {/* Middle Right: Navigation */}
-        <div className="hidden lg:flex flex-1 items-center justify-end gap-1 xl:gap-2 px-4 xl:pr-10">
+        <div className={`flex-1 items-center justify-end gap-1 xl:gap-2 px-4 xl:pr-10 ${isMobileSearchActive ? 'hidden' : 'hidden lg:flex'}`}>
           {desktopNavLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(`${link.href}?`));
             return (
@@ -159,11 +161,11 @@ export default function Header() {
         </div>
 
         {/* Right: Profile Toggle */}
-        <div className="flex items-center gap-1 sm:gap-3 mr-1 sm:mr-2 shrink-0">
+        <div className={`items-center gap-1 sm:gap-3 mr-1 sm:mr-2 shrink-0 ${isMobileSearchActive ? 'hidden lg:flex' : 'flex'}`}>
           
           {/* Mobile Search Toggle */}
           <button
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            onClick={() => setIsMobileSearchActive(true)}
             className="lg:hidden p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
           >
             <Search className="h-[22px] w-[22px]" />
@@ -269,17 +271,6 @@ export default function Header() {
           </div>
         </div>
       </div>
-
-      {/* Search Overlay */}
-      {isSearchOpen && (
-        <div className="absolute top-[80px] left-4 right-4 bg-white dark:bg-[#121212] p-4 rounded-2xl shadow-xl border border-slate-100 dark:border-white/10 z-40 animate-in fade-in slide-in-from-top-2">
-          <div className="flex justify-between items-center mb-3">
-             <span className="font-bold text-slate-700">Search Products</span>
-             <button onClick={() => setIsSearchOpen(false)} className="p-1 rounded-full hover:bg-slate-100"><X className="h-5 w-5"/></button>
-          </div>
-          <SearchBar onSelect={() => setIsSearchOpen(false)} />
-        </div>
-      )}
 
       {/* Mobile Nav Drawer */}
       {isMobileMenuOpen && (
