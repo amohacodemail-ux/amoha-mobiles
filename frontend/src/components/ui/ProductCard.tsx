@@ -151,23 +151,25 @@ function ProductCard({ product }: ProductCardProps) {
         </Link>
 
         {/* Price (Stacked) & Add to Cart */}
-        <div className="mt-auto pt-2 flex flex-col">
-          <span className="text-[16px] sm:text-[17px] font-extrabold text-black dark:text-white">
-            {formatPrice(product.price)}
-          </span>
-          <div className="min-h-[16px] mb-3">
-            {product.originalPrice > product.price && (
-              <span className="text-[11px] font-semibold text-gray-400 line-through">
-                {formatPrice(product.originalPrice)}
-              </span>
-            )}
+        <div className="flex flex-col flex-1 pt-1.5">
+          <div className="flex flex-col">
+            <span className="text-[16px] sm:text-[17px] font-extrabold text-black dark:text-white">
+              {formatPrice(product.price)}
+            </span>
+            <div className="min-h-[16px] mb-2">
+              {product.originalPrice > product.price && (
+                <span className="text-[11px] font-semibold text-gray-400 line-through">
+                  {formatPrice(product.originalPrice)}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart}
             disabled={addPending || !inStock}
-            className="w-full h-[36px] flex items-center justify-center gap-1.5 rounded-full bg-[#4F46E5] text-[12px] font-bold text-white transition-all duration-300 hover:bg-indigo-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:bg-blue-400"
+            className="mt-auto w-full h-[36px] flex items-center justify-center gap-1.5 rounded-full bg-[#4F46E5] text-[12px] font-bold text-white transition-all duration-300 hover:bg-indigo-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:bg-blue-400"
           >
             <HiOutlineShoppingCart className="h-[14px] w-[14px]" />
             {addPending ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}

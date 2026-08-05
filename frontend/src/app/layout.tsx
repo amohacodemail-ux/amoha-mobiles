@@ -272,3 +272,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+// Force Next.js cache invalidation
