@@ -326,88 +326,126 @@ export default function HomePage() {
       </section>
 
       {/* Discover More */}
-      <section className="py-6 sm:py-8 border-t border-gray-50 dark:border-white/5">
+      <section className="py-12 sm:py-20 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-[#0a0a0a]">
         <div className="page-container">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Discover More</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Find the latest releases, offers and exclusives right here</p>
+          <div className="mb-10 sm:mb-12">
+            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Discover More</h2>
+            <p className="mt-3 text-base text-gray-500 dark:text-gray-400">Find the latest releases, offers and exclusives right here</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 md:grid-rows-2 md:gap-4">
+          
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 auto-rows-fr">
+            {/* Featured Card (Left) */}
             {firstDiscover && (
               <Link
                 href={firstDiscover.link || '/products'}
-                className="group relative col-span-2 aspect-[2/1] overflow-hidden rounded-xl border border-gray-100 bg-gray-100 shadow-sm md:col-span-1 md:row-span-2 md:aspect-auto md:min-h-[280px] md:rounded-2xl dark:border-white/[0.06] dark:bg-white/[0.02]"
+                className="group relative flex flex-col justify-end overflow-hidden rounded-[24px] bg-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-white/[0.02] md:col-span-5 lg:col-span-6 md:min-h-[500px] min-h-[350px]"
               >
                 <Image
                   src={getSafeImage(firstDiscover.image, PLACEHOLDER_BANNER)}
                   alt={firstDiscover.title || 'Discover'}
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                  sizes="(max-width: 768px) 100vw, 50vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                <div className="absolute bottom-4 left-4 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
-                  {firstDiscover.title || 'Latest Launches'}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-colors duration-300 group-hover:from-black/90" />
+                <div className="relative z-10 p-6 sm:p-10 w-full">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight">
+                    {firstDiscover.title || 'Latest Launches'}
+                  </h3>
+                  <div className="flex items-center text-sm font-medium text-white/90 group-hover:text-white">
+                    Explore
+                    <svg className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </div>
                 </div>
               </Link>
             )}
 
-            {secondDiscover && (
-              <Link
-                href={secondDiscover.link || '/products'}
-                className="group relative col-span-2 aspect-[2/1] overflow-hidden rounded-xl border border-gray-100 bg-gray-100 shadow-sm md:col-span-2 md:row-span-1 md:aspect-auto md:min-h-[130px] md:rounded-2xl dark:border-white/[0.06] dark:bg-white/[0.02]"
-              >
-                <Image
-                  src={getSafeImage(secondDiscover.image, PLACEHOLDER_BANNER)}
-                  alt={secondDiscover.title || 'Discover'}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 66vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-4 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
-                  {secondDiscover.title || 'Trending Deals'}
-                </div>
-              </Link>
-            )}
+            {/* Right Side Column */}
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:col-span-7 lg:col-span-6">
+              
+              {/* Trending Deals (Top Right) */}
+              {secondDiscover && (
+                <Link
+                  href={secondDiscover.link || '/products'}
+                  className="group relative flex flex-col justify-end col-span-2 overflow-hidden rounded-[24px] bg-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-white/[0.02] min-h-[200px] sm:min-h-[240px]"
+                >
+                  <Image
+                    src={getSafeImage(secondDiscover.image, PLACEHOLDER_BANNER)}
+                    alt={secondDiscover.title || 'Discover'}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    sizes="(max-width: 768px) 100vw, 60vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-colors duration-300 group-hover:from-black/90" />
+                  <div className="relative z-10 p-6 sm:p-8 flex items-end justify-between w-full">
+                    <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                      {secondDiscover.title || 'Trending Deals'}
+                    </h3>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+                      <svg className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              )}
 
-            {thirdDiscover && (
-              <Link
-                href={thirdDiscover.link || '/products'}
-                className="group relative col-span-1 aspect-[4/3] overflow-hidden rounded-xl border border-gray-100 bg-gray-100 shadow-sm md:col-span-1 md:row-span-1 md:aspect-auto md:rounded-2xl dark:border-white/[0.06] dark:bg-white/[0.02]"
-              >
-                <Image
-                  src={getSafeImage(thirdDiscover.image, PLACEHOLDER_PRODUCT)}
-                  alt={thirdDiscover.title || 'Discover'}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md sm:text-[11px]">
-                  {thirdDiscover.title || 'Featured Picks'}
-                </div>
-              </Link>
-            )}
+              {/* Featured Picks (Bottom Left) */}
+              {thirdDiscover && (
+                <Link
+                  href={thirdDiscover.link || '/products'}
+                  className="group relative flex flex-col justify-end col-span-1 overflow-hidden rounded-[24px] bg-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-white/[0.02] min-h-[200px] sm:min-h-[240px]"
+                >
+                  <Image
+                    src={getSafeImage(thirdDiscover.image, PLACEHOLDER_PRODUCT)}
+                    alt={thirdDiscover.title || 'Discover'}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    sizes="(max-width: 768px) 50vw, 30vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-colors duration-300 group-hover:from-black/90" />
+                  <div className="relative z-10 p-5 sm:p-6 flex items-end justify-between w-full">
+                    <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight pr-2">
+                      {thirdDiscover.title || 'Featured Picks'}
+                    </h3>
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+                      <svg className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              )}
 
-            {fourthDiscover && (
-              <Link
-                href={fourthDiscover.link || '/products'}
-                className="group relative col-span-1 aspect-[4/3] overflow-hidden rounded-xl border border-gray-100 bg-gray-100 shadow-sm md:col-span-1 md:row-span-1 md:aspect-auto md:rounded-2xl dark:border-white/[0.06] dark:bg-white/[0.02]"
-              >
-                <Image
-                  src={getSafeImage(fourthDiscover.image, PLACEHOLDER_CATEGORY)}
-                  alt={fourthDiscover.title || 'Discover'}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md sm:text-[11px]">
-                  {fourthDiscover.title || 'Accessories & More'}
-                </div>
-              </Link>
-            )}
+              {/* Accessories & More (Bottom Right) */}
+              {fourthDiscover && (
+                <Link
+                  href={fourthDiscover.link || '/products'}
+                  className="group relative flex flex-col justify-end col-span-1 overflow-hidden rounded-[24px] bg-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-white/[0.02] min-h-[200px] sm:min-h-[240px]"
+                >
+                  <Image
+                    src={getSafeImage(fourthDiscover.image, PLACEHOLDER_CATEGORY)}
+                    alt={fourthDiscover.title || 'Discover'}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    sizes="(max-width: 768px) 50vw, 30vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-colors duration-300 group-hover:from-black/90" />
+                  <div className="relative z-10 p-5 sm:p-6 flex items-end justify-between w-full">
+                    <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight pr-2">
+                      {fourthDiscover.title || 'Accessories & More'}
+                    </h3>
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+                      <svg className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </section>

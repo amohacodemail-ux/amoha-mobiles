@@ -98,7 +98,7 @@ export default function TestimonialSection({ reviews }: TestimonialSectionProps)
                     <div className="mb-5 flex items-center gap-4">
                       <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-md ring-2 ring-slate-100 dark:border-zinc-800 dark:ring-zinc-700 group-hover:ring-blue-100 transition-colors">
                         {review.user?.avatar ? (
-                          <Image src={safeImageSrc(review.user.avatar, PLACEHOLDER_PRODUCT)} alt={review.user.name || 'User'} fill className="object-cover" />
+                          <Image src={safeImageSrc(review.user.avatar, PLACEHOLDER_PRODUCT)} alt={review.user.name || 'User'} fill className="object-cover" sizes="48px" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 text-xl font-bold text-slate-700 dark:from-zinc-700 dark:to-zinc-600 dark:text-zinc-200">
                             {(review.user?.name || 'U').charAt(0).toUpperCase()}

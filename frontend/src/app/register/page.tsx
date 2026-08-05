@@ -107,7 +107,7 @@ export default function RegisterPage() {
                 className="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-gray-300 dark:border-white/20 transition-colors hover:border-primary-400"
               >
                 {avatarPreview ? (
-                  <Image src={avatarPreview} alt="Avatar" fill className="object-cover" />
+                  <Image src={avatarPreview} alt="Avatar" fill className="object-cover" sizes="96px" />
                 ) : (
                   <div className="flex h-full w-full flex-col items-center justify-center text-gray-400 group-hover:text-primary-400">
                     <HiOutlineCamera className="h-6 w-6" />

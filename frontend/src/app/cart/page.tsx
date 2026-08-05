@@ -304,11 +304,11 @@ export default function CartPage() {
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                     placeholder="Coupon code"
-                    className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                    className="flex-1 min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
                   />
                   <button
                     onClick={handleApplyCoupon}
-                    className="rounded-xl bg-gray-900 dark:bg-white px-6 py-3 text-sm font-bold text-white dark:text-gray-900 transition-all hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500"
+                    className="shrink-0 rounded-xl bg-gray-900 dark:bg-white px-5 sm:px-6 py-3 text-sm font-bold text-white dark:text-gray-900 transition-all hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500"
                   >
                     Apply
                   </button>

@@ -53,7 +53,10 @@ export default function RecentlyViewed() {
     <section className="py-8">
       <h2 className="text-xl font-semibold mb-4">Recently Viewed</h2>
       <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
-        {products.filter((p) => p && p._id).map((product) => (
+        {products
+          .filter((p) => p && p._id)
+          .filter((product, index, self) => index === self.findIndex((p) => p._id === product._id))
+          .map((product) => (
           <Link
             key={product._id}
             href={`/product/${product.slug || '#'}`}
