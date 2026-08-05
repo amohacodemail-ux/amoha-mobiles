@@ -40,15 +40,21 @@ export default function ReturnPolicyPage() {
         </div>
 
         <div className="space-y-6 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-          <div className="glass-card p-6 sm:p-8 rounded-xl space-y-7">
+          <div className="space-y-4">
 
             {/* 1 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">1</span>
-                Return Eligibility
-              </h2>
-              <p className="mb-3">You may request a return within <strong className="text-gray-700 dark:text-gray-200">7 calendar days</strong> of the delivery date, subject to the conditions below:</p>
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">1</span>
+                  <h2 className="text-lg">Return Eligibility</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <p className="mb-3">You may request a return within <strong className="text-gray-700 dark:text-gray-200">7 calendar days</strong> of the delivery date, subject to the conditions below:</p>
               <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
                 <table className="w-full text-left text-xs">
                   <thead>
@@ -67,15 +73,22 @@ export default function ReturnPolicyPage() {
                   </tbody>
                 </table>
               </div>
-            </section>
+              </div>
+            </details>
 
             {/* 2 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">2</span>
-                Non-Returnable Items
-              </h2>
-              <p className="mb-2">The following items <strong className="text-gray-700 dark:text-gray-200">cannot be returned</strong> for hygiene, safety, or licensing reasons:</p>
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">2</span>
+                  <h2 className="text-lg">Non-Returnable Items</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <p className="mb-2">The following items <strong className="text-gray-700 dark:text-gray-200">cannot be returned</strong> for hygiene, safety, or licensing reasons:</p>
               <div className="grid sm:grid-cols-2 gap-2">
                 {[
                   "Nano / Micro / SIM card adapters (once opened)",
@@ -93,15 +106,22 @@ export default function ReturnPolicyPage() {
                   </div>
                 ))}
               </div>
-            </section>
+              </div>
+            </details>
 
             {/* 3 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">3</span>
-                Return Conditions
-              </h2>
-              <p className="mb-2">All returned items must meet the following conditions to be accepted:</p>
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">3</span>
+                  <h2 className="text-lg">Return Conditions</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <p className="mb-2">All returned items must meet the following conditions to be accepted:</p>
               <ul className="list-disc list-inside space-y-1.5">
                 <li>Item must be returned in its <strong className="text-gray-700 dark:text-gray-200">original manufacturer packaging</strong> with all accessories, chargers, cables, manuals, and warranty cards intact.</li>
                 <li>The device must not have been <strong className="text-gray-700 dark:text-gray-200">activated, registered, or linked to any account</strong> (e.g., Google, Apple ID, Samsung account).</li>
@@ -109,15 +129,22 @@ export default function ReturnPolicyPage() {
                 <li>A valid <strong className="text-gray-700 dark:text-gray-200">proof of purchase</strong> (order ID or invoice) must be provided with the return.</li>
                 <li>For defective / damage claims, clear <strong className="text-gray-700 dark:text-gray-200">photographs or video evidence</strong> must be uploaded when initiating the return.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
             {/* 4 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">4</span>
-                How to Initiate a Return
-              </h2>
-              <div className="space-y-3">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">4</span>
+                  <h2 className="text-lg">How to Initiate a Return</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <div className="space-y-3">
                 {[
                   ["Step 1 — Log in &amp; Go to My Orders", "Sign in to your AMOHA account. Go to My Orders and select the order containing the item you wish to return."],
                   ["Step 2 — Select Return Reason", "Choose the appropriate return reason and upload supporting photos/video if the item is defective or damaged."],
@@ -134,15 +161,22 @@ export default function ReturnPolicyPage() {
                   </div>
                 ))}
               </div>
-            </section>
+              </div>
+            </details>
 
             {/* 5 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">5</span>
-                Refund Process &amp; Timelines
-              </h2>
-              <p className="mb-3">Refunds are initiated within <strong className="text-gray-700 dark:text-gray-200">1–2 business days</strong> of receiving and inspecting the returned item. The time for the amount to reflect in your account depends on your payment method:</p>
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">5</span>
+                  <h2 className="text-lg">Refund Process &amp; Timelines</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <p className="mb-3">Refunds are initiated within <strong className="text-gray-700 dark:text-gray-200">1–2 business days</strong> of receiving and inspecting the returned item. The time for the amount to reflect in your account depends on your payment method:</p>
               <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
                 <table className="w-full text-left text-xs">
                   <thead>
@@ -173,67 +207,96 @@ export default function ReturnPolicyPage() {
                   <li>Refunds for international transactions are made in INR and are subject to your bank&apos;s forex rates.</li>
                 </ul>
               </div>
-            </section>
+              </div>
+            </details>
 
             {/* 6 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">6</span>
-                Replacement / Exchange Policy
-              </h2>
-              <ul className="list-disc list-inside space-y-1.5">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">6</span>
+                  <h2 className="text-lg">Replacement / Exchange Policy</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <ul className="list-disc list-inside space-y-1.5">
                 <li>We offer a <strong className="text-gray-700 dark:text-gray-200">free replacement</strong> for items that are Dead on Arrival (DOA), have a manufacturing defect, or were damaged in transit.</li>
                 <li>Replacement requests must be raised within <strong className="text-gray-700 dark:text-gray-200">48 hours</strong> of delivery with photo / video evidence.</li>
                 <li>Replacement is subject to stock availability. If the same product is unavailable, a full refund will be issued.</li>
                 <li>Replacements are dispatched within <strong className="text-gray-700 dark:text-gray-200">3–5 business days</strong> after the original item is received and verified at our warehouse.</li>
                 <li>Colour / variant exchanges are accepted within 7 days only if both variants are available and the item is in its original, unopened condition.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
             {/* 7 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">7</span>
-                Order Cancellation
-              </h2>
-              <ul className="list-disc list-inside space-y-1.5">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">7</span>
+                  <h2 className="text-lg">Order Cancellation</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <ul className="list-disc list-inside space-y-1.5">
                 <li>Orders can be cancelled <strong className="text-gray-700 dark:text-gray-200">free of charge</strong> before the order is marked as &quot;Shipped&quot; via My Orders in your account.</li>
                 <li>Once shipped, cancellation is not possible. You may initiate a return after delivery.</li>
                 <li>For prepaid orders, refunds for cancellation are processed within <strong className="text-gray-700 dark:text-gray-200">3–5 business days</strong>.</li>
                 <li>For COD orders cancelled before dispatch, no refund is required as no payment has been collected.</li>
                 <li>We reserve the right to cancel orders due to stock unavailability, pricing errors, or logistics constraints. You will receive a full refund within 5 business days.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
             {/* 8 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">8</span>
-                Repair Service Warranty &amp; Returns
-              </h2>
-              <ul className="list-disc list-inside space-y-1.5">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">8</span>
+                  <h2 className="text-lg">Repair Service Warranty &amp; Returns</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <ul className="list-disc list-inside space-y-1.5">
                 <li>All repair services carry a <strong className="text-gray-700 dark:text-gray-200">30-day warranty</strong> on the specific component repaired.</li>
                 <li>If the same fault recurs within the warranty period, we will re-service at <strong className="text-gray-700 dark:text-gray-200">no additional charge</strong>.</li>
                 <li>The warranty does not cover: new physical damage, water damage, electrical surges, or unrelated software issues post-repair.</li>
                 <li>Warranty is void if the device is tampered with by another service provider after repair.</li>
                 <li>Refund for repair services can only be claimed if we are unable to fix the reported fault. Service fees for unsuccessful repairs are subject to our diagnostic fee policy.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
             {/* 9 */}
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">9</span>
-                International Orders
-              </h2>
-              <ul className="list-disc list-inside space-y-1.5">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">9</span>
+                  <h2 className="text-lg">International Orders</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <ul className="list-disc list-inside space-y-1.5">
                 <li>Returns from international (outside India) orders are accepted only for <strong className="text-gray-700 dark:text-gray-200">defective or wrong items</strong>. Change-of-mind returns are not accepted for international orders.</li>
                 <li>Return shipping costs for international orders are the buyer&apos;s responsibility unless the item was defective / wrong.</li>
                 <li>Customs duties and import fees paid by the buyer are <strong className="text-gray-700 dark:text-gray-200">non-refundable</strong>.</li>
                 <li>Refunds for international orders are credited in INR to the original payment method within <strong className="text-gray-700 dark:text-gray-200">7–14 business days</strong>.</li>
                 <li>Contact <span className="text-primary-500">support@amoha.in</span> before shipping any international return for RMA authorisation.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
           </div>
         </div>

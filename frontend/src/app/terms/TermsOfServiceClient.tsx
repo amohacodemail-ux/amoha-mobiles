@@ -147,29 +147,33 @@ export default function TermsOfServiceClient() {
           <div className="flex-1 min-w-0 w-full space-y-8">
 
             {/* Preamble */}
-            <div className="bg-white dark:bg-surface-50 p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500" />
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400">
+            <div className="bg-gradient-to-br from-white to-gray-50 dark:from-surface-50 dark:to-surface-100 p-8 rounded-3xl border border-gray-200/80 dark:border-white/10 shadow-md relative overflow-hidden group hover:shadow-lg transition-all duration-500">
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 rounded-l-3xl" />
+              <div className="absolute top-0 right-0 p-16 opacity-5 dark:opacity-10 pointer-events-none transition-transform duration-700 group-hover:scale-110">
+                 <HiOutlineShieldCheck className="w-32 h-32" />
+              </div>
+              <div className="flex items-start gap-5 relative z-10">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white dark:bg-surface-50 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-100 dark:border-white/5">
                   <HiOutlineShieldCheck className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    These Terms of Service (&quot;<strong className="text-gray-800 dark:text-gray-200 font-semibold">Terms</strong>&quot;) constitute a legally binding agreement between you (&quot;<strong className="text-gray-800 dark:text-gray-200 font-semibold">User</strong>&quot;, &quot;you&quot;, &quot;your&quot;) and <strong className="text-gray-800 dark:text-gray-200 font-semibold">AMOHA Mobiles</strong> (&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;, &quot;us&quot;) governing your access to and use of our website located at <span className="text-primary-600 dark:text-primary-400 font-medium">www.amoha.in</span> and all related services offered by us. By accessing, browsing, or using our website, you acknowledge that you have read, understood, and agree to be bound by these Terms. If you do not agree, you must immediately discontinue use of our services.
+                  <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                    These Terms of Service (&quot;<strong className="text-gray-900 dark:text-white font-bold">Terms</strong>&quot;) constitute a legally binding agreement between you (&quot;<strong className="text-gray-900 dark:text-white font-bold">User</strong>&quot;, &quot;you&quot;, &quot;your&quot;) and <strong className="text-gray-900 dark:text-white font-bold">AMOHA Mobiles</strong> (&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;, &quot;us&quot;) governing your access to and use of our website located at <span className="text-primary-600 dark:text-primary-400 font-semibold bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded-md">www.amoha.in</span> and all related services offered by us. By accessing, browsing, or using our website, you acknowledge that you have read, understood, and agree to be bound by these Terms.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm space-y-12">
+            <div className="space-y-8">
               
               {/* 1 */}
-              <section id="sec-1" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">1</span>
+              <section id="sec-1" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">1</span>
                   Company Information
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <div className="rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 p-5 grid sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Legal Name</p>
@@ -199,15 +203,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 2 */}
-              <section id="sec-2" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">2</span>
+              <section id="sec-2" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">2</span>
                   Definitions
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-primary-500 before:mt-2 before:mr-2">
                       <span><strong className="text-gray-800 dark:text-gray-200 font-semibold">&quot;Platform&quot;</strong> means the AMOHA Mobiles website, mobile application, and associated digital services.</span>
@@ -228,15 +233,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 3 */}
-              <section id="sec-3" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">3</span>
+              <section id="sec-3" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">3</span>
                   Eligibility
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> You must be at least <strong className="text-gray-800 dark:text-gray-200 font-semibold">18 years of age</strong> or the age of majority in your jurisdiction to use our Platform.</li>
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> Minors (below 18) may use the Platform only under supervision of a parent or legal guardian who agrees to these Terms.</li>
@@ -246,15 +252,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 4 */}
-              <section id="sec-4" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">4</span>
+              <section id="sec-4" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">4</span>
                   Products & Services
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> All products listed are subject to availability. We reserve the right to limit quantities without prior notice.</li>
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> Product images, specifications, and descriptions are provided for informational purposes. Actual products may vary slightly in colour due to display settings.</li>
@@ -265,15 +272,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 5 */}
-              <section id="sec-5" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">5</span>
+              <section id="sec-5" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">5</span>
                   Pricing, Taxes & GST
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> All prices are displayed in <strong className="text-gray-800 dark:text-gray-200 font-semibold">Indian Rupees (INR)</strong> and include applicable Goods and Services Tax (GST) as per the GST Act, 2017, unless stated otherwise.</li>
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> GST breakdown is available on your invoice, which is generated and sent to your registered email after every successful order.</li>
@@ -284,15 +292,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 6 */}
-              <section id="sec-6" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">6</span>
+              <section id="sec-6" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">6</span>
                   Orders & Cancellation
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> Placement of an order constitutes an offer to purchase. The contract is formed only upon our written confirmation (order confirmation email).</li>
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> We reserve the right to cancel any order due to stock unavailability, pricing errors, suspected fraud, or inability to deliver to your location.</li>
@@ -303,15 +312,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 7 */}
-              <section id="sec-7" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">7</span>
+              <section id="sec-7" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">7</span>
                   Payment Methods
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11 space-y-8">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300 space-y-8">
                   <p>We accept a wide range of payment methods through our secure payment gateway partner <strong className="text-gray-800 dark:text-gray-200 font-semibold">Razorpay</strong>, which is compliant with RBI regulations, PCI-DSS Level 1, and ISO 27001 security standards. All transactions are encrypted using 256-bit SSL/TLS technology.</p>
 
                   <div className="space-y-6">
@@ -406,15 +416,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 8 */}
-              <section id="sec-8" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">8</span>
+              <section id="sec-8" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">8</span>
                   User Accounts & Security
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> You are responsible for maintaining the confidentiality of your login credentials and for all activities under your account.</li>
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> You agree to provide accurate, current, and complete information during registration and to keep it updated.</li>
@@ -426,15 +437,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 9 */}
-              <section id="sec-9" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">9</span>
+              <section id="sec-9" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">9</span>
                   Repair Services
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> Repair estimates shared at intake are indicative only. Final charges will be confirmed after diagnosis and communicated before any work begins.</li>
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> You must back up your data before submitting a device for repair. We are <strong className="text-gray-800 dark:text-gray-200 font-semibold">not responsible for any data loss</strong> during servicing.</li>
@@ -446,15 +458,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 10 */}
-              <section id="sec-10" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">10</span>
+              <section id="sec-10" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">10</span>
                   Intellectual Property
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> All content on this Platform — including text, images, logos, trade marks, product descriptions, software, and design — is the exclusive intellectual property of AMOHA Mobiles or its licensors and is protected under the Copyright Act, 1957 and Trade Marks Act, 1999.</li>
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> You may not reproduce, distribute, modify, display, or create derivative works of any content without our prior written consent.</li>
@@ -464,15 +477,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 11 */}
-              <section id="sec-11" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">11</span>
+              <section id="sec-11" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">11</span>
                   Prohibited Activities
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <p className="mb-4">You agree not to engage in any of the following:</p>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-red-500 mt-1">•</span> Using the Platform for any unlawful purpose or in violation of these Terms.</li>
@@ -490,15 +504,16 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 12 */}
-              <section id="sec-12" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">12</span>
+              <section id="sec-12" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">12</span>
                   Disclaimer of Warranties & Limitation of Liability
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <p className="mb-4">The Platform is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis without warranties of any kind, either express or implied, including but not limited to implied warranties of merchantability, fitness for a particular purpose, or non-infringement.</p>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> We do not warrant that the Platform will be uninterrupted, error-free, or free of viruses or harmful components.</li>
@@ -509,28 +524,30 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 13 */}
-              <section id="sec-13" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">13</span>
+              <section id="sec-13" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">13</span>
                   Indemnification
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <p>You agree to indemnify, defend, and hold harmless AMOHA Mobiles, its directors, officers, employees, agents, and partners from and against any claims, liabilities, damages, losses, and expenses (including reasonable legal fees) arising from: (a) your use of the Platform; (b) your violation of these Terms; (c) your violation of any third-party rights; or (d) any content you submit to the Platform.</p>
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 14 */}
-              <section id="sec-14" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">14</span>
+              <section id="sec-14" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">14</span>
                   Dispute Resolution & Arbitration
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <ul className="space-y-4">
                     <li className="p-4 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-surface-100">
                       <strong className="text-gray-900 dark:text-white block mb-1">Step 1 – Informal Resolution:</strong> 
@@ -548,28 +565,30 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 15 */}
-              <section id="sec-15" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">15</span>
+              <section id="sec-15" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">15</span>
                   Governing Law & Jurisdiction
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <p>These Terms are governed by and construed in accordance with the laws of the <strong className="text-gray-800 dark:text-gray-200 font-semibold">Republic of India</strong>, including the Indian Contract Act, 1872, the Consumer Protection Act, 2019, the Information Technology Act, 2000, and the Sale of Goods Act, 1930. Subject to the arbitration clause above, the courts of competent jurisdiction in <strong className="text-gray-800 dark:text-gray-200 font-semibold">Mumbai, Maharashtra</strong> shall have exclusive jurisdiction over any dispute arising out of these Terms.</p>
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 16 */}
-              <section id="sec-16" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">16</span>
+              <section id="sec-16" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">16</span>
                   Your Consumer Rights (India)
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <p className="mb-4">Under the <strong className="text-gray-800 dark:text-gray-200 font-semibold">Consumer Protection Act, 2019</strong>, you have the right to:</p>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-2"><span className="text-primary-500 mt-1">•</span> Be protected against unfair trade practices and misleading advertisements.</li>
@@ -581,28 +600,30 @@ export default function TermsOfServiceClient() {
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 17 */}
-              <section id="sec-17" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">17</span>
+              <section id="sec-17" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">17</span>
                   Amendments to These Terms
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <p>We reserve the right to modify these Terms at any time. Significant changes will be communicated via email or a prominent notice on the Platform at least <strong className="text-gray-800 dark:text-gray-200 font-semibold">15 days</strong> before they take effect. Your continued use of the Platform after changes take effect constitutes acceptance of the updated Terms.</p>
                 </div>
               </section>
 
-              <hr className="border-gray-100 dark:border-white/5" />
+              
 
               {/* 18 */}
-              <section id="sec-18" className="scroll-mt-28">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">18</span>
+              <section id="sec-18" className="scroll-mt-28 group bg-white dark:bg-surface-50 p-6 sm:p-10 rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 dark:hover:shadow-black/60 transition-all duration-500 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-primary-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-l-[2rem]"></div>
+                <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-4 transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 text-primary-600 dark:text-primary-400 text-base font-bold shadow-sm border border-primary-100 dark:border-primary-800/30">18</span>
                   Severability & Waiver
                 </h2>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed ml-11">
+                <div className="text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed ml-14 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-300">
                   <p>If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions shall continue in full force and effect. Our failure to enforce any right or provision of these Terms shall not constitute a waiver of that right or provision.</p>
                 </div>
               </section>
