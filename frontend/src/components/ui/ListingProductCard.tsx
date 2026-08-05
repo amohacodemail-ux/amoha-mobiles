@@ -4,12 +4,13 @@ import { memo, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { HiOutlineHeart, HiHeart, HiOutlineShoppingCart, HiOutlineShieldCheck } from 'react-icons/hi';
+import { HiOutlineHeart, HiHeart, HiStar, HiOutlineShoppingCart, HiOutlineSwitchHorizontal, HiShieldCheck } from 'react-icons/hi';
 import type { Product } from '@/types';
 import { formatPrice, safeImageSrc } from '@/lib/utils';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
+import { useCompareStore } from '@/store/compare.store';
 import toast from 'react-hot-toast';
 
 const PLACEHOLDER_IMG = '/images/no-product.svg';
@@ -25,10 +26,28 @@ function ListingProductCard({ product }: ProductCardProps) {
   const addToCart = useCartStore((s) => s.addToCart);
   const isProductPending = useCartStore((s) => s.isProductPending);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const addToCompare = useCompareStore((s) => s.addToCompare);
+  const removeFromCompare = useCompareStore((s) => s.removeFromCompare);
+  const isInCompare = useCompareStore((s) => s.isInCompare);
   const router = useRouter();
   
   const inStock = typeof (product as any).inStock === 'boolean' ? (product as any).inStock : (product.stock ?? 0) > 0;
+  const ratingValue = Number((product as any).ratings ?? (product as any).averageRating ?? 0);
+  const reviewCount = Number((product as any).numReviews ?? (product as any).reviewCount ?? 0);
+  const compared = isInCompare(product._id);
   const addPending = isProductPending(product._id);
+
+  const handleCompare = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (compared) {
+      removeFromCompare(product._id);
+      toast.success('Removed from compare');
+    } else {
+      addToCompare(product);
+      toast.success('Added to compare');
+    }
+  }, [compared, product, removeFromCompare, addToCompare]);
 
   const handleWishlist = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -71,88 +90,86 @@ function ListingProductCard({ product }: ProductCardProps) {
     : 0;
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-gray-100 bg-white p-2 shadow-sm transition-all duration-300 hover:shadow-lg dark:border-white/10 dark:bg-surface-50 w-full">
+    <div className="group relative flex h-full flex-col rounded-[24px] border border-gray-100 dark:border-white/10 bg-white dark:bg-[#121212] p-2 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:border-white/20">
       
-      {/* Top Image Section */}
-      <Link href={`/product/${product.slug}`} prefetch={true} className="relative block w-full overflow-hidden bg-[#F4F4F4] dark:bg-surface-100 rounded-[16px]">
-        <div className="relative w-full h-[120px] sm:h-[140px] flex items-center justify-center">
-          <Image
-            src={safeImageSrc(product.thumbnail || product.images?.[0], PLACEHOLDER_IMG)}
-            alt={product.name}
-            fill
-            className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
-          />
-        </div>
-
-        {/* Discount Badge */}
-        {discountPercent > 0 && inStock && (
-          <div className="absolute left-2 top-2 z-10 rounded-full bg-[#5264F9] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm sm:left-2.5 sm:top-2.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
+      {/* Image Section Wrapper */}
+      <div className="relative h-[130px] sm:h-[160px] w-full rounded-[20px] bg-gray-50 dark:bg-white/5 flex items-center justify-center overflow-hidden">
+        {/* Top Left Badge */}
+        {discountPercent > 0 && (
+          <div className="absolute left-2.5 top-2.5 z-10 rounded-full bg-[#3b82f6] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
             -{discountPercent}%
           </div>
         )}
 
-        {/* Wishlist Button */}
+        {/* Top Right Wishlist */}
         <button
           onClick={handleWishlist}
-          className={`absolute right-2 top-2 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white shadow-sm transition-all duration-200 hover:scale-110 dark:bg-surface-200 sm:right-2.5 sm:top-2.5 ${
-            wishlisted ? 'text-red-500' : 'text-gray-900 hover:text-red-500 dark:text-gray-100'
+          className={`absolute right-2.5 top-2.5 z-10 flex h-[28px] w-[28px] items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm transition-all duration-200 hover:scale-110 ${
+            wishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
           }`}
+          title="Wishlist"
         >
-          {wishlisted ? <HiHeart className="h-4 w-4" /> : <HiOutlineHeart className="h-4 w-4 stroke-[2]" />}
+          {wishlisted ? <HiHeart className="h-[14px] w-[14px]" /> : <HiOutlineHeart className="h-[14px] w-[14px]" />}
         </button>
-      </Link>
+
+        <Link href={`/product/${product.slug}`} prefetch={true} className="absolute inset-0 flex items-center justify-center">
+          <Image
+            src={safeImageSrc(product.thumbnail || product.images?.[0], PLACEHOLDER_IMG)}
+            alt={product.name}
+            fill
+            className="object-contain p-2 sm:p-3 transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
+          />
+        </Link>
+      </div>
 
       {/* Product Details */}
-      <div className="flex flex-col pt-2 px-1 pb-1">
-        {/* Badges Row */}
-        <div className="mb-2 flex flex-wrap gap-1.5">
+      <div className="flex flex-1 flex-col px-1.5 pt-3 pb-1">
+        
+        {/* Badges (Vertical Stack) */}
+        <div className="flex flex-col items-start gap-1.5 mb-2">
           {/* Warranty Badge */}
-          <span className="flex items-center gap-1 rounded-full bg-[#EEEDFF] px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#6D63FF] dark:bg-purple-900/30 dark:text-purple-300">
-            <HiOutlineShieldCheck className="h-2.5 w-2.5 stroke-[2]" />
+          <div className="flex items-center gap-1 rounded-full border border-purple-100 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 text-[9px] font-bold text-purple-600 dark:text-purple-400">
+            <HiShieldCheck className="h-2.5 w-2.5" />
             Warranty
-          </span>
-          {/* Stock Badge */}
-          {inStock ? (
-            <span className="flex items-center rounded-full bg-[#E5F8ED] px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#00A859] dark:bg-green-900/30 dark:text-green-400">
+          </div>
+          {/* Stock Status */}
+          {inStock && (
+            <div className="rounded-full bg-green-50 dark:bg-green-500/10 px-2 py-0.5 text-[9px] font-bold text-green-600 dark:text-green-400">
               In Stock
-            </span>
-          ) : (
-            <span className="flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-red-600 dark:bg-red-900/30 dark:text-red-400">
-              Out of Stock
-            </span>
+            </div>
           )}
         </div>
 
         {/* Product Name */}
-        <Link href={`/product/${product.slug}`} prefetch={true} className="mb-1">
-          <h3 className="line-clamp-2 text-[12px] sm:text-[13px] font-bold leading-tight text-gray-900 dark:text-white">
+        <Link href={`/product/${product.slug}`} prefetch={true} className="group-hover:text-blue-600 transition-colors">
+          <h3 className="line-clamp-2 text-[12px] sm:text-[13px] font-bold leading-snug text-gray-900 dark:text-white">
             {product.name}
           </h3>
         </Link>
 
-        {/* Price Row (Now naturally sitting under the title) */}
-        <div className="mb-3 flex flex-wrap items-baseline gap-1 sm:gap-1.5">
-          <span className="text-[16px] sm:text-[17px] font-extrabold text-gray-900 dark:text-white">
+        {/* Price (Stacked) & Add to Cart */}
+        <div className="mt-auto pt-2 flex flex-col">
+          <span className="text-[16px] sm:text-[17px] font-extrabold text-black dark:text-white">
             {formatPrice(product.price)}
           </span>
-          {product.originalPrice > product.price && (
-            <span className="text-[10px] sm:text-[11px] font-semibold text-gray-400 line-through">
-              {formatPrice(product.originalPrice)}
-            </span>
-          )}
-        </div>
+          <div className="min-h-[16px] mb-3">
+            {product.originalPrice > product.price && (
+              <span className="text-[11px] font-semibold text-gray-400 line-through">
+                {formatPrice(product.originalPrice)}
+              </span>
+            )}
+          </div>
 
-        {/* Add to Cart Button */}
-        <div className="mt-2">
+          {/* Add to Cart Button */}
           <button
             onClick={handleAddToCart}
             disabled={addPending || !inStock}
-            className="group/btn flex w-full h-[36px] sm:h-[40px] items-center justify-center gap-1.5 rounded-full bg-[#5264F9] text-[11px] sm:text-[12px] font-bold text-white shadow-sm transition-all duration-300 hover:bg-[#4352D4] hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full h-[36px] flex items-center justify-center gap-1.5 rounded-full bg-[#4F46E5] text-[12px] font-bold text-white transition-all duration-300 hover:bg-indigo-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:bg-blue-400"
           >
-            <HiOutlineShoppingCart className="h-4 w-4 stroke-[2]" />
+            <HiOutlineShoppingCart className="h-[14px] w-[14px]" />
             {addPending ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}
           </button>
         </div>
@@ -162,3 +179,4 @@ function ListingProductCard({ product }: ProductCardProps) {
 }
 
 export default memo(ListingProductCard);
+

@@ -87,7 +87,7 @@ class PosController {
             id: newUserId,
             name: customerName || 'Walk-in Customer',
             phone: customerPhone,
-            email: customerEmail || `walkin_${Date.now()}@example.com`,
+            email: customerEmail || null,
             role: 'user',
             password: uuidv4(), // generate a random password for walk-in
             is_verified: true,
@@ -125,7 +125,7 @@ class PosController {
         payment_method: 'cod', payment_status: 'paid', status: 'delivered',
         subtotal, discount, shipping_fee: 0, total: totalAmount,
         is_walk_in: true, walk_in_customer_name: customerName || 'Walk-in Customer',
-        walk_in_customer_phone: customerPhone || '', walk_in_customer_email: customerEmail || '',
+        walk_in_customer_phone: customerPhone || '', walk_in_customer_email: customerEmail || null,
         pos_payment_method: paymentMethod, pos_discount: posDiscount || 0, pos_discount_type: posDiscountType || 'fixed',
         gst_amount: gstAmount, gst_rate: enableGst ? defaultGstRate : 0, invoice_number: invoiceNumber,
         notes: notes || 'POS Order',

@@ -397,7 +397,7 @@ export default function ProductsPage() {
                     className="animate-fade-in"
                     style={{ animationDelay: `${index * 30}ms`, animationFillMode: 'both' }}
                   >
-                    <ProductCard product={product} />
+                    <ListingProductCard product={product} />
                   </div>
                 ))}
               </div>

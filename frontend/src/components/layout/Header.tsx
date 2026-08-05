@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { HiOutlineShoppingBag, HiOutlineHeart, HiOutlineUser, HiOutlineMenu, HiOutlineX, HiOutlineSearch, HiOutlineClipboardList, HiOutlineLogout, HiOutlineCollection, HiOutlineCog, HiOutlineSwitchHorizontal, HiOutlineRefresh, HiOutlineCreditCard } from 'react-icons/hi';
-import { Smartphone, Wrench, Package, FileText, Home, ShoppingBag, ArrowRightLeft } from 'lucide-react';
+import { Smartphone, Wrench, Package, FileText, Home, ShoppingBag, ArrowRightLeft, Phone, Search, Menu, X, User, Heart, LogOut, CreditCard, RefreshCw, Inbox, Settings, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/auth.store';
 import { useCartStore } from '@/store/cart.store';
@@ -19,8 +18,10 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [promoIndex, setPromoIndex] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
+  
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
@@ -32,12 +33,33 @@ export default function Header() {
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
-  const siteName = settings?.siteName || 'AMOHA Mobiles';
-  const tagline = settings?.tagline || 'Explore Plus';
-  const announcement = settings?.isAnnouncementActive && settings?.announcement
-    ? settings.announcement
-    : `Free shipping on orders above Rs.${settings?.freeDeliveryAbove ?? 999}`;
-  const contactPhone = settings?.contactPhone || '+91 98765 43210';
+  const promoMessages = [
+    "Free Delivery on orders above Rs.999",
+    "EMI Available on major cards",
+    "Best Exchange Offers",
+    "Same Day Delivery in Coimbatore"
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPromoIndex((prev) => (prev + 1) % promoMessages.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isMobileMenuOpen]);
+
+  const siteName = settings?.siteName || 'AMOHA MOBILES';
+  const tagline = settings?.tagline || 'Your Trusted Mobile Partner';
+  const contactPhone = settings?.contactPhone || '+91 7339179183';
 
   const handleLogout = () => {
     logout();
@@ -45,252 +67,171 @@ export default function Header() {
     router.replace('/login');
   };
 
-  const navLinks = [
-    { name: 'Products', href: '/products', icon: Smartphone },
-    { name: 'Services', href: '/services', icon: Wrench },
-    { name: 'Orders', href: '/orders', icon: Package },
-    { name: 'Requests', href: '/my-requests', icon: FileText },
-  ];
-
   const desktopNavLinks = [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Service', href: '/services', icon: Wrench },
-    { name: 'Orders', href: '/orders', icon: Package },
-    { name: 'cart', href: '/cart', icon: ShoppingBag },
-    { name: 'Compare', href: '/compare', icon: ArrowRightLeft },
+    { name: 'Products', href: '/products', icon: Inbox },
+    { name: 'Services', href: '/services', icon: Settings },
+    { name: 'Orders', href: '/orders', icon: ClipboardList },
   ];
-  return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/98 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[var(--header-bg)] dark:backdrop-blur-xl">
-      {/* Top bar - Dark mode visibility fix */}
-      <div className="border-b border-slate-100 bg-slate-50/60 dark:border-slate-700/50 dark:bg-slate-900/80">
-        <div className="page-container flex items-center justify-between py-1.5 text-xs text-slate-500 dark:text-white">
-          <span className="truncate text-xs font-medium text-slate-600 dark:!text-white mr-2">{announcement}</span>
-          <span className="hidden flex-shrink-0 text-xs font-medium text-slate-600 dark:!text-white sm:inline">Support: {contactPhone}</span>
-        </div>
-      </div>
 
-      {/* Main header */}
-      <div className="page-container">
-        <div className="flex h-14 items-center gap-4 sm:h-16">
-          {/* Logo */}
-          <Link href="/" prefetch={true} className="flex flex-shrink-0 items-center gap-2">
-            {settings?.logo ? (
-              <Image
-                src={settings.logo}
-                alt={siteName}
-                width={36}
-                height={36}
-                priority
-                className="h-9 w-9 rounded-xl object-contain"
-              />
-            ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-primary font-bold text-white">
-                {siteName.charAt(0)}
-              </div>
-            )}
-            <div className="hidden sm:block">
-              <span className="text-lg font-bold text-slate-900 dark:text-white">{siteName}</span>
-              <p className="text-[11px] -mt-1 font-medium italic text-slate-500 dark:text-white/90">{tagline.split(' ').map((w, i) => i === tagline.split(' ').length - 1 ? <span key={i} className="text-accent-500 dark:text-accent-400">{w}</span> : w + ' ')}</p>
+  return (
+    <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#121212] border-b border-slate-200 dark:border-white/10 shadow-sm transition-all duration-300">
+      <div className="flex items-center justify-between h-[78px] px-4 md:px-8 max-w-[1600px] mx-auto relative z-40">
+        
+        {/* Left: Logo */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="lg:hidden p-2 rounded-full text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          <Link href="/" prefetch={true} className="flex items-center gap-3 group">
+            <div className="flex h-[44px] w-[44px] items-center justify-center rounded-2xl bg-[#0F829D] font-bold text-white shadow-sm text-xl transition-transform group-hover:scale-105">
+              {siteName.charAt(0)}
+            </div>
+            <div className="hidden xl:flex flex-col justify-center">
+              <span className="text-[17px] font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">{siteName.toUpperCase()}</span>
+              <span className="text-[11px] font-medium text-[#0F829D] italic mt-0.5">{tagline}</span>
             </div>
           </Link>
+        </div>
 
-          {/* Desktop search */}
-          <div className="hidden flex-1 max-w-xl lg:block">
+        {/* Middle: Search */}
+        <div className="hidden lg:flex flex-1 justify-center px-8">
+          <div className="w-full max-w-[600px]">
             <SearchBar />
           </div>
+        </div>
 
-          {/* Nav actions */}
-          <div className="ml-auto flex items-center gap-0.5 sm:gap-1">
-            {/* Mobile search toggle */}
-            <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="rounded-lg p-2.5 text-slate-500 transition-all duration-150 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white lg:hidden"
-            >
-              <HiOutlineSearch className="h-5 w-5" />
-            </button>
+        {/* Right: Actions & Icons */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          
+          <div className="hidden lg:flex items-center gap-2 text-slate-600 dark:text-slate-300 mr-2">
+            {desktopNavLinks.map((link) => (
+              <Link key={link.name} href={link.href} className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-colors relative group">
+                <link.icon className="h-[22px] w-[22px]" />
+                <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap pointer-events-none">
+                  {link.name}
+                </span>
+              </Link>
+            ))}
+          </div>
 
-            {/* Products */}
-            <Link
-              href="/products"
-              prefetch={true}
-              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${pathname === '/products' || pathname.startsWith('/products?')
-                  ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'
-                }`}
-            >
-              <HiOutlineCollection className="h-4 w-4" />
-              <span className="hidden md:inline">Products</span>
-            </Link>
-
-            {/* Services */}
-            <Link
-              href="/services"
-              prefetch={true}
-              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${pathname === '/services'
-                  ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'
-                }`}
-            >
-              <HiOutlineCog className="h-4 w-4" />
-              <span className="hidden md:inline">Services</span>
-            </Link>
-
-            {/* Orders */}
-            <Link
-              href="/orders"
-              prefetch={true}
-              className={`hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${pathname === '/orders'
-                  ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'
-                }`}
-            >
-              <HiOutlineClipboardList className="h-4 w-4" />
-              <span className="hidden md:inline">Orders</span>
-            </Link>
-
-            {/* Theme Toggle */}
+          <div className="h-6 w-px bg-slate-200 dark:bg-white/10 hidden lg:block mx-2"></div>
+          
+          <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
 
-            {/* Wishlist - hidden on mobile, bottom nav handles it */}
-            <Link
-              href="/wishlist"
-              prefetch={true}
-              className="relative hidden rounded-lg p-2 text-slate-500 transition-all duration-150 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white sm:block"
+            {/* Mobile Search Toggle */}
+            <button
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="lg:hidden p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
             >
-              <HiOutlineHeart className="h-5 w-5" />
+              <Search className="h-5 w-5" />
+            </button>
+
+            <Link href="/wishlist" className="relative p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
+              <Heart className="h-[22px] w-[22px]" />
               {wishlistCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                <span className="absolute top-0 right-0 h-[18px] min-w-[18px] px-1 flex items-center justify-center rounded-full bg-[#f43f5e] text-[10px] font-bold text-white shadow-sm border-2 border-white dark:border-[#121212]">
                   {wishlistCount}
                 </span>
               )}
             </Link>
 
-            {/* Compare - hidden on mobile */}
-            <Link
-              href="/compare"
-              prefetch={true}
-              className="relative hidden rounded-lg p-2 text-slate-500 transition-all duration-150 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white sm:block"
-            >
-              <HiOutlineSwitchHorizontal className="h-5 w-5" />
+            <Link href="/compare" className="relative p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
+              <ArrowRightLeft className="h-[22px] w-[22px]" />
               {compareCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-white">
+                <span className="absolute top-0 right-0 h-[18px] min-w-[18px] px-1 flex items-center justify-center rounded-full bg-slate-900 dark:bg-white text-[10px] font-bold text-white dark:text-slate-900 shadow-sm border-2 border-white dark:border-[#121212]">
                   {compareCount}
                 </span>
               )}
             </Link>
 
-            {/* Cart */}
-            <Link
-              href="/cart"
-              prefetch={true}
-              className="relative rounded-lg p-2 text-slate-500 transition-all duration-150 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
-            >
-              <HiOutlineShoppingBag className="h-5 w-5" />
+            <Link href="/cart" className="relative p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
+              <ShoppingBag className="h-[22px] w-[22px]" />
               {totalItems > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-800 text-[10px] font-bold text-white dark:bg-accent-500">
+                <span className="absolute top-0 right-0 h-[18px] min-w-[18px] px-1 flex items-center justify-center rounded-full bg-slate-900 dark:bg-white text-[10px] font-bold text-white dark:text-slate-900 shadow-sm border-2 border-white dark:border-[#121212]">
                   {totalItems}
                 </span>
               )}
             </Link>
 
-            {/* Profile Dropdown - hidden on mobile, bottom nav Account handles it */}
-            <div className="relative hidden sm:block">
+            {/* User Profile */}
+            <div className="ml-2">
               {isAuthenticated ? (
-                <>
-                  <button
-                    onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-slate-600 transition-all duration-150 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white sm:px-3"
-                  >
-                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 dark:bg-surface-200 dark:text-slate-300">
-                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </div>
-                    <span className="hidden text-sm font-medium md:inline">{user?.name?.split(' ')[0] || 'Account'}</span>
-                  </button>
-
-                  {isProfileOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)} />
-                      <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-premium dark:border-white/[0.08] dark:bg-surface-100 dark:shadow-[var(--shadow-premium)] dark:backdrop-blur-xl">
-                        <div className="border-b border-gray-100 p-3 dark:border-white/[0.08]">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.name}</p>
-                          <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                        </div>
-                        <div className="py-1">
-                          <Link href="/profile" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-white">
-                            <HiOutlineUser className="h-4 w-4" /> My Profile
-                          </Link>
-                          <Link href="/orders" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-white">
-                            <HiOutlineClipboardList className="h-4 w-4" /> My Orders
-                          </Link>
-                          <Link href="/wishlist" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-white">
-                            <HiOutlineHeart className="h-4 w-4" /> My Wishlist
-                          </Link>
-                          <Link href="/returns" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-white">
-                            <HiOutlineRefresh className="h-4 w-4" /> My Returns
-                          </Link>
-                          <Link href="/wallet" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-white">
-                            <HiOutlineCreditCard className="h-4 w-4" /> My Wallet
-                          </Link>
-                        </div>
-                        <div className="border-t border-gray-100 py-1 dark:border-white/[0.08]">
-                          <button onClick={() => { setIsProfileOpen(false); handleLogout(); }} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-sm text-red-500 transition-all duration-150 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10">
-                            <HiOutlineLogout className="h-4 w-4" /> Sign Out
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </>
+                <Link href="/profile" className="flex items-center justify-center h-[38px] w-[38px] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-[15px] hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </Link>
               ) : (
-                <Link
-                  href="/login"
-                  className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 transition-all duration-150 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white sm:px-3"
-                >
-                  <HiOutlineUser className="h-5 w-5" />
-                  <span className="hidden md:inline">Login</span>
+                <Link href="/login" className="flex items-center justify-center h-[38px] w-[38px] rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                  <User className="h-5 w-5" />
                 </Link>
               )}
             </div>
-
-            {/* Mobile menu toggle */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="rounded-lg p-2 text-slate-500 transition-all duration-150 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white sm:hidden"
-            >
-              {isMobileMenuOpen ? <HiOutlineX className="h-5 w-5" /> : <HiOutlineMenu className="h-5 w-5" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile search */}
-        {isSearchOpen && (
-          <div className="border-t border-gray-100 py-3 dark:border-white/[0.06] lg:hidden animate-slide-down">
-            <SearchBar onSelect={() => setIsSearchOpen(false)} />
-          </div>
-        )}
       </div>
 
-      {/* Mobile menu - simplified since bottom nav handles primary navigation */}
+      {/* Mobile Search Overlay */}
+      {isSearchOpen && (
+        <div className="lg:hidden absolute top-[78px] left-0 right-0 bg-white dark:bg-[#121212] p-4 border-b border-slate-100 dark:border-white/10 z-40 animate-in fade-in slide-in-from-top-2">
+          <SearchBar onSelect={() => setIsSearchOpen(false)} />
+        </div>
+      )}
+
+      {/* Mobile Nav Drawer */}
       {isMobileMenuOpen && (
-        <div className="border-t border-slate-100 bg-white/98 backdrop-blur-xl dark:border-white/[0.05] dark:bg-surface-50 sm:hidden animate-slide-down">
-          <nav className="page-container flex flex-col py-3">
-            <Link href="/services" onClick={() => setIsMobileMenuOpen(false)} className={`rounded-lg px-4 py-3 text-sm font-medium transition-all duration-150 ${pathname === '/services' ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'}`}>
-              Services
-            </Link>
-            <Link href="/compare" onClick={() => setIsMobileMenuOpen(false)} className={`rounded-lg px-4 py-3 text-sm font-medium transition-all duration-150 ${pathname === '/compare' ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'}`}>
-              Compare {compareCount > 0 && `(${compareCount})`}
-            </Link>
-            <Link href="/orders" onClick={() => setIsMobileMenuOpen(false)} className={`rounded-lg px-4 py-3 text-sm font-medium transition-all duration-150 ${pathname === '/orders' ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white'}`}>
-              My Orders
-            </Link>
-            {isAuthenticated && (
-              <div className="mt-2 border-t border-gray-100 pt-2 dark:border-white/[0.08]">
-                <button onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }} className="w-full rounded-lg px-4 py-3 text-left text-sm font-medium text-red-500 transition-all duration-150 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10">
-                  Sign Out
-                </button>
+        <div className="lg:hidden fixed inset-0 z-[100] flex">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="relative w-[280px] h-full bg-white dark:bg-[#0a0a0f] shadow-2xl flex flex-col animate-in slide-in-from-left">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-white/10">
+              <span className="font-extrabold text-lg text-slate-900 dark:text-white">Menu</span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              <nav className="space-y-1">
+                {desktopNavLinks.map((link) => {
+                  const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(`${link.href}?`));
+                  return (
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-bold transition-colors ${isActive ? 'bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400' : 'text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-600 dark:hover:bg-teal-500/10 dark:hover:text-teal-400'}`}
+                    >
+                      <link.icon className="h-[20px] w-[20px]" />
+                      {link.name}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/10">
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-[15px] font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                  >
+                    <LogOut className="h-[20px] w-[20px]" />
+                    Sign Out
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-[#0F829D] text-white font-bold shadow-sm"
+                  >
+                    <User className="h-5 w-5" />
+                    Login / Sign up
+                  </Link>
+                )}
               </div>
-            )}
-          </nav>
+            </div>
+          </div>
         </div>
       )}
     </header>

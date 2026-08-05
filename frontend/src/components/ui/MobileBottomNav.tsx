@@ -54,7 +54,7 @@ export default function MobileBottomNav() {
           const Icon = tab.icon;
           return (
             <Link
-              key={tab.href}
+              key={tab.label}
               href={tab.href}
               prefetch={true}
               className={`relative flex items-center justify-center rounded-full transition-all duration-300 active:scale-95 ${

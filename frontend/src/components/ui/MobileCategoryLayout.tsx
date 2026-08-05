@@ -142,7 +142,7 @@ export default function MobileCategoryLayout() {
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#5264F9] border-t-transparent" />
               </div>
             ) : products.length > 0 ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pb-10">
+              <div className="grid grid-cols-2 gap-3 pb-10">
                 {products.map((product) => (
                   <ListingProductCard key={product._id} product={product} />
                 ))}

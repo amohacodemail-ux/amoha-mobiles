@@ -41,14 +41,14 @@ export default function SearchBar({ onSelect }: SearchBarProps) {
   return (
     <div className="relative w-full">
       <form onSubmit={handleSubmit} className="relative">
-        <HiOutlineSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+        <HiOutlineSearch className="absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-            placeholder="Search products, services..."
-            className="glass-input w-full pl-10 pr-10 py-3 text-sm sm:py-2.5"
+            placeholder="Search mobiles, brands & accessories..."
+            className="w-full pl-11 pr-10 py-3 sm:py-2.5 text-sm bg-slate-50 dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
           />
         {query && (
           <button
