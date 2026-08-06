@@ -20,7 +20,8 @@ import {
   CreditCard as HiOutlineCreditCard,
   Clock as HiOutlineClock,
   CheckCircle2 as HiOutlineCheckCircle,
-  ArrowRightLeft as HiOutlineSwitchHorizontal
+  ArrowRightLeft as HiOutlineSwitchHorizontal,
+  Check as HiCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Product } from '@/types';
@@ -506,18 +507,44 @@ export default function ProductDetailClient() {
                   Color: <span className="font-semibold text-gray-900 dark:text-white">{selectedColor}</span>
                 </p>
                 <div className="mt-2.5 flex flex-wrap gap-2">
-                  {product.colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      className={`flex items-center justify-center min-w-[4rem] rounded-full border-2 px-4 py-2 text-sm font-semibold shadow-sm gloss-effect transition-all duration-200 ${selectedColor === color
-                          ? 'border-blue-500 ring-4 ring-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.5)] bg-white text-blue-600 dark:bg-slate-800 dark:text-blue-400'
-                          : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-100 dark:hover:bg-white/[0.06]'
-                        }`}
-                    >
-                      {color}
-                    </button>
-                  ))}
+                  {product.colors.map((color) => {
+                    const name = color.toLowerCase();
+                    let bg = '#e2e8f0';
+                    let text = '#0f172a';
+                    let isDark = false;
+                    
+                    if (name.includes('black') || name.includes('dark') || name.includes('midnight')) { bg = '#171717'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('navy') || name.includes('cloud navy')) { bg = '#1e3a8a'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('arctic') || name.includes('cyan') || name.includes('light blue')) { bg = '#e0f2fe'; text = '#0369a1'; isDark = false; }
+                    else if (name.includes('blue')) { bg = '#3b82f6'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('lime') || name.includes('mint')) { bg = '#d9f99d'; text = '#3f6212'; isDark = false; }
+                    else if (name.includes('green')) { bg = '#22c55e'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('gold')) { bg = '#fcd34d'; text = '#78350f'; isDark = false; }
+                    else if (name.includes('white') || name.includes('silver')) { bg = '#f8fafc'; text = '#0f172a'; isDark = false; }
+                    else if (name.includes('red')) { bg = '#ef4444'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('purple')) { bg = '#a855f7'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('pink')) { bg = '#fbcfe8'; text = '#831843'; isDark = false; }
+                    else if (name.includes('yellow')) { bg = '#fef08a'; text = '#713f12'; isDark = false; }
+
+                    const isSelected = selectedColor === color;
+
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        style={{
+                          backgroundColor: bg,
+                          color: text,
+                        }}
+                        className="flex h-[42px] min-w-[5rem] items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-opacity duration-300 hover:opacity-80"
+                      >
+                        {isSelected && (
+                          <HiCheck className={`h-4 w-4 flex-shrink-0 ${isDark ? 'text-white' : 'text-gray-900'}`} strokeWidth={3} />
+                        )}
+                        <span>{color}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
