@@ -332,7 +332,7 @@ export default function HomePage() {
             <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Discover More</h2>
             <p className="mt-3 text-base text-gray-500 dark:text-gray-400">Find the latest releases, offers and exclusives right here</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 auto-rows-fr">
             {/* Featured Card (Left) */}
             {firstDiscover && (
@@ -364,7 +364,7 @@ export default function HomePage() {
 
             {/* Right Side Column */}
             <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:col-span-7 lg:col-span-6">
-              
+
               {/* Trending Deals (Top Right) */}
               {secondDiscover && (
                 <Link

@@ -50,9 +50,9 @@ export default function DiscoverMoreSection({ items }: DiscoverMoreSectionProps)
   if (!first) return null;
 
   const renderCard = (
-    item: DiscoverItem, 
-    index: number, 
-    className: string, 
+    item: DiscoverItem,
+    index: number,
+    className: string,
     imgSizes: string,
     delayClass: string
   ) => {
@@ -70,19 +70,19 @@ export default function DiscoverMoreSection({ items }: DiscoverMoreSectionProps)
           sizes={imgSizes}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/0 transition-opacity duration-350 group-hover:from-black/90" />
-        
+
         <div className="absolute inset-x-0 bottom-0 flex flex-col items-start p-6 sm:p-8">
           <div className="mb-3 rounded-full bg-white/20 px-3 py-1 text-[11px] font-semibold tracking-wide text-white backdrop-blur-md border border-white/10 shadow-sm">
             {LABELS[index % LABELS.length]}
           </div>
-          
+
           <h3 className="mb-1 text-2xl font-bold text-white sm:text-3xl drop-shadow-sm">
             {item.title}
           </h3>
           <p className="mb-6 text-sm text-white/80">
             {DESCRIPTIONS[index % DESCRIPTIONS.length]}
           </p>
-          
+
           <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-medium text-white backdrop-blur-md transition-all duration-300 group-hover:bg-white group-hover:text-slate-900 group-hover:shadow-[0_0_15px_rgba(255,255,255,0.4)]">
             {CTAS[index % CTAS.length]}
             <HiArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -93,7 +93,7 @@ export default function DiscoverMoreSection({ items }: DiscoverMoreSectionProps)
   };
 
   return (
-    <section 
+    <section
       ref={sectionRef}
       className={`bg-[#F8FAFC] py-20 sm:py-24 dark:bg-[var(--background)] transition-opacity duration-1000 ${hasScrolledIn ? 'opacity-100' : 'opacity-0'}`}
     >
@@ -110,36 +110,36 @@ export default function DiscoverMoreSection({ items }: DiscoverMoreSectionProps)
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 lg:grid-rows-2 lg:gap-6 lg:h-[600px]">
           {/* Large Feature Card (Left) */}
           {renderCard(
-            first, 
-            0, 
-            "sm:col-span-2 md:col-span-3 lg:col-span-7 lg:row-span-2 min-h-[400px] lg:min-h-full", 
+            first,
+            0,
+            "sm:col-span-2 md:col-span-3 lg:col-span-7 lg:row-span-2 min-h-[400px] lg:min-h-full",
             "(max-width: 1024px) 100vw, 60vw",
             "delay-[200ms]"
           )}
-          
+
           {/* Top Right Card */}
           {renderCard(
-            second, 
-            1, 
-            "sm:col-span-2 md:col-span-3 lg:col-span-5 lg:row-span-1 min-h-[300px] lg:min-h-full", 
+            second,
+            1,
+            "sm:col-span-2 md:col-span-3 lg:col-span-5 lg:row-span-1 min-h-[300px] lg:min-h-full",
             "(max-width: 1024px) 100vw, 40vw",
             "delay-[300ms]"
           )}
-          
+
           {/* Bottom Right Card 1 */}
           {renderCard(
-            third, 
-            2, 
-            "sm:col-span-1 md:col-span-1 lg:col-span-2 lg:row-span-1 lg:col-start-8 min-h-[300px] lg:min-h-full", 
+            third,
+            2,
+            "sm:col-span-1 md:col-span-1 lg:col-span-2 lg:row-span-1 lg:col-start-8 min-h-[300px] lg:min-h-full",
             "(max-width: 1024px) 50vw, 20vw",
             "delay-[400ms]"
           )}
-          
+
           {/* Bottom Right Card 2 */}
           {renderCard(
-            fourth, 
-            3, 
-            "sm:col-span-1 md:col-span-2 lg:col-span-3 lg:row-span-1 lg:col-start-10 min-h-[300px] lg:min-h-full", 
+            fourth,
+            3,
+            "sm:col-span-1 md:col-span-2 lg:col-span-3 lg:row-span-1 lg:col-start-10 min-h-[300px] lg:min-h-full",
             "(max-width: 1024px) 50vw, 25vw",
             "delay-[500ms]"
           )}

@@ -18,6 +18,10 @@ import {
 import { productService } from '@/services/product.service';
 import { Product } from '@/types';
 import { useAuthStore } from '@/store/auth.store';
+import { useWishlistStore } from '@/store/wishlist.store';
+import { useCartStore } from '@/store/cart.store';
+import { useCompareStore } from '@/store/compare.store';
+import { useRouter } from 'next/navigation';
 import { formatPrice } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -90,17 +94,8 @@ export default function RecentlyViewed() {
     if (!isDragging || !carouselRef.current) return;
     e.preventDefault();
     const x = e.pageX - carouselRef.current.offsetLeft;
-    const walk = (x - startX) * 2; // Scroll-fast
+    const walk = (x - startX) * 2;
     carouselRef.current.scrollLeft = scrollLeft - walk;
-  };
-
-  const handleActionClick = (e: React.MouseEvent, action: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toast.success(`${action} feature coming soon!`, {
-      icon: '✨',
-      style: { borderRadius: '10px', background: '#333', color: '#fff' }
-    });
   };
 
   if (!mounted || !isAuthenticated || (!loading && products.length === 0)) return null;
@@ -185,17 +180,114 @@ export default function RecentlyViewed() {
               ))
             ) : (
               validProducts.map((product, idx) => (
+                <RecentlyViewedCard key={product._id} product={product} idx={idx} />
+              ))
+            )}
+          </div>
+
+          <div className="mt-4 flex justify-center sm:hidden">
+            <Link href="/products" className="inline-flex items-center justify-center rounded-full bg-slate-900 px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-gray-100">
+              View All Products
+            </Link>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RecentlyViewedCard({ product, idx }: { product: Product; idx: number }) {
+  const addToWishlist = useWishlistStore((s) => s.addToWishlist);
+  const removeFromWishlist = useWishlistStore((s) => s.removeFromWishlist);
+  const wishlisted = useWishlistStore((s) => s.items.some((item) => item?.product?._id === product._id));
+  const addToCart = useCartStore((s) => s.addToCart);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const addToCompare = useCompareStore((s) => s.addToCompare);
+  const removeFromCompare = useCompareStore((s) => s.removeFromCompare);
+  const isInCompare = useCompareStore((s) => s.isInCompare);
+  const router = useRouter();
+
+  const handleCompare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isInCompare(product._id)) {
+      removeFromCompare(product._id);
+      toast.success('Removed from compare');
+    } else {
+      addToCompare(product);
+      toast.success('Added to compare');
+    }
+  };
+
+  const handleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      router.push('/login?redirect=' + encodeURIComponent('/product/' + product.slug));
+      return;
+    }
+    try {
+      if (wishlisted) {
+        toast.success('Removed from wishlist');
+        await removeFromWishlist(product._id);
+      } else {
+        toast.success('Added to wishlist');
+        await addToWishlist(product._id, product);
+      }
+    } catch {
+      toast.error('Failed to update wishlist');
+    }
+  };
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      router.push('/login?redirect=' + encodeURIComponent('/product/' + product.slug));
+      return;
+    }
+    try {
+      await addToCart(product._id);
+      toast.success('Added to cart');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to add to cart');
+    }
+  };
+
+  const handleQuickView = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toast.success('Quick view coming soon!');
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (navigator.share) {
+      navigator.share({
+        title: product.name,
+        url: `${window.location.origin}/product/${product.slug}`
+      });
+    } else {
+      navigator.clipboard.writeText(`${window.location.origin}/product/${product.slug}`);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
+  return (
                 <motion.div
-                  key={product._id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-50px" }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
                   className="group relative h-[420px] w-[280px] shrink-0 sm:snap-start"
                 >
-                  <Link href={`/product/${product.slug || '#'}`} className="block h-full w-full outline-none">
+                  <div className="block h-full w-full outline-none">
                     <div className="relative h-full w-full overflow-hidden rounded-[28px] border border-[#EEF2F7] bg-white/90 backdrop-blur-md transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:border-white/10 dark:bg-[#1a1a24]/90 dark:group-hover:shadow-[0_20px_40px_-15px_rgba(255,255,255,0.05)]">
                       
+                      {/* Full card link overlay */}
+                      <Link href={`/product/${product.slug || '#'}`} className="absolute inset-0 z-10 outline-none" />
                       {/* Top Badges (Left) */}
                       {(product.discount ?? 0) > 0 && (
                         <div className="absolute left-3 top-3 z-20">
@@ -206,17 +298,17 @@ export default function RecentlyViewed() {
                       )}
 
                       {/* Top Actions (Right) - Reveal on Hover */}
-                      <div className="absolute right-3 top-3 z-20 flex flex-col gap-2 translate-x-10 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
-                        <button onClick={(e) => handleActionClick(e, 'Wishlist')} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-red-500 dark:bg-black/50 dark:text-gray-300 dark:hover:bg-black/80 dark:hover:text-red-400">
-                          <Heart className="h-4 w-4" />
+                      <div className="absolute right-3 top-3 z-30 flex flex-col gap-2 translate-x-10 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+                        <button onClick={handleWishlist} className={`flex h-8 w-8 items-center justify-center rounded-full shadow-sm backdrop-blur-md transition-colors ${wishlisted ? 'bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-500/20' : 'bg-white/80 text-gray-600 hover:bg-white hover:text-red-500 dark:bg-black/50 dark:text-gray-300 dark:hover:bg-black/80 dark:hover:text-red-400'}`}>
+                          <Heart className={`h-4 w-4 ${wishlisted ? 'fill-current' : ''}`} />
                         </button>
-                        <button onClick={(e) => handleActionClick(e, 'Compare')} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-blue-500 dark:bg-black/50 dark:text-gray-300 dark:hover:bg-black/80 dark:hover:text-blue-400">
+                        <button onClick={handleCompare} className={`flex h-8 w-8 items-center justify-center rounded-full shadow-sm backdrop-blur-md transition-colors ${isInCompare(product._id) ? 'bg-blue-50 text-blue-500 hover:bg-blue-100 dark:bg-blue-500/20' : 'bg-white/80 text-gray-600 hover:bg-white hover:text-blue-500 dark:bg-black/50 dark:text-gray-300 dark:hover:bg-black/80 dark:hover:text-blue-400'}`}>
                           <ArrowRightLeft className="h-4 w-4" />
                         </button>
-                        <button onClick={(e) => handleActionClick(e, 'Quick View')} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-purple-500 dark:bg-black/50 dark:text-gray-300 dark:hover:bg-black/80 dark:hover:text-purple-400">
+                        <button onClick={handleQuickView} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-purple-500 dark:bg-black/50 dark:text-gray-300 dark:hover:bg-black/80 dark:hover:text-purple-400">
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button onClick={(e) => handleActionClick(e, 'Share')} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-green-500 dark:bg-black/50 dark:text-gray-300 dark:hover:bg-black/80 dark:hover:text-green-400">
+                        <button onClick={handleShare} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-gray-600 shadow-sm backdrop-blur-md transition-colors hover:bg-white hover:text-green-500 dark:bg-black/50 dark:text-gray-300 dark:hover:bg-black/80 dark:hover:text-green-400">
                           <Share2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -266,34 +358,21 @@ export default function RecentlyViewed() {
                         </div>
 
                         {/* Bottom Actions - Slide up on hover */}
-                        <div className="absolute bottom-5 left-5 right-5 flex flex-col gap-2 translate-y-[120px] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 bg-white dark:bg-[#1a1a24] pt-2">
-                          <button onClick={(e) => handleActionClick(e, 'Add to Cart')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:from-blue-700 hover:to-indigo-700">
+                        <div className="absolute bottom-5 left-5 right-5 z-30 flex flex-col gap-2 translate-y-[120px] opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 bg-white dark:bg-[#1a1a24] pt-2">
+                          <button onClick={handleAddToCart} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:from-blue-700 hover:to-indigo-700">
                             <ShoppingCart className="h-4 w-4" />
                             Add to Cart
                           </button>
-                          <button onClick={(e) => handleActionClick(e, 'Buy Now')} className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white">
+                          <Link href={`/checkout?product=${product._id}`} className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white">
                             <CreditCard className="h-4 w-4" />
                             Buy Now
-                          </button>
+                          </Link>
                         </div>
                         
                       </div>
 
                     </div>
-                  </Link>
+                  </div>
                 </motion.div>
-              ))
-            )}
-          </div>
-
-          <div className="mt-4 flex justify-center sm:hidden">
-            <Link href="/products" className="inline-flex items-center justify-center rounded-full bg-slate-900 px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-gray-100">
-              View All Products
-            </Link>
-          </div>
-
-        </div>
-      </div>
-    </section>
   );
 }
