@@ -164,7 +164,7 @@ export function getAccessibleModules(role: UserRole): string[] {
     purchase: [
       'dashboard', 'products', 'categories', 'brands', 'inventory',
       'suppliers', 'supplier_entries', 'rfq', 'purchase_requests',
-      'reports', 'notifications', 'policies', 'barcode_pos'
+      'reports', 'notifications', 'policies'
     ],
     marketing: [
       'dashboard', 'coupons', 'banners', 'reviews', 'contact_messages',
