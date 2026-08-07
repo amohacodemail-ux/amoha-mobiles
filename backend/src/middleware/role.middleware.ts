@@ -67,18 +67,26 @@ export const isAuthenticated = (req: AuthenticatedRequest, _res: Response, next:
 
 // ---- SALES MODULE ----
 /** Sales operations: orders, billing, POS, returns, wallets */
-export const canAccessSales = authorize('admin', 'sales');
+export const canAccessSales = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const userRole = normalizeRole(req.user?.role as UserRole);
+  if (userRole === 'logistics' && req.method === 'GET') return next();
+  return authorize('admin', 'sales')(req, res, next);
+};
 
 // ---- PURCHASE MODULE ----
 /** Purchase operations: products, inventory, suppliers, RFQ, purchase requests */
-export const canAccessPurchase = authorize('admin', 'purchase', 'purchase_inventory');
+export const canAccessPurchase = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const userRole = normalizeRole(req.user?.role as UserRole);
+  if (userRole === 'logistics' && req.method === 'GET') return next();
+  return authorize('admin', 'purchase', 'purchase_inventory')(req, res, next);
+};
 
 // ---- MARKETING MODULE ----
 /** Marketing operations: coupons, banners, reviews, CRM, campaigns */
 export const canAccessMarketing = authorize('admin', 'marketing', 'digital_marketing');
 
-/** View Customers - accessible by admin, marketing, sales */
-export const canViewCustomers = authorize('admin', 'marketing', 'digital_marketing', 'sales');
+/** View Customers - accessible by admin, marketing, sales, logistics */
+export const canViewCustomers = authorize('admin', 'marketing', 'digital_marketing', 'sales', 'logistics');
 
 // ---- LOGISTICS MODULE ----
 /** Logistics operations: order tracking, shipping */
@@ -110,8 +118,8 @@ export const canAccessNotifications = authorize('admin', 'sales', 'purchase', 'p
 /** Settings/Profile - accessible by all authenticated users */
 export const canAccessSettings = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
 
-/** View Catalog (Products, Categories, Brands) - accessible by admin, purchase, sales, marketing */
-export const canViewCatalog = authorize('admin', 'purchase', 'purchase_inventory', 'sales', 'marketing', 'digital_marketing');
+/** View Catalog (Products, Categories, Brands) - accessible by admin, purchase, sales, marketing, logistics */
+export const canViewCatalog = authorize('admin', 'purchase', 'purchase_inventory', 'sales', 'marketing', 'digital_marketing', 'logistics');
 
 // ==================== LEGACY COMPATIBILITY ====================
 
@@ -171,7 +179,7 @@ export function getAccessibleModules(role: UserRole): string[] {
       'product_views', 'abandoned_carts', 'crm', 'notifications', 'policies'
     ],
     logistics: [
-      'dashboard', 'orders', 'notifications', 'policies'
+      'dashboard', 'orders', 'returns', 'inventory', 'products', 'crm', 'reports', 'notifications', 'policies'
     ],
     supplier: [
       'dashboard', 'rfq', 'notifications'
