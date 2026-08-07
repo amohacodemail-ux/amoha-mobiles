@@ -27,6 +27,17 @@ const STATUS_OPTIONS: { label: string; value: string }[] = [
   { label: 'Returned', value: 'returned' },
 ];
 
+const formatPaymentMethod = (method: string) => {
+  if (!method) return '-';
+  const m = method.toLowerCase();
+  if (m === 'cod') return 'Cash on Delivery';
+  if (m === 'razorpay') return 'Razorpay';
+  if (m === 'upi') return 'UPI';
+  if (m === 'pos_cash' || m === 'cash') return 'Cash';
+  if (m === 'pos_card' || m === 'card') return 'Card';
+  return method;
+};
+
 const SOURCE_OPTIONS: { label: string; value: string }[] = [
   { label: 'All Sources', value: 'all' },
   { label: 'Online', value: 'online' },
@@ -106,11 +117,14 @@ export default function OrdersPage() {
     },
     {
       key: 'paymentMethod', header: 'Payment Method',
-      render: (o) => (
-        <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-          {o.paymentMethod || '-'}
-        </span>
-      ),
+      render: (o) => {
+        const pm = (o as any).posPaymentMethod || o.paymentMethod;
+        return (
+          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+            {pm ? formatPaymentMethod(pm) : '-'}
+          </span>
+        );
+      },
     },
     { key: 'createdAt', header: 'Date', render: (o) => <span className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</span> },
     {
