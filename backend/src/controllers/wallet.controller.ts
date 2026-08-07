@@ -29,7 +29,7 @@ class WalletController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
-      const result = await walletService.getAllWallets(page, limit);
+      const result = await walletService.getAllWallets({ ...req.query, page, limit });
       sendPaginated(res, result.wallets, result.pagination, 'Wallets fetched');
     } catch (error) {
       next(error);

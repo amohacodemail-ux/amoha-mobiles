@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import inventoryLedger from './inventory-ledger.service';
@@ -208,7 +208,13 @@ class OrderService {
     if (query.source === 'pos') qb = qb.eq('is_walk_in', true);
     else if (query.source === 'online') qb = qb.eq('is_walk_in', false);
     if (query.search) {
-      qb = qb.or(`order_number.ilike.%${query.search}%`);
+      const { data: searchUsers } = await supabase.from('users').select('id').or(`name.ilike.%${query.search}%,email.ilike.%${query.search}%,phone.ilike.%${query.search}%`);
+      const searchUserIds = (searchUsers || []).map((u: any) => u.id);
+      let orStr = `order_number.ilike.%${query.search}%,walk_in_customer_name.ilike.%${query.search}%,walk_in_customer_phone.ilike.%${query.search}%`;
+      if (searchUserIds.length > 0) {
+        orStr += `,user_id.in.(${searchUserIds.join(',')})`;
+      }
+      qb = qb.or(orStr);
     }
     if (query.startDate) qb = qb.gte('created_at', query.startDate);
     if (query.endDate) qb = qb.lte('created_at', query.endDate);
