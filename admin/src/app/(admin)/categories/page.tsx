@@ -110,13 +110,15 @@ export default function CategoriesPage() {
     },
   ];
 
+  const visibleColumns = (canEdit || canDelete) ? columns : columns.filter(c => c.key !== 'actions');
+
   return (
     <div>
       <PageHeader title="Categories" description={`${categories.length} total categories`}>
         {canCreate && <Button onClick={openAdd}><Plus className="h-4 w-4" />Add Category</Button>}
       </PageHeader>
 
-      <DataTable columns={columns} data={filtered} loading={loading} searchValue={search} onSearchChange={setSearch} searchPlaceholder="Search categories..." rowKey={(c) => c._id} />
+      <DataTable columns={visibleColumns} data={filtered} loading={loading} searchValue={search} onSearchChange={setSearch} searchPlaceholder="Search categories..." rowKey={(c) => c._id} />
 
       {/* Add/Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

@@ -164,7 +164,7 @@ export default function CrmPage() {
   const [segments, setSegments] = useState<SegmentSummary[]>([]);
   const [showModal, setShowModal] = useState(false);
 
-  const { canCreate } = useModulePermissions(MODULES.CRM);
+  const { canCreate, canEdit, canDelete } = useModulePermissions(MODULES.CRM);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -210,15 +210,15 @@ export default function CrmPage() {
       key: 'name',
       header: 'Customer',
       render: (c) => (
-        <div className="flex items-center gap-3">
+        <Link href={`/crm/${c._id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
             {getInitials(c.name)}
           </div>
           <div>
-            <p className="font-medium text-foreground text-sm">{c.name}</p>
+            <p className="font-medium text-foreground text-sm hover:underline">{c.name}</p>
             <p className="text-xs text-muted-foreground">{c.email}</p>
           </div>
-        </div>
+        </Link>
       ),
     },
     {
@@ -270,6 +270,8 @@ export default function CrmPage() {
       ),
     },
   ];
+
+  const visibleColumns = (canCreate || canEdit || canDelete) ? columns : columns.filter(c => c.key !== 'actions');
 
   return (
     <div>
@@ -327,7 +329,7 @@ export default function CrmPage() {
       </div>
 
       <DataTable
-        columns={columns}
+        columns={visibleColumns}
         data={customers}
         loading={loading}
         searchValue={search}

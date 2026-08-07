@@ -146,6 +146,8 @@ export default function ProductsPage() {
     },
   ];
 
+  const visibleColumns = (canEdit || canDelete) ? columns : columns.filter(c => c.key !== 'actions');
+
   return (
     <div>
       <PageHeader title="Products" description={`${totalItems} total products`}>
@@ -165,7 +167,7 @@ export default function ProductsPage() {
       </PageHeader>
 
       <DataTable
-        columns={columns}
+        columns={visibleColumns}
         data={products}
         loading={loading}
         searchValue={search}
