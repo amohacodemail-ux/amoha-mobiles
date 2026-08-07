@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, X, Plus, Loader2, RefreshCw, Lock, Unlock } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
+import { useModulePermissions, MODULES } from '@/lib/permissions';
 import { MultiImageUploader } from '@/components/shared/image-uploader';
 import { BarcodeVisual } from '@/components/shared/barcode-visual';
 import { Button } from '@/components/ui/button';
@@ -81,7 +82,8 @@ export function ProductForm({ productId }: Props) {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([{ key: '', value: '' }]);
-  const [editMode, setEditMode] = useState(true);
+  const { canEdit: hasEditPermission } = useModulePermissions(MODULES.PRODUCTS);
+  const [editMode, setEditMode] = useState(hasEditPermission);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(!!productId);
   const [imagesUploading, setImagesUploading] = useState(false);
@@ -275,9 +277,9 @@ export function ProductForm({ productId }: Props) {
 
   return (
     <div>
-      <PageHeader title={productId ? 'Edit Product' : 'Add Product'} description={productId ? 'Update product details' : 'Create a new product listing'}>
+      <PageHeader title={productId ? (hasEditPermission ? 'Edit Product' : 'Product Details') : 'Add Product'} description={productId ? (hasEditPermission ? 'Update product details' : 'View product information') : 'Create a new product listing'}>
         <div className="flex items-center gap-2">
-          {productId && (
+          {productId && hasEditPermission && (
             <Button
               type="button"
               variant="outline"
@@ -541,9 +543,11 @@ export function ProductForm({ productId }: Props) {
               </CardContent>
             </Card>
 
-            <Button type="submit" className="w-full" size="lg" loading={submitting || imagesUploading} disabled={submitting || imagesUploading}>
-              {imagesUploading ? 'Uploading Images...' : productId ? 'Update Product' : 'Create Product'}
-            </Button>
+            {hasEditPermission && (
+              <Button type="submit" className="w-full" size="lg" loading={submitting || imagesUploading} disabled={submitting || imagesUploading}>
+                {imagesUploading ? 'Uploading Images...' : productId ? 'Update Product' : 'Create Product'}
+              </Button>
+            )}
           </div>
         </div>
       </form>
