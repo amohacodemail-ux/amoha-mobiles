@@ -100,7 +100,7 @@ class ReturnService {
       const searchUserIds = (searchUsers || []).map((u: any) => u.id);
       let orStr = `return_number.ilike.%${query.search}%`;
       if (searchUserIds.length > 0) {
-        orStr += `,user_id.in.(${searchUserIds.join(',')})`;
+        orStr += `,user_id.in.("${searchUserIds.join('","')}")`;
       }
       qb = qb.or(orStr);
     }

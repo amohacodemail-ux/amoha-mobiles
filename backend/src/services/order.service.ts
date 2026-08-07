@@ -212,7 +212,7 @@ class OrderService {
       const searchUserIds = (searchUsers || []).map((u: any) => u.id);
       let orStr = `order_number.ilike.%${query.search}%,walk_in_customer_name.ilike.%${query.search}%,walk_in_customer_phone.ilike.%${query.search}%`;
       if (searchUserIds.length > 0) {
-        orStr += `,user_id.in.(${searchUserIds.join(',')})`;
+        orStr += `,user_id.in.("${searchUserIds.join('","')}")`;
       }
       qb = qb.or(orStr);
     }
