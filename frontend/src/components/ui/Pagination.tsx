@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { HiChevronLeft, HiChevronRight } from 'react-icons/hi';
 
@@ -36,7 +36,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="flex h-9 items-center gap-1 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] px-2 text-xs font-medium text-gray-500 dark:text-gray-400 transition-all hover:border-gray-300 dark:hover:border-white/20 hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-30 sm:h-10 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:text-sm"
+        className="flex h-9 items-center gap-1 rounded-full border border-border-light bg-white px-3 text-sm font-medium text-gray-500 transition-all hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:px-4"
       >
         <HiChevronLeft className="h-4 w-4" />
         <span className="hidden sm:inline">Prev</span>
@@ -51,10 +51,10 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
           <button
             key={page}
             onClick={() => onPageChange(page)}
-            className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-all sm:h-10 sm:w-10 sm:rounded-xl sm:text-sm ${
+            className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-all sm:h-10 sm:w-10 ${
               currentPage === page
-                ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/25'
-                : 'border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white'
+                ? 'bg-gradient-primary text-white shadow-md shadow-primary-500/30'
+                : 'border border-border-light bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
             {page}
@@ -65,7 +65,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="flex h-9 items-center gap-1 rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.04] px-2 text-xs font-medium text-gray-500 dark:text-gray-400 transition-all hover:border-gray-300 dark:hover:border-white/20 hover:bg-white/[0.08] hover:text-gray-900 dark:hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-gray-200 dark:disabled:hover:border-white/10 disabled:hover:bg-gray-50 dark:disabled:hover:bg-white/[0.04] disabled:hover:text-gray-500 sm:h-10 sm:gap-1.5 sm:rounded-xl sm:px-3 sm:text-sm"
+        className="flex h-9 items-center gap-1 rounded-full border border-border-light bg-white px-3 text-sm font-medium text-gray-500 transition-all hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:px-4"
       >
         <span className="hidden sm:inline">Next</span>
         <HiChevronRight className="h-4 w-4" />

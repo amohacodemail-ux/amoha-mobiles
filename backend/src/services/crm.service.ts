@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
 import { NotFoundError, ConflictError, BadRequestError } from '../errors/app-error';
 import logger from '../utils/logger.util';
@@ -269,8 +269,8 @@ class CrmService {
     const insertData: any = {
       name,
       phone,
-      // Use phone-based placeholder when no email — empty string '' collides with existing users
-      email: data.email?.trim() ? data.email.trim().toLowerCase() : `${phone}@noemail.local`,
+      // Allow null email when not provided (requires DB migration)
+      email: data.email?.trim() ? data.email.trim().toLowerCase() : null,
       role: 'user',
       is_verified: true,
       password: tempPassword,

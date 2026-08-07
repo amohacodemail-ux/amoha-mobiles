@@ -20,10 +20,10 @@ export default function MobileBottomNav() {
       match: (p: string) => p === '/',
     },
     {
-      href: '/products',
+      href: '/categories',
       label: 'Categories',
       icon: LayoutGrid,
-      match: (p: string) => p === '/products' || p.startsWith('/products?') || p === '/search' || p === '/categories',
+      match: (p: string) => p === '/categories' || p === '/products' || p.startsWith('/products?') || p === '/search',
     },
     {
       href: isAuthenticated ? '/orders' : '/login',

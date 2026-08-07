@@ -35,8 +35,9 @@ export const productService = {
         }
       });
     }
+    const queryString = params.toString();
     const { data } = await apiClient.get<ApiResponse<ProductsResponse>>(
-      `/products?${params.toString()}`,
+      queryString ? `/products?${queryString}` : '/products',
     );
     return normalizeProductsResponse(data?.data);
   },
@@ -78,8 +79,9 @@ export const productService = {
         }
       });
     }
+    const queryString = params.toString();
     const { data } = await apiClient.get<ApiResponse<ProductsResponse>>(
-      `/products/category/${categorySlug}?${params.toString()}`,
+      queryString ? `/products/category/${categorySlug}?${queryString}` : `/products/category/${categorySlug}`,
     );
     return normalizeProductsResponse(data?.data);
   },

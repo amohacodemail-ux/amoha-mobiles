@@ -90,10 +90,10 @@ function ListingProductCard({ product }: ProductCardProps) {
     : 0;
 
   return (
-    <div className="group relative flex h-full flex-col rounded-[24px] border border-gray-100 dark:border-white/10 bg-white dark:bg-[#121212] p-2 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:border-white/20">
+    <div className="group relative flex h-full flex-col rounded-[24px] border border-border-light bg-white p-2 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-premium-hover">
       
       {/* Image Section Wrapper */}
-      <div className="relative h-[130px] sm:h-[160px] w-full rounded-[20px] bg-gray-50 dark:bg-white/5 flex items-center justify-center overflow-hidden">
+      <div className="relative h-[130px] sm:h-[160px] w-full rounded-[20px] bg-surface-50 flex items-center justify-center overflow-hidden">
         {/* Top Left Badge */}
         {discountPercent > 0 && (
           <div className="absolute left-2.5 top-2.5 z-10 rounded-full bg-[#3b82f6] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
@@ -104,12 +104,12 @@ function ListingProductCard({ product }: ProductCardProps) {
         {/* Top Right Wishlist */}
         <button
           onClick={handleWishlist}
-          className={`absolute right-2.5 top-2.5 z-10 flex h-[28px] w-[28px] items-center justify-center rounded-full bg-white dark:bg-gray-800 shadow-sm transition-all duration-200 hover:scale-110 ${
+          className={`absolute right-2.5 top-2.5 z-10 flex h-[32px] w-[32px] items-center justify-center rounded-full bg-white shadow-card transition-all duration-200 hover:scale-110 hover:shadow-md ${
             wishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
           }`}
           title="Wishlist"
         >
-          {wishlisted ? <HiHeart className="h-[14px] w-[14px]" /> : <HiOutlineHeart className="h-[14px] w-[14px]" />}
+          {wishlisted ? <HiHeart className="h-[16px] w-[16px]" /> : <HiOutlineHeart className="h-[16px] w-[16px]" />}
         </button>
 
         <Link href={`/product/${product.slug}`} prefetch={true} className="absolute inset-0 flex items-center justify-center">
@@ -131,28 +131,28 @@ function ListingProductCard({ product }: ProductCardProps) {
         {/* Badges (Vertical Stack) */}
         <div className="flex flex-col items-start gap-1.5 mb-2">
           {/* Warranty Badge */}
-          <div className="flex items-center gap-1 rounded-full border border-purple-100 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 text-[9px] font-bold text-purple-600 dark:text-purple-400">
+          <div className="flex items-center gap-1 rounded-full border border-purple-100 bg-purple-50 px-2 py-0.5 text-[9px] font-bold text-purple-600">
             <HiShieldCheck className="h-2.5 w-2.5" />
             Warranty
           </div>
           {/* Stock Status */}
           {inStock && (
-            <div className="rounded-full bg-green-50 dark:bg-green-500/10 px-2 py-0.5 text-[9px] font-bold text-green-600 dark:text-green-400">
+            <div className="rounded-full bg-success-50 px-2 py-0.5 text-[9px] font-bold text-success-600">
               In Stock
             </div>
           )}
         </div>
 
         {/* Product Name */}
-        <Link href={`/product/${product.slug}`} prefetch={true} className="group-hover:text-blue-600 transition-colors">
-          <h3 className="line-clamp-2 text-[12px] sm:text-[13px] font-bold leading-snug text-gray-900 dark:text-white">
+        <Link href={`/product/${product.slug}`} prefetch={true} className="group-hover:text-primary-600 transition-colors">
+          <h3 className="line-clamp-2 text-[12px] sm:text-[13px] font-bold leading-snug text-gray-900">
             {product.name}
           </h3>
         </Link>
 
         {/* Price (Stacked) & Add to Cart */}
         <div className="mt-auto pt-2 flex flex-col">
-          <span className="text-[16px] sm:text-[17px] font-extrabold text-black dark:text-white">
+          <span className="text-[16px] sm:text-[17px] font-extrabold text-gray-900">
             {formatPrice(product.price)}
           </span>
           <div className="min-h-[16px] mb-3">
@@ -167,7 +167,7 @@ function ListingProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleAddToCart}
             disabled={addPending || !inStock}
-            className="w-full h-[36px] flex items-center justify-center gap-1.5 rounded-full bg-[#4F46E5] text-[12px] font-bold text-white transition-all duration-300 hover:bg-indigo-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:bg-blue-400"
+            className="w-full h-[36px] flex items-center justify-center gap-1.5 rounded-full bg-primary-600 text-[12px] font-bold text-white transition-all duration-300 hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-600/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 disabled:bg-primary-400"
           >
             <HiOutlineShoppingCart className="h-[14px] w-[14px]" />
             {addPending ? 'Adding...' : inStock ? 'Add to Cart' : 'Out of Stock'}

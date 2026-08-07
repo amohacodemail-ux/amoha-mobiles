@@ -1,44 +1,38 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { HiChevronLeft, HiOutlineCollection } from 'react-icons/hi';
-import type { Category, Product, ProductFilters } from '@/types';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
+
+import type { Category, Product } from '@/types';
 import { categoryService } from '@/services/category.service';
+import { brandService, type Brand } from '@/services/brand.service';
 import { productService } from '@/services/product.service';
+
 import ListingProductCard from '@/components/ui/ListingProductCard';
 import { safeImageSrc } from '@/lib/utils';
+import { ProductGridSkeleton } from '@/components/ui/Skeletons';
+
+type ViewState = 'categories' | 'brands' | 'products';
 
 const PLACEHOLDER_CATEGORY = '/images/no-category.svg';
-
-interface SubcategoryDef {
-  id: string;
-  name: string;
-  image?: string;
-  filters: ProductFilters;
-}
-
-// Map generic subcategories. We derive these on the frontend to avoid backend changes.
-const getSubcategoriesForCategory = (categorySlug: string): SubcategoryDef[] => {
-  // We can return dynamic subcategories based on the category slug if needed.
-  // For now, returning a solid list for all categories to match the requested design.
-  return [
-    { id: 'new', name: 'New Devices', filters: { condition: 'new' } },
-    { id: 'used', name: 'Used Devices', filters: { condition: 'used' } },
-    { id: 'refurbished', name: 'Refurbished', filters: { condition: 'refurbished' } },
-    { id: 'premium', name: 'Premium', filters: { priceMin: 50000 } },
-    { id: 'budget', name: 'Budget', filters: { priceMax: 15000 } },
-    { id: 'all', name: 'View All', filters: {} },
-  ];
-};
+const PLACEHOLDER_BRAND = '/images/no-category.svg';
 
 export default function MobileCategoryLayout() {
+  const router = useRouter();
+
+  // State
+  const [view, setView] = useState<ViewState>('categories');
   const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategory, setActiveCategory] = useState<Category | null>(null);
-  const [activeSubcategory, setActiveSubcategory] = useState<SubcategoryDef | null>(null);
-  
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+
+  const [activeCategory, setActiveCategory] = useState<Category | null>(null);
+  const [activeBrand, setActiveBrand] = useState<Brand | null>(null);
+
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [isLoadingBrands, setIsLoadingBrands] = useState(false);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   // Fetch Categories
@@ -46,141 +40,177 @@ export default function MobileCategoryLayout() {
     categoryService.getAll().then((cats) => {
       const validCats = cats.filter((c) => !c.name?.startsWith('PW-Cat-') && !c.slug?.startsWith('pw-cat-'));
       setCategories(validCats);
-      if (validCats.length > 0) {
-        setActiveCategory(validCats[0]);
-      }
     }).catch(console.error)
       .finally(() => setIsLoadingCategories(false));
   }, []);
 
-  // Fetch Products when a subcategory is tapped
-  const handleSubcategorySelect = useCallback(async (subcat: SubcategoryDef) => {
+  // Fetch Brands when moving to brands view
+  const handleSelectCategory = useCallback(async (cat: Category) => {
+    setActiveCategory(cat);
+    setView('brands');
+    if (brands.length === 0) {
+      setIsLoadingBrands(true);
+      try {
+        const data = await brandService.getAll();
+        setBrands(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoadingBrands(false);
+      }
+    }
+  }, [brands.length]);
+
+  // Fetch Products when moving to products view
+  const handleSelectBrand = useCallback(async (brand: Brand) => {
     if (!activeCategory) return;
-    setActiveSubcategory(subcat);
+    setActiveBrand(brand);
+    setView('products');
     setIsLoadingProducts(true);
+    setProducts([]);
     try {
-      const data = await productService.getByCategory(activeCategory.slug, { ...subcat.filters, limit: 20 });
+      const data = await productService.getAll({
+        category: activeCategory.slug,
+        brand: [brand.name],
+        limit: 50
+      });
       setProducts(data.products || []);
     } catch (error) {
       console.error(error);
-      setProducts([]);
     } finally {
       setIsLoadingProducts(false);
     }
   }, [activeCategory]);
 
-  const subcategories = useMemo(() => {
-    if (!activeCategory) return [];
-    return getSubcategoriesForCategory(activeCategory.slug);
-  }, [activeCategory]);
-
-  if (isLoadingCategories) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#5264F9] border-t-transparent" />
-      </div>
-    );
-  }
+  const handleBack = () => {
+    if (view === 'products') setView('brands');
+    else if (view === 'brands') setView('categories');
+    else router.push('/');
+  };
 
   return (
-    <div className="flex h-[calc(100vh-60px)] w-full overflow-hidden bg-gray-50 dark:bg-background md:hidden">
-      {/* Left Panel - Main Categories */}
-      <div className="w-[28%] min-w-[85px] max-w-[110px] h-full overflow-y-auto border-r border-gray-200 bg-white dark:border-white/10 dark:bg-surface-100 no-scrollbar pb-24">
-        {categories.map((cat) => {
-          const isActive = activeCategory?._id === cat._id;
-          return (
-            <button
-              key={cat._id}
-              onClick={() => {
-                setActiveCategory(cat);
-                setActiveSubcategory(null);
-                setProducts([]);
-              }}
-              className={`relative flex w-full flex-col items-center justify-center gap-1.5 p-3 py-4 text-center transition-colors ${
-                isActive 
-                  ? 'bg-blue-50 dark:bg-[#5264F9]/10' 
-                  : 'bg-white hover:bg-gray-50 dark:bg-surface-100 dark:hover:bg-white/5'
-              }`}
-            >
-              {isActive && (
-                <div className="absolute left-0 top-0 h-full w-1 rounded-r-md bg-[#5264F9]" />
-              )}
-              <div className={`relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full p-2 ${isActive ? 'bg-white shadow-sm dark:bg-surface-200' : 'bg-gray-100 dark:bg-white/5'}`}>
-                <Image
-                  src={safeImageSrc(cat.image, PLACEHOLDER_CATEGORY)}
-                  alt={cat.name}
-                  fill
-                  className="object-contain p-2"
-                  sizes="48px"
-                />
-              </div>
-              <span className={`text-[10px] sm:text-[11px] leading-tight ${isActive ? 'font-bold text-[#5264F9] dark:text-[#5264F9]' : 'font-semibold text-gray-600 dark:text-gray-400'}`}>
-                {cat.name}
-              </span>
-            </button>
-          );
-        })}
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#121212] pb-24 pt-20 px-4 lg:hidden">
+      
+      {/* Header Area */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-white/90 dark:bg-[#121212]/90 backdrop-blur-md border-b border-gray-200 dark:border-white/10 px-4 h-[68px] flex items-center shadow-sm">
+        <button 
+          onClick={handleBack}
+          className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+        >
+          <ChevronLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+        </button>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-white ml-2">
+          {view === 'categories' && 'Categories'}
+          {view === 'brands' && activeCategory?.name}
+          {view === 'products' && `${activeBrand?.name} ${activeCategory?.name}`}
+        </h1>
       </div>
 
-      {/* Right Panel - Subcategories & Products */}
-      <div className="flex-1 h-full overflow-y-auto bg-[#F9FAFB] dark:bg-background p-3 pb-24">
-        {activeSubcategory ? (
-          /* Products View inside Right Panel */
-          <div className="animate-fade-in-up">
-            <div className="mb-4 flex items-center gap-2 sticky top-0 bg-[#F9FAFB]/90 dark:bg-background/90 backdrop-blur-md py-2 z-10">
-              <button 
-                onClick={() => setActiveSubcategory(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm dark:bg-surface-200 text-gray-700 dark:text-white"
-              >
-                <HiChevronLeft className="h-5 w-5" />
-              </button>
-              <h3 className="font-bold text-gray-900 dark:text-white text-sm">{activeSubcategory.name}</h3>
-            </div>
-            
-            {isLoadingProducts ? (
-              <div className="flex h-40 items-center justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#5264F9] border-t-transparent" />
-              </div>
-            ) : products.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 pb-10">
-                {products.map((product) => (
-                  <ListingProductCard key={product._id} product={product} />
-                ))}
-              </div>
+      {/* Main Content Area with Animations */}
+      <div className="w-full relative mt-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        
+        {/* Categories View */}
+        {view === 'categories' && (
+          <div className="grid grid-cols-2 gap-4">
+            {isLoadingCategories ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-[#1a1a1a] rounded-[16px] h-32 animate-pulse" />
+              ))
             ) : (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm dark:bg-surface-200">
-                  <HiOutlineCollection className="h-6 w-6 text-gray-400" />
+              categories.map((cat, idx) => {
+                const colors = [
+                  'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+                  'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+                  'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400',
+                  'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
+                  'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400',
+                  'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400'
+                ];
+                const colorClass = colors[idx % colors.length];
+                
+                return (
+                  <button
+                    key={cat._id}
+                    onClick={() => handleSelectCategory(cat)}
+                    className="flex flex-col items-center justify-center gap-3 p-4 bg-white dark:bg-[#1a1a1a] rounded-[16px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-white/5 active:scale-95 transition-all duration-200"
+                  >
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center ${colorClass}`}>
+                      {cat.image ? (
+                         <div className="relative w-8 h-8">
+                           <Image 
+                             src={safeImageSrc(cat.image, PLACEHOLDER_CATEGORY)} 
+                             alt={cat.name} 
+                             fill 
+                             className="object-contain" 
+                           />
+                         </div>
+                      ) : (
+                        <span className="text-xl font-bold">{cat.name.charAt(0)}</span>
+                      )}
+                    </div>
+                    <span className="text-[14px] font-semibold text-gray-900 dark:text-white text-center line-clamp-2">
+                      {cat.name}
+                    </span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        )}
+
+        {/* Brands View */}
+        {view === 'brands' && (
+          <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-right-8 duration-300">
+            {isLoadingBrands ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-[#1a1a1a] rounded-[16px] h-24 animate-pulse" />
+              ))
+            ) : (
+              brands.map((brand) => (
+                <button
+                  key={brand.id}
+                  onClick={() => handleSelectBrand(brand)}
+                  className="flex flex-col items-center justify-center gap-2 p-4 bg-white dark:bg-[#1a1a1a] rounded-[16px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-white/5 active:scale-95 transition-all duration-200"
+                >
+                  <div className="relative w-12 h-12">
+                    <Image 
+                      src={safeImageSrc(brand.logo_url || brand.image_url, PLACEHOLDER_BRAND)} 
+                      alt={brand.name} 
+                      fill 
+                      className="object-contain p-1" 
+                      sizes="48px"
+                    />
+                  </div>
+                  <span className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                    {brand.name}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Products View */}
+        {view === 'products' && (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 animate-in slide-in-from-right-8 duration-300">
+            {isLoadingProducts ? (
+              <ProductGridSkeleton count={4} />
+            ) : products.length > 0 ? (
+              products.map((product) => (
+                <ListingProductCard key={product._id} product={product} />
+              ))
+            ) : (
+              <div className="col-span-2 py-12 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-4">
+                  <span className="text-gray-400">?</span>
                 </div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">No products found</p>
-                <p className="mt-1 text-xs text-gray-500">Try a different subcategory</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">No products found</h3>
+                <p className="text-gray-500 mt-1 text-[14px]">There are currently no {activeBrand?.name} products in this category.</p>
               </div>
             )}
           </div>
-        ) : (
-          /* Subcategories View inside Right Panel */
-          <div className="animate-fade-in-up">
-            <h2 className="mb-4 text-sm font-extrabold text-gray-900 dark:text-white ml-1">
-              Shop {activeCategory?.name}
-            </h2>
-            <div className="grid grid-cols-2 gap-3 pb-10">
-              {subcategories.map((sub) => (
-                <button
-                  key={sub.id}
-                  onClick={() => handleSubcategorySelect(sub)}
-                  className="group flex flex-col items-center rounded-[18px] border border-gray-100 bg-white p-4 text-center shadow-sm transition-all hover:border-blue-200 hover:shadow-md dark:border-white/10 dark:bg-surface-50 dark:hover:border-[#5264F9]/30 active:scale-[0.98]"
-                >
-                  <div className="mb-3 flex h-[50px] w-[50px] items-center justify-center rounded-full bg-blue-50 text-[#5264F9] dark:bg-[#5264F9]/10 dark:text-[#5264F9] transition-transform group-hover:scale-110">
-                    <HiOutlineCollection className="h-[22px] w-[22px] stroke-[1.5]" />
-                  </div>
-                  <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 leading-tight">
-                    {sub.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
         )}
+
       </div>
     </div>
   );
