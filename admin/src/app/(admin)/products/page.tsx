@@ -102,7 +102,7 @@ export default function ProductsPage() {
       render: (p) => (
         <Link href={`/products/${p._id}/edit`} className="flex items-center gap-3 hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors">
           <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-            {p.thumbnail ? <Image src={safeImageSrc(p.thumbnail)} alt={p.name} fill className="object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/images/no-image.svg'; }} /> : <Package className="h-4 w-4 m-auto text-muted-foreground" />}
+            {p.thumbnail ? <Image src={safeImageSrc(p.thumbnail)} alt={p.name} fill sizes="40px" className="object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/images/no-image.svg'; }} /> : <Package className="h-4 w-4 m-auto text-muted-foreground" />}
           </div>
           <div className="min-w-0">
             <p className="font-medium text-foreground truncate max-w-[200px] hover:underline">{p.name}</p>

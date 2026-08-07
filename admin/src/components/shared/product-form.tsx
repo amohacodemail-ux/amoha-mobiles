@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, X, Plus, Loader2, RefreshCw, Lock, Unlock } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
-import { useModulePermissions, MODULES } from '@/lib/permissions';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import { MultiImageUploader } from '@/components/shared/image-uploader';
 import { BarcodeVisual } from '@/components/shared/barcode-visual';
 import { Button } from '@/components/ui/button';

@@ -110,8 +110,8 @@ export const canAccessNotifications = authorize('admin', 'sales', 'purchase', 'p
 /** Settings/Profile - accessible by all authenticated users */
 export const canAccessSettings = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
 
-/** View Catalog (Products, Categories, Brands) - accessible by admin, purchase, sales */
-export const canViewCatalog = authorize('admin', 'purchase', 'purchase_inventory', 'sales');
+/** View Catalog (Products, Categories, Brands) - accessible by admin, purchase, sales, marketing */
+export const canViewCatalog = authorize('admin', 'purchase', 'purchase_inventory', 'sales', 'marketing', 'digital_marketing');
 
 // ==================== LEGACY COMPATIBILITY ====================
 
