@@ -34,7 +34,7 @@ export default function ProductsPage() {
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const { canDelete, canCreate } = useModulePermissions(MODULES.PRODUCTS);
+  const { canDelete, canCreate, canEdit } = useModulePermissions(MODULES.PRODUCTS);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -131,9 +131,11 @@ export default function ProductsPage() {
       key: 'actions', header: 'Actions',
       render: (p) => (
         <div className="flex items-center gap-2">
-          <Link href={`/products/${p._id}/edit`}>
-            <Button variant="outline" size="icon-sm"><Pencil className="h-3.5 w-3.5" /></Button>
-          </Link>
+          {canEdit && (
+            <Link href={`/products/${p._id}/edit`}>
+              <Button variant="outline" size="icon-sm"><Pencil className="h-3.5 w-3.5" /></Button>
+            </Link>
+          )}
           {canDelete && (
             <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => openDelete(p)}>
               <Trash2 className="h-3.5 w-3.5" />

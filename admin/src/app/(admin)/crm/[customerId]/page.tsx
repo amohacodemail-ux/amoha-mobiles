@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { crmService, CrmCustomerProfile, CrmNote } from '@/services/crm.service';
 import { formatCurrency, formatDate, formatDateTime, getInitials } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 
 const SEGMENT_ICON: Record<string, React.ElementType> = {
   vip: Crown,
@@ -55,6 +56,8 @@ export default function CrmCustomerPage({ params }: { params: { customerId: stri
   const [noteContent, setNoteContent] = useState('');
   const [submittingNote, setSubmittingNote] = useState(false);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+
+  const { canCreate, canDelete } = useModulePermissions(MODULES.CRM);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -236,10 +239,12 @@ export default function CrmCustomerPage({ params }: { params: { customerId: stri
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Interaction Notes</CardTitle>
-                <Button size="sm" onClick={() => setAddingNote((v) => !v)}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Add Note
-                </Button>
+                {canCreate && (
+                  <Button size="sm" onClick={() => setAddingNote((v) => !v)}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Add Note
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -286,15 +291,17 @@ export default function CrmCustomerPage({ params }: { params: { customerId: stri
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">{formatDateTime(note.createdAt)}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="h-6 w-6 hover:text-destructive"
-                            disabled={deletingNoteId === note._id}
-                            onClick={() => handleDeleteNote(note._id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className="h-6 w-6 hover:text-destructive"
+                              disabled={deletingNoteId === note._id}
+                              onClick={() => handleDeleteNote(note._id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                       <p className="text-sm text-foreground whitespace-pre-wrap">{note.content}</p>

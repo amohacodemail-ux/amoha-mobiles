@@ -22,6 +22,8 @@ import {
   canAccessDashboard,
   canAccessReports,
   canAccessNotifications,
+  canViewCatalog,
+  canViewCustomers,
   isAdmin
 } from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
@@ -169,12 +171,12 @@ router.get('/reports/inventory', canAccessReports, async (_req: Request, res: Re
 });
 
 // ====== Products - Purchase & Admin only ======
-// Purchase & Admin can see all products regardless of is_active; inject isActive=all to bypass the default filter
-router.get('/products', canAccessPurchase, (req: Request, res: Response, next: NextFunction) => {
+// Purchase, Sales & Admin can see all products regardless of is_active; inject isActive=all to bypass the default filter
+router.get('/products', canViewCatalog, (req: Request, res: Response, next: NextFunction) => {
   if (req.query.isActive === undefined) (req.query as any).isActive = 'all';
   productController.getAll(req, res, next);
 });
-router.get('/products/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/products/:id', canViewCatalog, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const product = await productService.getProductById(req.params.id);
     sendSuccess(res, product, 'Product fetched');
@@ -188,8 +190,8 @@ router.delete('/products/:id', canAccessPurchase, productController.delete);
 router.patch('/products/:id/stock', canAccessPurchase, productController.updateStock);
 
 // ====== Categories - Purchase & Admin only ======
-router.get('/categories', canAccessPurchase, categoryController.getAllAdmin);
-router.get('/categories/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/categories', canViewCatalog, categoryController.getAllAdmin);
+router.get('/categories/:id', canViewCatalog, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -206,8 +208,8 @@ router.put('/categories/:id', canAccessPurchase, categoryController.update);
 router.delete('/categories/:id', canAccessPurchase, categoryController.delete);
 
 // ====== Brands - Purchase & Admin only ======
-router.get('/brands', canAccessPurchase, brandController.getAllAdmin);
-router.get('/brands/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/brands', canViewCatalog, brandController.getAllAdmin);
+router.get('/brands/:id', canViewCatalog, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -662,9 +664,9 @@ router.get('/pos/today-stats', canAccessSales, posController.getTodayStats);
 router.get('/pos/billing-info', canAccessSales, posController.getBillingInfo);
 
 // ====== CRM - Marketing & Admin only ======
-router.get('/crm/customers', canAccessMarketing, crmController.getCustomers);
+router.get('/crm/customers', canViewCustomers, crmController.getCustomers);
 router.post('/crm/customers', canAccessMarketing, crmController.createCustomer);
-router.get('/crm/customers/:customerId', canAccessMarketing, crmController.getCustomerProfile);
+router.get('/crm/customers/:customerId', canViewCustomers, crmController.getCustomerProfile);
 router.post('/crm/customers/:customerId/notes', canAccessMarketing, crmController.addNote);
 router.delete('/crm/notes/:noteId', canAccessAdminOnly, crmController.deleteNote);
 router.get('/crm/segments', canAccessMarketing, crmController.getSegmentSummary);

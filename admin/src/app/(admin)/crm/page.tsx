@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { crmService, CrmCustomer, SegmentSummary, CreateCustomerPayload } from '@/services/crm.service';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 
 const EMPTY_FORM: CreateCustomerPayload = {
   name: '', phone: '', email: '', address: '', city: '', state: '', pincode: '', notes: '', tags: '',
@@ -163,6 +164,8 @@ export default function CrmPage() {
   const [segments, setSegments] = useState<SegmentSummary[]>([]);
   const [showModal, setShowModal] = useState(false);
 
+  const { canCreate } = useModulePermissions(MODULES.CRM);
+
   const debouncedSearch = useDebouncedValue(search, 350);
 
   const load = useCallback(async () => {
@@ -274,7 +277,7 @@ export default function CrmPage() {
       <PageHeader
         title="CRM"
         description="Customer relationship management and segmentation"
-        action={<Button onClick={() => setShowModal(true)}><UserPlus className="h-4 w-4 mr-2" />Add Customer</Button>}
+        action={canCreate ? <Button onClick={() => setShowModal(true)}><UserPlus className="h-4 w-4 mr-2" />Add Customer</Button> : undefined}
       />
 
       {/* Segment summary cards */}
