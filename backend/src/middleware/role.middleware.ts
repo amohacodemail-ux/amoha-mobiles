@@ -85,8 +85,8 @@ export const canAccessPurchase = (req: AuthenticatedRequest, res: Response, next
 /** Marketing operations: coupons, banners, reviews, CRM, campaigns */
 export const canAccessMarketing = authorize('admin', 'marketing', 'digital_marketing');
 
-/** View Customers - accessible by admin, marketing, sales, logistics */
-export const canViewCustomers = authorize('admin', 'marketing', 'digital_marketing', 'sales', 'logistics');
+/** View Customers - accessible by admin, marketing, sales */
+export const canViewCustomers = authorize('admin', 'marketing', 'digital_marketing', 'sales');
 
 // ---- LOGISTICS MODULE ----
 /** Logistics operations: order tracking, shipping */
@@ -179,7 +179,7 @@ export function getAccessibleModules(role: UserRole): string[] {
       'product_views', 'abandoned_carts', 'crm', 'notifications', 'policies'
     ],
     logistics: [
-      'dashboard', 'orders', 'returns', 'inventory', 'products', 'crm', 'reports', 'notifications', 'policies'
+      'dashboard', 'orders', 'returns', 'products', 'reports', 'notifications'
     ],
     supplier: [
       'dashboard', 'rfq', 'notifications'

@@ -229,7 +229,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.DASHBOARD]: [ACTIONS.READ],
     [MODULES.ORDERS]: [ACTIONS.READ, ACTIONS.EDIT], // For tracking updates
     [MODULES.NOTIFICATIONS]: [ACTIONS.READ],
-    [MODULES.POLICIES]: [ACTIONS.READ],
+    [MODULES.POLICIES]: [],
     // No access to other modules
     [MODULES.BILLING]: [],
     [MODULES.REPORTS]: [ACTIONS.READ],
