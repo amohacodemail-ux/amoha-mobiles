@@ -168,7 +168,7 @@ export function getAccessibleModules(role: UserRole): string[] {
     ],
     marketing: [
       'dashboard', 'coupons', 'banners', 'reviews', 'contact_messages',
-      'product_views', 'abandoned_carts', 'crm', 'notifications', 'policies'
+      'product_views', 'abandoned_carts', 'products', 'categories', 'brands', 'reports', 'notifications', 'policies'
     ],
     logistics: [
       'dashboard', 'orders', 'notifications', 'policies'
