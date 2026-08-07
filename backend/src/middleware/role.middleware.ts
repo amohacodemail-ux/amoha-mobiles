@@ -110,8 +110,8 @@ export const canAccessNotifications = authorize('admin', 'sales', 'purchase', 'p
 /** Settings/Profile - accessible by all authenticated users */
 export const canAccessSettings = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
 
-/** View Catalog (Products, Categories, Brands) - accessible by admin, purchase, sales, marketing */
-export const canViewCatalog = authorize('admin', 'purchase', 'purchase_inventory', 'sales', 'marketing');
+/** View Catalog (Products, Categories, Brands) - accessible by admin, purchase, sales */
+export const canViewCatalog = authorize('admin', 'purchase', 'purchase_inventory', 'sales');
 
 // ==================== LEGACY COMPATIBILITY ====================
 
@@ -168,7 +168,7 @@ export function getAccessibleModules(role: UserRole): string[] {
     ],
     marketing: [
       'dashboard', 'coupons', 'banners', 'reviews', 'contact_messages',
-      'product_views', 'abandoned_carts', 'products', 'categories', 'brands', 'reports', 'notifications', 'policies'
+      'product_views', 'abandoned_carts', 'crm', 'notifications', 'policies'
     ],
     logistics: [
       'dashboard', 'orders', 'notifications', 'policies'
