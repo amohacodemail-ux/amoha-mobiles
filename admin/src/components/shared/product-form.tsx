@@ -239,7 +239,7 @@ export function ProductForm({ productId }: Props) {
         sellingPrice: payload.price
       });
 
-      // Only include stock in payload for new products (not updates)
+      // Only include stock in payload for new products(not updates)
       if (!productId) {
         payload.stock = data.stock;
       }
@@ -458,7 +458,7 @@ export function ProductForm({ productId }: Props) {
                     {/* Barcode Preview */}
                     {barcodeValue && (
                       <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                        <p className="text-xs text-muted-foreground mb-2">Preview :</p>
                         <div className="flex items-center gap-4">
                           <BarcodeVisual
                             key={`${barcodeValue}-${barcodeType}`}
