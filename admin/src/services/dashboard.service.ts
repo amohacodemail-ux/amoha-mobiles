@@ -4,6 +4,10 @@ import type { ApiResponse, DashboardStats, RevenueData, TopProduct, RecentOrder 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const dashboardService = {
+  getSalesStats: async (timeFilter: string = '7d'): Promise<any> => {
+    const { data } = await apiClient.get<ApiResponse<any>>(`/admin/dashboard/sales-stats?timeFilter=${timeFilter}`);
+    return data?.data;
+  },
   getStats: async (): Promise<DashboardStats> => {
     const { data } = await apiClient.get<ApiResponse<DashboardStats>>('/admin/dashboard/stats');
     return data?.data || {

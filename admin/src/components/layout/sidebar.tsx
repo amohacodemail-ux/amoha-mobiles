@@ -69,6 +69,11 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
   const { clearUser, user } = useAuthStore();
   const { canAccess, roleDisplayName, roleBadgeColor } = usePermissions();
   const [isPending, startTransition] = useTransition();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Filter navigation items based on user permissions
   const filteredNavItems = useMemo(() => {
@@ -200,9 +205,9 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
                       active ? 'text-primary' : 'text-muted-foreground',
                       'h-4 w-4'
                     )} />
-                    {!collapsed && <span className="truncate">{label}</span>}
+                    {!collapsed && <span className="truncate">{label === 'Dashboard' && mounted && user?.role === 'sales' ? 'My Dashboard' : label}</span>}
                     {collapsed && (
-                      <span className="sr-only">{label}</span>
+                      <span className="sr-only">{label === 'Dashboard' && mounted && user?.role === 'sales' ? 'My Dashboard' : label}</span>
                     )}
                   </button>
                 );

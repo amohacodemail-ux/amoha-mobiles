@@ -202,6 +202,7 @@ class OrderService {
 
     let qb = supabase.from('orders').select('*', { count: 'exact' });
 
+    if (query.createdBy) qb = qb.eq('created_by', query.createdBy);
     if (query.userId) qb = qb.eq('user_id', query.userId);
     if (query.status || query.orderStatus) qb = qb.eq('status', query.status || query.orderStatus);
     if (query.paymentStatus) qb = qb.eq('payment_status', query.paymentStatus);

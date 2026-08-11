@@ -15,9 +15,6 @@ import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
 import { downloadExcelFromBlob } from '@/lib/excel-export';
 
-import { useAuthStore } from '@/store/auth.store';
-import { SalesDashboard } from './SalesDashboard';
-
 const RevenueChart = dynamic(
   () => import('@/components/charts/revenue-chart').then((m) => ({ default: m.RevenueChart })),
   {
@@ -27,9 +24,6 @@ const RevenueChart = dynamic(
 );
 
 export default function DashboardPage() {
-  const { user } = useAuthStore();
-  const isSales = user?.role === 'sales';
-
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [revenue, setRevenue] = useState<RevenueData[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
@@ -64,14 +58,7 @@ export default function DashboardPage() {
     }
   };
 
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (isSales) return;
     const load = async () => {
       try {
         const [s, r, tp, ro] = await Promise.all([
@@ -91,20 +78,7 @@ export default function DashboardPage() {
       }
     };
     load();
-  }, [isSales]);
-
-  if (!mounted) {
-    return null; // Prevent hydration mismatch
-  }
-
-  if (isSales) {
-    return (
-      <div>
-        <PageHeader title="My Dashboard" description="Welcome back! Here's your sales performance." />
-        <SalesDashboard />
-      </div>
-    );
-  }
+  }, []);
 
   return (
     <div>

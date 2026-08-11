@@ -88,10 +88,13 @@ class ReturnService {
     const limit = parseInt(query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    let qb = supabase.from('return_requests').select(
-      '*, return_request_items(*, products:product_id(id, name, thumbnail, selling_price)), users:user_id(id, name, email), orders:order_id(id, order_number, total)',
-      { count: 'exact' }
-    );
+    const selectQuery = query.createdBy 
+      ? '*, return_request_items(*, products:product_id(id, name, thumbnail, selling_price)), users:user_id(id, name, email), orders:order_id!inner(id, order_number, total, created_by)'
+      : '*, return_request_items(*, products:product_id(id, name, thumbnail, selling_price)), users:user_id(id, name, email), orders:order_id(id, order_number, total)';
+
+    let qb = supabase.from('return_requests').select(selectQuery, { count: 'exact' });
+    
+    if (query.createdBy) qb = qb.eq('orders.created_by', query.createdBy);
     if (query.userId) qb = qb.eq('user_id', query.userId);
     if (query.status && query.status !== 'all') qb = qb.eq('status', query.status);
     if (query.type) qb = qb.eq('return_type', query.type);

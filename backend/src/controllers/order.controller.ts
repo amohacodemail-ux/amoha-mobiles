@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import orderService from '../services/order.service';
 import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
@@ -114,7 +114,11 @@ class OrderController {
 
   async getAllOrders(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const result = await orderService.getOrders(req.query);
+      const query = { ...req.query };
+      if (req.user?.role === 'sales') {
+        query.createdBy = req.user.userId;
+      }
+      const result = await orderService.getOrders(query);
       sendSuccess(res, result, 'All orders fetched');
     } catch (error) { next(error); }
   }

@@ -1,8 +1,87 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow, transformUser } from '../utils/transform.util';
 import logger from '../utils/logger.util';
 
 class AdminService {
+  async getSalesDashboardStats(userId: string, timeFilter: string = '7d') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString();
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString();
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString();
+
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+    const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+
+    // Fetch all relevant orders for this salesperson
+    const { data: allOrders, error } = await supabase
+      .from('orders')
+      .select('id, total, created_at')
+      .eq('created_by', userId)
+      .not('status', 'eq', 'cancelled')
+      .not('status', 'eq', 'returned');
+
+    if (error) throw error;
+
+    const orders = allOrders || [];
+
+    // Calculate Today's Stats
+    const todayOrders = orders.filter((o: any) => o.created_at >= todayStr && o.created_at < tomorrowStr);
+    const todayRevenue = todayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+    const todaySales = todayOrders.length;
+
+    // Calculate Yesterday's Stats (for comparison)
+    const yesterdayOrders = orders.filter((o: any) => o.created_at >= yesterdayStr && o.created_at < todayStr);
+    const yesterdayRevenue = yesterdayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+
+    // Calculate Monthly Stats
+    const monthlyOrders = orders.filter((o: any) => o.created_at >= thisMonthStart && o.created_at <= thisMonthEnd);
+    const monthlyRevenue = monthlyOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+    const monthlySales = monthlyOrders.length;
+
+    // Calculate Average Sale Value
+    const totalRevenue = orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+    const averageSaleValue = orders.length > 0 ? Math.round(totalRevenue / orders.length) : 0;
+
+    // Chart Data Generation based on timeFilter
+    const chartData = [];
+    const daysToLookBack = timeFilter === '3m' ? 90 : timeFilter === '30d' ? 30 : 7;
+    
+    for (let i = daysToLookBack - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const start = new Date(d).setHours(0,0,0,0);
+      const end = new Date(d).setHours(23,59,59,999);
+      
+      const dayOrders = orders.filter((o: any) => {
+        const orderTime = new Date(o.created_at).getTime();
+        return orderTime >= start && orderTime <= end;
+      });
+      
+      chartData.push({
+        date: d.toISOString().split('T')[0],
+        revenue: dayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0),
+        sales: dayOrders.length,
+      });
+    }
+
+    return {
+      todayRevenue,
+      todaySales,
+      yesterdayRevenue,
+      monthlyRevenue,
+      monthlySales,
+      averageSaleValue,
+      chartData
+    };
+  }
+
   async getDashboardAnalytics() {
     const { data, error } = await supabase.rpc('get_dashboard_analytics');
     if (error) throw error;

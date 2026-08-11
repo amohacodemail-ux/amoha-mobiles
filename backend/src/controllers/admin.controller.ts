@@ -4,6 +4,17 @@ import { AuthenticatedRequest } from '../types';
 import { sendSuccess } from '../utils/response.util';
 
 class AdminController {
+  async getSalesDashboard(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const timeFilter = req.query.timeFilter as string || '7d';
+      const stats = await adminService.getSalesDashboardStats(userId, timeFilter);
+      sendSuccess(res, stats, 'Sales dashboard stats fetched');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getDashboard(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const analytics = await adminService.getDashboardAnalytics();

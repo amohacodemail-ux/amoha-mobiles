@@ -129,6 +129,7 @@ class PosController {
         pos_payment_method: paymentMethod, pos_discount: posDiscount || 0, pos_discount_type: posDiscountType || 'fixed',
         gst_amount: gstAmount, gst_rate: enableGst ? defaultGstRate : 0, invoice_number: invoiceNumber,
         notes: notes || 'POS Order',
+        created_by: req.user!.userId,
       }).select('*').single();
       if (error) throw error;
 

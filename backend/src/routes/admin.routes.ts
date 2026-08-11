@@ -46,6 +46,7 @@ const router = Router();
 router.use(authenticate);
 
 // ====== Dashboard - Accessible by all internal roles ======
+router.get('/dashboard/sales-stats', canAccessDashboard, adminController.getSalesDashboard);
 router.get('/dashboard/stats', canAccessDashboard, adminController.getDashboard);
 router.get('/dashboard/revenue', canAccessDashboard, adminController.getMonthlyRevenue);
 router.get('/dashboard/top-products', canAccessDashboard, adminController.getTopProducts);
@@ -649,7 +650,7 @@ router.get('/abandoned-carts/download', canAccessMarketing, productViewControlle
 
 // ====== Barcode / SKU - Sales, Purchase & Admin only ======
 router.get('/barcode/lookup/:code', canAccessSales, barcodeController.lookup);
-router.get('/barcode/stock/:code', canAccessPurchase, barcodeController.stockCheck);
+router.get('/barcode/stock/:code', canViewCatalog, barcodeController.stockCheck);
 router.post('/barcode/bulk-lookup', canAccessSales, barcodeController.bulkLookup);
 router.post('/barcode/regenerate/:productId', canAccessPurchase, barcodeController.regenerate);
 router.post('/barcode/validate', canAccessSales, barcodeController.validate);
@@ -695,6 +696,10 @@ router.get('/reports/orders', canAccessSales, async (req: Request, res: Response
     if (status) qb = qb.eq('status', status);
     if (search) {
       qb = qb.or(`order_number.ilike.%${search}%,invoice_number.ilike.%${search}%,walk_in_customer_name.ilike.%${search}%`);
+    }
+
+    if ((req as any).user?.role === 'sales') {
+      qb = qb.eq('created_by', (req as any).user.userId);
     }
 
     qb = qb.order('created_at', { ascending: false }).range(offset, offset + limitNum - 1);
@@ -828,12 +833,18 @@ router.get('/reports/sales-summary', canAccessReports, async (req: Request, res:
       start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
     }
 
-    const { data: orders, error } = await supabase
+    let query = supabase
       .from('orders')
       .select('id, created_at, total, subtotal, discount, gst_amount, payment_status, status, is_walk_in, pos_payment_method')
       .gte('created_at', start.toISOString())
       .lte('created_at', end.toISOString())
       .not('status', 'eq', 'cancelled');
+
+    if ((req as any).user?.role === 'sales') {
+      query = query.eq('created_by', (req as any).user.userId);
+    }
+
+    const { data: orders, error } = await query;
 
     if (error) throw error;
 
