@@ -236,12 +236,13 @@ router.get('/orders/:id', canAccessSales, async (req: Request, res: Response, ne
 router.get('/orders/:id/invoice', canAccessSales, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
-    const { generateInvoicePDF } = await import('../utils/invoice.util');
+    const { generateInvoicePDF, inferHsnCode } = await import('../utils/invoice.util');
     const order: any = await (await import('../services/order.service')).default.getById(req.params.id);
 
     // Fetch billing settings from site_settings (JSONB — cast to any for safe field access)
     const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
     const billing: any = (settings as any)?.billing || {};
+    const fallbackHsn = billing.hsnCode || '8517';
 
     // Get customer info
     let customerName = 'Customer';
@@ -262,16 +263,40 @@ router.get('/orders/:id/invoice', canAccessSales, async (req: Request, res: Resp
       customerPhone = order.user.phone || '';
     }
 
-    const shippingAddress = order.shippingAddress || {
-      fullName: customerName,
-      addressLine1: order.walkInCustomerAddress || 'In-store purchase',
-      city: '', state: '', pincode: '',
-      phone: customerPhone,
-    };
-
     // Build business address string
     const bizAddrParts = [billing.billingAddress, billing.billingCity, billing.billingState, billing.billingPincode].filter(Boolean);
     const businessAddress = bizAddrParts.join(', ') || settings?.address || '';
+
+    // Fix walk-in customer address — never display shop address as customer address
+    let shippingAddress: any;
+    if (order.isWalkIn) {
+      const rawAddr = order.shippingAddress || {};
+      const isShopAddress = (val?: string) => !val || val === billing.billingAddress || val === 'Counter Sale' || val === 'Store';
+      const isShopCity = (val?: string) => !val || val === billing.billingCity || val === 'Store';
+      const isShopState = (val?: string) => !val || val === billing.billingState || val === 'Store';
+      const isShopPin = (val?: string) => !val || val === billing.billingPincode || val === '000000';
+
+      const custAddr = order.walkInCustomerAddress || (!isShopAddress(rawAddr.addressLine1) ? rawAddr.addressLine1 : '');
+      const custCity = !isShopCity(rawAddr.city) ? rawAddr.city : '';
+      const custState = !isShopState(rawAddr.state) ? rawAddr.state : '';
+      const custPin = !isShopPin(rawAddr.pincode) ? rawAddr.pincode : '';
+
+      shippingAddress = {
+        fullName: customerName,
+        addressLine1: custAddr || 'In-Store Purchase',
+        city: custCity,
+        state: custState,
+        pincode: custPin,
+        phone: customerPhone,
+      };
+    } else {
+      shippingAddress = order.shippingAddress || {
+        fullName: customerName,
+        addressLine1: '',
+        city: '', state: '', pincode: '',
+        phone: customerPhone,
+      };
+    }
 
     generateInvoicePDF(res, {
       orderNumber: order.orderNumber || req.params.id.slice(0, 8).toUpperCase(),
@@ -281,11 +306,18 @@ router.get('/orders/:id/invoice', canAccessSales, async (req: Request, res: Resp
       customerEmail,
       customerPhone,
       shippingAddress,
-      items: (order.items || []).map((i: any) => ({
-        name: i.product?.name || i.productName || 'Product',
-        quantity: i.quantity,
-        price: i.price,
-      })),
+      items: (order.items || []).map((i: any) => {
+        const prod = i.product || {};
+        const itemHsn = i.hsnCode || i.hsn_code || prod.hsnCode || prod.hsn_code ||
+          prod.specifications?.hsnCode || prod.specifications?.hsn ||
+          inferHsnCode(prod.name || i.productName || '', prod.category?.name || prod.category || '', fallbackHsn);
+        return {
+          name: prod.name || i.productName || 'Product',
+          quantity: i.quantity,
+          price: i.price,
+          hsnCode: itemHsn,
+        };
+      }),
       subtotal: order.subtotal,
       discount: order.discount || 0,
       deliveryCharge: order.deliveryCharge ?? order.shippingFee ?? 0,
@@ -305,7 +337,7 @@ router.get('/orders/:id/invoice', canAccessSales, async (req: Request, res: Resp
       businessEmail: billing.billingEmail || settings?.contact_email || '',
       termsOnInvoice: billing.termsOnInvoice || '',
       footerNote: billing.footerNote || 'Thank you for shopping with us!',
-      hsnCode: billing.hsnCode || '',
+      hsnCode: fallbackHsn,
     });
   } catch (error) {
     next(error);

@@ -35,6 +35,8 @@ function normalizeProduct(p: any): any {
     p.discount = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
   }
   p.discount = p.discount ?? 0;
+  // HSN code
+  p.hsnCode = p.specifications?.hsnCode || p.specifications?.hsn || p.hsn_code || '';
   // purchase price (default to 0 if not set)
   p.purchasePrice = p.purchasePrice ?? p.purchase_price ?? 0;
   // calculate profit margin (selling price - purchase price)
@@ -278,7 +280,9 @@ class ProductService {
     logger.info(`[ProductService] Creating product with purchase price: ${mapped.purchasePrice}, isActive: ${mapped.isActive}`);
 
     const dbData = toDbRow(mapped);
-    if (data.specifications) dbData.specifications = data.specifications;
+    const specs = data.specifications || {};
+    if (data.hsnCode) specs.hsnCode = String(data.hsnCode).trim();
+    if (Object.keys(specs).length > 0) dbData.specifications = specs;
 
     const { data: product, error } = await supabase
       .from('products').insert(dbData).select('*').single();
@@ -371,7 +375,15 @@ class ProductService {
     logger.info(`[ProductService] Updating product ${productId} with purchase price: ${mapped.purchasePrice}, isActive: ${mapped.isActive}`);
 
     const dbUpdates = toDbRow(mapped);
-    if (updates.specifications) dbUpdates.specifications = updates.specifications;
+    if (updates.specifications || updates.hsnCode !== undefined) {
+      const { data: curProd } = await supabase.from('products').select('specifications').eq('id', productId).maybeSingle();
+      const currentSpecs = curProd?.specifications || {};
+      const newSpecs = { ...currentSpecs, ...(updates.specifications || {}) };
+      if (updates.hsnCode !== undefined) {
+        newSpecs.hsnCode = String(updates.hsnCode || '').trim();
+      }
+      dbUpdates.specifications = newSpecs;
+    }
 
     const { data: product, error } = await supabase
       .from('products').update(dbUpdates).eq('id', productId).select('*').single();

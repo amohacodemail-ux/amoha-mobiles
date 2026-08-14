@@ -8,7 +8,7 @@ import {
   Search, Package, RefreshCw, X, CheckCircle, AlertCircle, Camera,
   ScanLine, Printer, ShoppingCart, Trash2, Plus, Minus,
   CreditCard, Banknote, QrCode, IndianRupee, FileText, Receipt,
-  TrendingUp, User, Phone, Mail,
+  TrendingUp, User, Phone, Mail, MapPin,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
@@ -63,6 +63,7 @@ export default function BarcodePage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [posDiscount, setPosDiscount] = useState(0);
   const [posDiscountType, setPosDiscountType] = useState<'fixed' | 'percentage'>('fixed');
   const [creatingOrder, setCreatingOrder] = useState(false);
@@ -351,6 +352,7 @@ export default function BarcodePage() {
     setCustomerName('');
     setCustomerPhone('');
     setCustomerEmail('');
+    setCustomerAddress('');
     setPaymentMethod('cash');
     setLastOrder(null);
     setLocalGstEnabled(null);
@@ -416,6 +418,7 @@ export default function BarcodePage() {
         customerName: customerName || undefined,
         customerPhone: customerPhone || undefined,
         customerEmail: customerEmail || undefined,
+        customerAddress: customerAddress.trim() || undefined,
         paymentMethod,
         posDiscount: posDiscount || undefined,
         posDiscountType: posDiscount > 0 ? posDiscountType : undefined,
@@ -504,6 +507,7 @@ export default function BarcodePage() {
         <div>${new Date(order.createdAt).toLocaleString('en-IN')}</div>
       </div>
       ${order.walkInCustomerName && order.walkInCustomerName !== 'Walk-in Customer' ? `<div style="font-size:12px;margin-top:4px;"><strong>Customer:</strong> ${escapeHtml(order.walkInCustomerName)} ${order.walkInCustomerPhone ? '| ' + escapeHtml(order.walkInCustomerPhone) : ''}</div>` : ''}
+      ${order.walkInCustomerAddress ? `<div style="font-size:11px;color:#555;margin-top:2px;">${escapeHtml(order.walkInCustomerAddress)}</div>` : ''}
       <div style="font-size:12px;margin-top:2px;"><strong>Payment:</strong> ${escapeHtml(order.posPaymentMethod?.toUpperCase() || 'CASH')}</div>
       <div class="divider"></div>
       <table>
@@ -804,6 +808,7 @@ export default function BarcodePage() {
                   <div className="relative"><User className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" /><Input className="pl-8 h-9 text-sm" placeholder="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} /></div>
                   <div className="relative"><Phone className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" /><Input className="pl-8 h-9 text-sm" placeholder="Phone Number" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} /></div>
                   <div className="relative"><Mail className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" /><Input className="pl-8 h-9 text-sm" placeholder="Email (optional)" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} /></div>
+                  <div className="relative"><MapPin className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" /><Input className="pl-8 h-9 text-sm" placeholder="Address (optional)" value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} /></div>
                 </CardContent>
               </Card>
 

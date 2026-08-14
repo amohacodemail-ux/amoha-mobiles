@@ -39,6 +39,7 @@ const schema = z.object({
   isFeatured: z.boolean().default(false),
   isTrending: z.boolean().default(false),
   isActive: z.boolean().default(true),
+  hsnCode: z.string().optional(),
   barcode: z.string().optional(),
   barcodeType: z.enum(['EAN13', 'EAN8', 'UPCA', 'CODE128', 'CODE39']).default('CODE128'),
 });
@@ -91,7 +92,7 @@ export function ProductForm({ productId }: Props) {
 
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, isActive: true, barcodeType: 'CODE128' },
+    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, isActive: true, hsnCode: '', barcodeType: 'CODE128' },
   });
 
   const barcodeType = watch('barcodeType');
@@ -124,6 +125,7 @@ export function ProductForm({ productId }: Props) {
             isFeatured: p.isFeatured,
             isTrending: p.isTrending,
             isActive: (p as any).isActive ?? true,
+            hsnCode: (p as any).hsnCode || (p as any).hsn_code || p.specifications?.hsnCode || p.specifications?.hsn || '',
             barcode: p.barcode || '',
             barcodeType: (p.barcodeType as BarcodeType) || 'CODE128',
           });
@@ -189,6 +191,9 @@ export function ProductForm({ productId }: Props) {
     setSubmitting(true);
     try {
       const specsObj = Object.fromEntries(specs.filter((s) => s.key).map((s) => [s.key, s.value]));
+      if (data.hsnCode?.trim()) {
+        specsObj.hsnCode = data.hsnCode.trim();
+      }
       const discount = data.originalPrice > 0
         ? Math.round(((data.originalPrice - data.price) / data.originalPrice) * 100)
         : 0;
@@ -217,6 +222,7 @@ export function ProductForm({ productId }: Props) {
         originalPrice: data.originalPrice,
         purchasePrice: typeof data.purchasePrice === 'number' ? data.purchasePrice : 0,
         discount: Math.max(0, discount),
+        hsnCode: data.hsnCode?.trim() || undefined,
         specifications: specsObj,
         tags: data.tags ? data.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
         colors: data.colors ? data.colors.split(',').map((c: string) => c.trim()).filter(Boolean) : [],
@@ -366,6 +372,7 @@ export function ProductForm({ productId }: Props) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input label="Stock Quantity" type="number" error={errors.stock?.message} {...register('stock')} preventScroll disabled={!!productId && !editMode} />
+                  <Input label="HSN Code" placeholder="e.g. 8517, 3926, 8504" {...register('hsnCode')} disabled={!!productId && !editMode} />
                 </div>
                 <Input label="Tags (comma separated)" placeholder="smartphone, 5g, flagship" {...register('tags')} />
                 <Input label="Colors (comma separated)" placeholder="Black, Silver, Gold" {...register('colors')} />

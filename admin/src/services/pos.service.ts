@@ -14,6 +14,7 @@ export interface PosOrderPayload {
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
+  customerAddress?: string;
   paymentMethod: 'cash' | 'card' | 'upi' | 'other';
   posDiscount?: number;
   posDiscountType?: 'percentage' | 'fixed';
