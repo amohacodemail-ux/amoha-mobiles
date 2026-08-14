@@ -1,0 +1,290 @@
+[
+  {
+    "phone": "9876543210",
+    "count": 20,
+    "customers": [
+      {
+        "id": "3c7cc0a4-bf8b-4959-9337-ad7801b2da21",
+        "name": "Test Admin",
+        "email": "admin_1775975867@test.com",
+        "created_at": "2026-04-12T06:37:47.394214+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "7039f27f-3596-4452-91bd-68b23cbde9ed",
+        "name": "TestUser",
+        "email": "testuser@amoha.com",
+        "created_at": "2026-04-12T06:41:47.514865+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "9b62d1cc-a812-4998-ba99-61ab70876877",
+        "name": "LiveCheck User",
+        "email": "livecheck_1033868516@test.com",
+        "created_at": "2026-04-12T08:58:57.199396+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "d62afdeb-223e-4b8c-9286-eb41b23b823b",
+        "name": "Live Check",
+        "email": "live1775988348@testmail.com",
+        "created_at": "2026-04-12T10:05:51.168623+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "a8d1bb9d-70ca-4995-ac4f-8a5c881dc367",
+        "name": "Live Check",
+        "email": "live1775988357@testmail.com",
+        "created_at": "2026-04-12T10:05:58.974701+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "d6a2077d-97c2-4eff-9a22-ddb4f38a0918",
+        "name": "Live Check",
+        "email": "live1775988364@testmail.com",
+        "created_at": "2026-04-12T10:06:06.453739+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "96379f31-17d2-4d55-9dc2-2aa9cc0ed385",
+        "name": "Payment E2E User",
+        "email": "payment_e2e_stable@amohatest.com",
+        "created_at": "2026-04-17T09:51:24.547096+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "9eb8fc8f-3d7b-49ac-927b-eacd1d837993",
+        "name": "Test User",
+        "email": "testuser1777296660254@test.com",
+        "created_at": "2026-04-27T13:31:02.21282+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "5d159d29-0150-42bf-85f4-c7712a4ea845",
+        "name": "Checkout Validation User",
+        "email": "checkout_validation_e2e@amohatest.com",
+        "created_at": "2026-04-28T14:24:44.836391+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "5d783cba-4a7b-46f0-900b-950d1d4878b8",
+        "name": "Checkout API Test",
+        "email": "checkout_val_new_0041@amohatest.com",
+        "created_at": "2026-04-28T16:05:23.353341+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "489e1068-e0e2-4d27-b171-ba7083c1131f",
+        "name": "Checkout API Test",
+        "email": "checkout_api_1777394049968@amohatest.com",
+        "created_at": "2026-04-28T16:34:25.981453+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "9496fc04-cee4-437a-bc2c-f2743d960edf",
+        "name": "Checkout API Test",
+        "email": "checkout_api_1777394049613@amohatest.com",
+        "created_at": "2026-04-28T16:34:29.194175+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "32106bec-29be-468c-98a0-1bf8cd0a2ad1",
+        "name": "Checkout API Test",
+        "email": "checkout_api_1777394059932@amohatest.com",
+        "created_at": "2026-04-28T16:34:30.687017+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "7aba8f0d-4418-4a29-b122-7d325c7f24c1",
+        "name": "Checkout API Test",
+        "email": "checkout_api_1777394058650@amohatest.com",
+        "created_at": "2026-04-28T16:34:30.688549+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "7c0e2478-c2d7-4f6d-84d8-279e007d245c",
+        "name": "Checkout API Test",
+        "email": "checkout_api_1777442715801@amohatest.com",
+        "created_at": "2026-04-29T06:05:22.498273+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "817c8276-77e9-40e3-8d27-fefa9cb4bbed",
+        "name": "Checkout API Test",
+        "email": "checkout_api_1777442715807@amohatest.com",
+        "created_at": "2026-04-29T06:05:23.108902+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "11c1445a-7ac8-4229-b37b-79c6dad59527",
+        "name": "Checkout API Test",
+        "email": "checkout_api_1777442716226@amohatest.com",
+        "created_at": "2026-04-29T06:05:23.212476+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "76ffd844-b41a-45d5-9d1c-03dac3c9e5c4",
+        "name": "Sec Test",
+        "email": "sec_1777449067372@amohatest.com",
+        "created_at": "2026-04-29T07:51:08.238767+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "4be1f6c4-da84-4ea3-a6b0-044f0333e850",
+        "name": "Sec Test",
+        "email": "sec_1777452690674@amohatest.com",
+        "created_at": "2026-04-29T08:51:31.531009+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "f517af3f-0dec-407e-b178-a89779914260",
+        "name": "Test User",
+        "email": "test@example.com",
+        "created_at": "2026-05-10T15:17:58.916326+00:00",
+        "total_orders": 0
+      }
+    ]
+  },
+  {
+    "phone": "9876543211",
+    "count": 8,
+    "customers": [
+      {
+        "id": "121a527e-a3b7-492e-90aa-ed340b26e7e7",
+        "name": "Test User",
+        "email": "user_1775975867@test.com",
+        "created_at": "2026-04-12T06:37:48.806867+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "df9e17d4-1b6a-4a70-9647-9ae51c536b4f",
+        "name": "<script>alert(\"xss\")</script>",
+        "email": "xss_1777307245577@test.com",
+        "created_at": "2026-04-27T16:27:31.370715+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "b023cec7-e6aa-4127-9bbf-aa4047ca202c",
+        "name": "<script>alert(\"xss\")</script>",
+        "email": "xss_1777307314249@test.com",
+        "created_at": "2026-04-27T16:28:39.170048+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "124d0bf5-acc0-4fdf-ad08-5b13459c3824",
+        "name": "<script>alert(\"xss\")</script>",
+        "email": "xss_1777381920996@test.com",
+        "created_at": "2026-04-28T13:12:05.102359+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "69aa13a1-2f68-498b-ba3f-ff71c5154174",
+        "name": "<script>alert(\"xss\")</script>",
+        "email": "xss_1777382266997@test.com",
+        "created_at": "2026-04-28T13:17:51.405102+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "ca04c49a-f7b6-44da-9b39-6c75a66f43a1",
+        "name": "<script>alert(\"xss\")</script>",
+        "email": "xss_1777382565301@test.com",
+        "created_at": "2026-04-28T13:22:48.742093+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "b0d71690-fa91-4057-aaef-e57e4f2ada71",
+        "name": "<script>alert(\"xss\")</script>",
+        "email": "xss_1777442220422@test.com",
+        "created_at": "2026-04-29T05:57:04.998565+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "a317d69c-870c-4304-804a-053138109856",
+        "name": "<script>alert(\"xss\")</script>",
+        "email": "xss_1777442674491@test.com",
+        "created_at": "2026-04-29T06:04:37.993797+00:00",
+        "total_orders": 0
+      }
+    ]
+  },
+  {
+    "phone": "9000000001",
+    "count": 2,
+    "customers": [
+      {
+        "id": "2cb4db56-5c7c-4323-805d-0fbb14cdc486",
+        "name": "Test Supplier",
+        "email": "supplier.1776247795@test.com",
+        "created_at": "2026-04-15T10:09:56.16655+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "d84e10cc-f144-4138-ab8d-ff282643833c",
+        "name": "TestUser1777377151938",
+        "email": "t1777377151938@test.com",
+        "created_at": "2026-04-28T11:52:34.646915+00:00",
+        "total_orders": 0
+      }
+    ]
+  },
+  {
+    "phone": "9000000002",
+    "count": 2,
+    "customers": [
+      {
+        "id": "07af7056-2167-4512-ad13-05d78b1ff667",
+        "name": "Test Admin",
+        "email": "admin.1776247795@test.com",
+        "created_at": "2026-04-15T10:09:57.494737+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "961cf7d9-1b1e-4013-9515-eeb5844fb41a",
+        "name": "QATest1777377176979",
+        "email": "qa1777377176979@test.com",
+        "created_at": "2026-04-28T11:52:59.500719+00:00",
+        "total_orders": 0
+      }
+    ]
+  },
+  {
+    "phone": "6374973026",
+    "count": 2,
+    "customers": [
+      {
+        "id": "e7308ecc-51bd-4e3e-8607-5402adf58207",
+        "name": "vijayadharshini",
+        "email": "vijayadharshinikrishnasamy19@gmail.com",
+        "created_at": "2026-07-10T04:04:08.837744+00:00",
+        "total_orders": 3
+      },
+      {
+        "id": "aa549566-59d0-4470-9d04-4c8fa2667bf5",
+        "name": "VIJAYADHARSHINI K",
+        "email": "mk.uzhavanfoods@gmail.com",
+        "created_at": "2026-07-29T11:24:25.792242+00:00",
+        "total_orders": 1
+      }
+    ]
+  },
+  {
+    "phone": "9000000003",
+    "count": 2,
+    "customers": [
+      {
+        "id": "a2086be5-6724-4fa6-afa5-55d376ab943d",
+        "name": "QATester",
+        "email": "qa1777377218898@test.com",
+        "created_at": "2026-04-28T11:53:41.536803+00:00",
+        "total_orders": 0
+      },
+      {
+        "id": "9c1d5aba-bf28-459d-be78-29d95f2c6086",
+        "name": "QATester",
+        "email": "qa1777377247653@t.com",
+        "created_at": "2026-04-28T11:54:10.408059+00:00",
+        "total_orders": 0
+      }
+    ]
+  }
+]

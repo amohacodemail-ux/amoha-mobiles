@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -51,15 +51,15 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Email</label>
+              <label className="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Email or Mobile Number</label>
               <div className="relative">
                 <HiOutlineMail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                 <input
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="glass-input pl-10 py-3 text-sm"
-                  placeholder="you@example.com"
+                  placeholder="Enter your email or mobile number"
                 />
               </div>
             </div>

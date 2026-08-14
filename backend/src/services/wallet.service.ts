@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import { sendWalletCreditEmail } from '../utils/email.util';
@@ -93,7 +93,22 @@ class WalletService {
     const page = typeof pageOrQuery === 'number' ? pageOrQuery : (parseInt(pageOrQuery?.page) || 1);
     const lim = limit ?? (typeof pageOrQuery === 'object' ? parseInt(pageOrQuery?.limit) || 20 : 20);
     const offset = (page - 1) * lim;
-    const { data, error, count } = await supabase.from('wallets').select('*, user:user_id(id, name, email)', { count: 'exact' }).order('updated_at', { ascending: false }).range(offset, offset + lim - 1);
+    let qb = supabase.from('wallets').select('*, user:user_id(id, name, email)', { count: 'exact' });
+    
+    const search = typeof pageOrQuery === 'object' ? pageOrQuery?.search : null;
+    if (search) {
+      const { data: searchUsers } = await supabase.from('users').select('id').or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+      const searchUserIds = (searchUsers || []).map((u: any) => u.id);
+      if (searchUserIds.length > 0) {
+        qb = qb.in('user_id', searchUserIds);
+      } else {
+        // If no user matches, return empty result by adding an impossible condition
+        qb = qb.eq('id', '00000000-0000-0000-0000-000000000000');
+      }
+    }
+    
+    qb = qb.order('updated_at', { ascending: false }).range(offset, offset + lim - 1);
+    const { data, error, count } = await qb;
     if (error) throw error;
     return { wallets: (data || []).map(transformRow), pagination: { total: count || 0, page, limit: lim, pages: Math.ceil((count || 0) / lim) } };
   }

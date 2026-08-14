@@ -2,14 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { HiOutlineHome, HiHome, HiOutlineSearch, HiOutlineShoppingBag, HiShoppingBag, HiOutlineHeart, HiHeart, HiOutlineUser, HiUser } from 'react-icons/hi';
+import { Home, LayoutGrid, Package, Heart, User } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { useAuthStore } from '@/store/auth.store';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const { totalItems } = useCartStore();
   const wishlistItems = useWishlistStore((s) => Array.isArray(s.items) ? s.items : []);
   const { isAuthenticated } = useAuthStore();
 
@@ -17,74 +16,70 @@ export default function MobileBottomNav() {
     {
       href: '/',
       label: 'Home',
-      icon: HiOutlineHome,
-      activeIcon: HiHome,
+      icon: Home,
       match: (p: string) => p === '/',
     },
     {
-      href: '/products',
-      label: 'Shop',
-      icon: HiOutlineSearch,
-      activeIcon: HiOutlineSearch,
-      match: (p: string) => p === '/products' || p.startsWith('/products?') || p === '/search',
+      href: '/categories',
+      label: 'Categories',
+      icon: LayoutGrid,
+      match: (p: string) => p === '/categories' || p === '/products' || p.startsWith('/products?') || p === '/search',
     },
     {
-      href: '/cart',
-      label: 'Cart',
-      icon: HiOutlineShoppingBag,
-      activeIcon: HiShoppingBag,
-      badge: totalItems,
-      match: (p: string) => p === '/cart' || p === '/checkout',
+      href: isAuthenticated ? '/orders' : '/login',
+      label: 'Orders',
+      icon: Package,
+      match: (p: string) => p === '/orders' || p.startsWith('/orders/'),
     },
     {
       href: '/wishlist',
       label: 'Wishlist',
-      icon: HiOutlineHeart,
-      activeIcon: HiHeart,
+      icon: Heart,
       badge: wishlistItems.length,
       match: (p: string) => p === '/wishlist',
     },
     {
       href: isAuthenticated ? '/profile' : '/login',
-      label: isAuthenticated ? 'Account' : 'Login',
-      icon: HiOutlineUser,
-      activeIcon: HiUser,
-      match: (p: string) => p === '/profile' || p === '/login' || p === '/register' || p === '/orders',
+      label: 'Profile',
+      icon: User,
+      match: (p: string) => p === '/profile' || p === '/login' || p === '/register' || p === '/my-requests' || p.startsWith('/my-requests/'),
     },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur-xl dark:border-white/10 dark:bg-[#0a0a0f]/95 sm:hidden">
-      <div className="flex items-center justify-around px-1">
+    <div className="sm:hidden fixed bottom-5 left-4 right-4 z-50 pb-[env(safe-area-inset-bottom)] pointer-events-none">
+      <nav className="pointer-events-auto flex items-center justify-between px-1.5 py-1.5 rounded-full bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
         {tabs.map((tab) => {
           const active = tab.match(pathname);
-          const Icon = active ? tab.activeIcon : tab.icon;
+          const Icon = tab.icon;
           return (
             <Link
-              key={tab.href}
+              key={tab.label}
               href={tab.href}
               prefetch={true}
-              className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+              className={`relative flex items-center justify-center rounded-full transition-all duration-300 active:scale-95 ${
                 active
-                  ? 'text-primary-600 dark:text-primary-400'
-                  : 'text-gray-400 dark:text-gray-500'
+                  ? 'bg-[#0EA5FF] text-white shadow-md px-3.5 py-2'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white p-2'
               }`}
             >
-              <div className="relative">
-                <Icon className="h-5 w-5" />
+              <div className="relative flex items-center justify-center shrink-0">
+                <Icon className="h-[22px] w-[22px]" />
                 {tab.badge && tab.badge > 0 ? (
-                  <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-500 px-1 text-[9px] font-bold text-white">
+                  <span className={`absolute -right-1.5 -top-1.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full px-1 text-[8px] font-bold border-2 ${
+                    active ? 'bg-white text-[#0EA5FF] border-[#0EA5FF]' : 'bg-rose-500 text-white border-white dark:border-[#1a1a1a]'
+                  }`}>
                     {tab.badge > 9 ? '9+' : tab.badge}
                   </span>
                 ) : null}
               </div>
-              <span>{tab.label}</span>
+              <div className={`overflow-hidden transition-all duration-300 flex items-center ${active ? 'w-auto max-w-[100px] opacity-100 ml-1.5' : 'w-0 max-w-0 opacity-0 ml-0'}`}>
+                <span className="text-[12px] font-bold whitespace-nowrap leading-none">{tab.label}</span>
+              </div>
             </Link>
           );
         })}
-      </div>
-      {/* Safe area for phones with home indicator */}
-      <div className="h-[env(safe-area-inset-bottom)]" />
-    </nav>
+      </nav>
+    </div>
   );
 }

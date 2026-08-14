@@ -34,7 +34,7 @@ export default function ProductsPage() {
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const { canDelete, canCreate } = useModulePermissions(MODULES.PRODUCTS);
+  const { canDelete, canCreate, canEdit } = useModulePermissions(MODULES.PRODUCTS);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -100,15 +100,15 @@ export default function ProductsPage() {
     {
       key: 'name', header: 'Product', sortable: true,
       render: (p) => (
-        <div className="flex items-center gap-3">
+        <Link href={`/products/${p._id}/edit`} className="flex items-center gap-3 hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors">
           <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-            {p.thumbnail ? <Image src={safeImageSrc(p.thumbnail)} alt={p.name} fill className="object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/images/no-image.svg'; }} /> : <Package className="h-4 w-4 m-auto text-muted-foreground" />}
+            {p.thumbnail ? <Image src={safeImageSrc(p.thumbnail)} alt={p.name} fill sizes="40px" className="object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/images/no-image.svg'; }} /> : <Package className="h-4 w-4 m-auto text-muted-foreground" />}
           </div>
           <div className="min-w-0">
-            <p className="font-medium text-foreground truncate max-w-[200px]">{p.name}</p>
+            <p className="font-medium text-foreground truncate max-w-[200px] hover:underline">{p.name}</p>
             <p className="text-xs text-muted-foreground">{typeof p.brand === 'object' ? p.brand?.name : p.brand}</p>
           </div>
-        </div>
+        </Link>
       ),
     },
     { key: 'category', header: 'Category', render: (p) => <span className="text-sm">{typeof p.category === 'object' ? p.category?.name : p.category}</span> },
@@ -131,9 +131,11 @@ export default function ProductsPage() {
       key: 'actions', header: 'Actions',
       render: (p) => (
         <div className="flex items-center gap-2">
-          <Link href={`/products/${p._id}/edit`}>
-            <Button variant="outline" size="icon-sm"><Pencil className="h-3.5 w-3.5" /></Button>
-          </Link>
+          {canEdit && (
+            <Link href={`/products/${p._id}/edit`}>
+              <Button variant="outline" size="icon-sm"><Pencil className="h-3.5 w-3.5" /></Button>
+            </Link>
+          )}
           {canDelete && (
             <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => openDelete(p)}>
               <Trash2 className="h-3.5 w-3.5" />
@@ -143,6 +145,8 @@ export default function ProductsPage() {
       ),
     },
   ];
+
+  const visibleColumns = (canEdit || canDelete) ? columns : columns.filter(c => c.key !== 'actions');
 
   return (
     <div>
@@ -163,7 +167,7 @@ export default function ProductsPage() {
       </PageHeader>
 
       <DataTable
-        columns={columns}
+        columns={visibleColumns}
         data={products}
         loading={loading}
         searchValue={search}

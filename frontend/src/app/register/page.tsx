@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -55,7 +55,8 @@ export default function RegisterPage() {
       return;
     }
     try {
-      await register(form.name, form.email, form.phone, form.password, form.confirmPassword);
+      const normalizedPhone = form.phone.trim().replace(/\s+/g, '');
+      await register(form.name.trim(), form.email.trim(), normalizedPhone, form.password, form.confirmPassword);
 
       // Upload avatar if selected (user now has token from register)
       if (avatarFile) {
@@ -79,8 +80,8 @@ export default function RegisterPage() {
 
       toast.success('Account created successfully!');
       router.push('/');
-    } catch {
-      toast.error('Registration failed');
+    } catch (err: any) {
+      toast.error(err.message || 'Registration failed');
     }
   };
 
@@ -106,7 +107,7 @@ export default function RegisterPage() {
                 className="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-gray-300 dark:border-white/20 transition-colors hover:border-primary-400"
               >
                 {avatarPreview ? (
-                  <Image src={avatarPreview} alt="Avatar" fill className="object-cover" />
+                  <Image src={avatarPreview} alt="Avatar" fill className="object-cover" sizes="96px" />
                 ) : (
                   <div className="flex h-full w-full flex-col items-center justify-center text-gray-400 group-hover:text-primary-400">
                     <HiOutlineCamera className="h-6 w-6" />

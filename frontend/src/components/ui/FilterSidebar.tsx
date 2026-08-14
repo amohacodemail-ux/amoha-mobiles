@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { HiOutlineX, HiOutlineAdjustments, HiStar, HiChevronDown, HiChevronUp } from 'react-icons/hi';
+import { HiOutlineX, HiStar, HiChevronDown, HiChevronUp, HiOutlineFilter } from 'react-icons/hi';
 import type { ProductFilters } from '@/types';
 import { formatPrice } from '@/lib/utils';
 import apiClient from '@/lib/api-client';
@@ -10,6 +10,8 @@ interface FilterSidebarProps {
   filters: ProductFilters;
   onFilterChange: (filters: Partial<ProductFilters>) => void;
   onClear: () => void;
+  isOpen?: boolean; // For mobile drawer
+  onClose?: () => void; // For mobile drawer
 }
 
 const FALLBACK_BRANDS = ['Samsung', 'Apple', 'OnePlus', 'Xiaomi', 'Realme', 'Vivo', 'OPPO', 'Google', 'Nothing', 'Motorola'];
@@ -21,26 +23,11 @@ const conditionOptions = [
   { value: 'used', label: 'Used' },
   { value: 'refurbished', label: 'Refurbished' },
 ];
-const discountOptions = [
-  { value: 10, label: '10% Off or more' },
-  { value: 20, label: '20% Off or more' },
-  { value: 30, label: '30% Off or more' },
-  { value: 40, label: '40% Off or more' },
-  { value: 50, label: '50% Off or more' },
-];
-const sortOptions = [
-  { value: 'newest', label: 'Newest First' },
-  { value: 'price_low', label: 'Price: Low to High' },
-  { value: 'price_high', label: 'Price: High to Low' },
-  { value: 'popular', label: 'Popularity' },
-  { value: 'rating', label: 'Highest Rated' },
-];
 
 const PRICE_MIN = 0;
 const PRICE_MAX = 200000;
 const PRICE_STEP = 1000;
 
-// --- Dual Range Slider Component ---
 function PriceRangeSlider({
   min,
   max,
@@ -69,7 +56,7 @@ function PriceRangeSlider({
       const rawValue = min + percent * (max - min);
       return Math.round(rawValue / step) * step;
     },
-    [min, max, step],
+    [min, max, step]
   );
 
   const handlePointerDown = (type: 'min' | 'max') => (e: React.PointerEvent) => {
@@ -88,7 +75,7 @@ function PriceRangeSlider({
         onChange(valueMin, Math.max(val, valueMin + step));
       }
     },
-    [dragging, getValueFromPosition, onChange, valueMin, valueMax, step],
+    [dragging, getValueFromPosition, onChange, valueMin, valueMax, step]
   );
 
   const handlePointerUp = () => setDragging(null);
@@ -97,47 +84,44 @@ function PriceRangeSlider({
   const rightPercent = getPercent(valueMax);
 
   return (
-    <div className="px-1 pt-2 pb-1">
+    <div className="px-2 pt-3 pb-2">
       <div
         ref={trackRef}
-        className="relative h-1.5 w-full rounded-full bg-gray-200 dark:bg-white/10 cursor-pointer"
+        className="relative h-1.5 w-full rounded-full bg-gray-200 cursor-pointer"
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        {/* Active range track */}
         <div
-          className="absolute top-0 h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-400"
+          className="absolute top-0 h-full rounded-full bg-primary-600"
           style={{ left: `${leftPercent}%`, width: `${rightPercent - leftPercent}%` }}
         />
-        {/* Min thumb */}
         <div
           onPointerDown={handlePointerDown('min')}
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-6 w-6 rounded-full border-2 border-primary-500 bg-surface-100 shadow-lg cursor-grab active:cursor-grabbing transition-shadow hover:shadow-glow touch-none"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-5 rounded-full border-2 border-primary-600 bg-white shadow-md cursor-grab active:cursor-grabbing touch-none"
           style={{ left: `${leftPercent}%` }}
         />
-        {/* Max thumb */}
         <div
           onPointerDown={handlePointerDown('max')}
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-6 w-6 rounded-full border-2 border-primary-500 bg-surface-100 shadow-lg cursor-grab active:cursor-grabbing transition-shadow hover:shadow-glow touch-none"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-5 w-5 rounded-full border-2 border-primary-600 bg-white shadow-md cursor-grab active:cursor-grabbing touch-none"
           style={{ left: `${rightPercent}%` }}
         />
       </div>
-      {/* Labels */}
-      <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-        <span className="rounded bg-gray-100 dark:bg-white/5 px-2 py-1 font-medium tabular-nums">{formatPrice(valueMin)}</span>
-        <span className="text-gray-600">—</span>
-        <span className="rounded bg-gray-100 dark:bg-white/5 px-2 py-1 font-medium tabular-nums">{formatPrice(valueMax)}</span>
+      <div className="mt-4 flex items-center justify-between text-xs font-semibold text-gray-500">
+        <span className="tabular-nums">{formatPrice(valueMin)}</span>
+        <span className="tabular-nums">{formatPrice(valueMax)}</span>
       </div>
     </div>
   );
 }
 
-export default function FilterSidebar({ filters, onFilterChange, onClear }: FilterSidebarProps) {
-  const [openFilter, setOpenFilter] = useState<string | null>(null);
-  const [brandSearch, setBrandSearch] = useState('');
+export default function FilterSidebar({ filters, onFilterChange, onClear, isOpen, onClose }: FilterSidebarProps) {
   const [brands, setBrands] = useState<string[]>(FALLBACK_BRANDS);
+  const [openSection, setOpenSection] = useState<string | null>(null);
 
-  // Load brands from API on mount
+  const toggleSection = (section: string) => {
+    setOpenSection(prev => prev === section ? null : section);
+  };
+
   useEffect(() => {
     apiClient.get('/brands')
       .then((res: any) => {
@@ -149,14 +133,13 @@ export default function FilterSidebar({ filters, onFilterChange, onClear }: Filt
           : [];
         if (list.length > 0) setBrands(list);
       })
-      .catch(() => {/* keep fallback */});
+      .catch(() => {});
   }, []);
 
   const [localPriceMin, setLocalPriceMin] = useState(filters.priceMin ?? PRICE_MIN);
   const [localPriceMax, setLocalPriceMax] = useState(filters.priceMax ?? PRICE_MAX);
   const debounceRef = useRef<NodeJS.Timeout>();
 
-  // Sync local price with filters when filters change externally (e.g. clear)
   useEffect(() => {
     setLocalPriceMin(filters.priceMin ?? PRICE_MIN);
     setLocalPriceMax(filters.priceMax ?? PRICE_MAX);
@@ -194,483 +177,226 @@ export default function FilterSidebar({ filters, onFilterChange, onClear }: Filt
     filters.discount !== undefined ||
     filters.inStock !== undefined;
 
-  const activeFilterCount = [
-    filters.brand?.length || 0,
-    filters.ram?.length || 0,
-    filters.storage?.length || 0,
-    filters.battery?.length || 0,
-    filters.priceMin !== undefined || filters.priceMax !== undefined ? 1 : 0,
-    filters.rating !== undefined ? 1 : 0,
-    filters.condition !== undefined ? 1 : 0,
-    filters.discount !== undefined ? 1 : 0,
-    filters.inStock !== undefined ? 1 : 0,
-  ].reduce((a, b) => a + b, 0);
-
-  const filteredBrands = brands.filter((b) =>
-    b.toLowerCase().includes(brandSearch.toLowerCase()),
-  );
-
-  const toggleFilter = (filterName: string) => {
-    setOpenFilter(openFilter === filterName ? null : filterName);
-  };
-
-  // Count active filters per category
-  const getFilterCount = (filterName: string): number => {
-    switch (filterName) {
-      case 'brand': return filters.brand?.length || 0;
-      case 'price': return (filters.priceMin !== undefined || filters.priceMax !== undefined) ? 1 : 0;
-      case 'ram': return filters.ram?.length || 0;
-      case 'storage': return filters.storage?.length || 0;
-      case 'battery': return filters.battery?.length || 0;
-      case 'rating': return filters.rating !== undefined ? 1 : 0;
-      case 'condition': return filters.condition !== undefined ? 1 : 0;
-      case 'discount': return filters.discount !== undefined ? 1 : 0;
-      case 'availability': return filters.inStock !== undefined ? 1 : 0;
-      default: return 0;
-    }
-  };
-
-  return (
-    <div className="w-full">
-      {/* Horizontal Filter Bar */}
-      <div className="glass-card mb-4 overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.08]">
-        {/* Filter chips row */}
-        <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 scrollbar-hide">
-          {/* Sort */}
-          <button
-            onClick={() => toggleFilter('sort')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'sort'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            Sort By
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'sort' ? 'rotate-180' : ''}`} />
+  const sidebarContent = (
+    <div className="flex h-full flex-col bg-white/70 backdrop-blur-2xl lg:rounded-[24px] lg:border lg:border-border-light lg:shadow-premium overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border-light px-6 py-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+          <HiOutlineFilter className="h-5 w-5 text-primary-600" />
+          Filters
+        </h2>
+        {/* Mobile Close Button */}
+        {onClose && (
+          <button onClick={onClose} className="lg:hidden p-2 text-gray-500 hover:text-gray-900 transition-colors">
+            <HiOutlineX className="h-5 w-5" />
           </button>
-
-          {/* Brand */}
-          <button
-            onClick={() => toggleFilter('brand')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'brand'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            Brand
-            {getFilterCount('brand') > 0 && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-[10px] font-bold text-white">
-                {getFilterCount('brand')}
-              </span>
-            )}
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'brand' ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Price */}
-          <button
-            onClick={() => toggleFilter('price')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'price'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            Price
-            {getFilterCount('price') > 0 && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-[10px] font-bold text-white">
-                {getFilterCount('price')}
-              </span>
-            )}
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'price' ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* RAM */}
-          <button
-            onClick={() => toggleFilter('ram')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'ram'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            RAM
-            {getFilterCount('ram') > 0 && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-[10px] font-bold text-white">
-                {getFilterCount('ram')}
-              </span>
-            )}
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'ram' ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Storage */}
-          <button
-            onClick={() => toggleFilter('storage')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'storage'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            Storage
-            {getFilterCount('storage') > 0 && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-[10px] font-bold text-white">
-                {getFilterCount('storage')}
-              </span>
-            )}
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'storage' ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Battery */}
-          <button
-            onClick={() => toggleFilter('battery')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'battery'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            Battery
-            {getFilterCount('battery') > 0 && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-[10px] font-bold text-white">
-                {getFilterCount('battery')}
-              </span>
-            )}
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'battery' ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Rating */}
-          <button
-            onClick={() => toggleFilter('rating')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'rating'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            Rating
-            {getFilterCount('rating') > 0 && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-[10px] font-bold text-white">
-                {getFilterCount('rating')}
-              </span>
-            )}
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'rating' ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Condition (New/Used/Refurbished) */}
-          <button
-            onClick={() => toggleFilter('condition')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'condition'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            Condition
-            {filters.condition && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-[10px] font-bold text-white">1</span>
-            )}
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'condition' ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Discount */}
-          <button
-            onClick={() => toggleFilter('discount')}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              openFilter === 'discount'
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            Discount
-            {filters.discount && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-[10px] font-bold text-white">1</span>
-            )}
-            <HiChevronDown className={`h-4 w-4 transition-transform ${openFilter === 'discount' ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Availability */}
-          <button
-            onClick={() => {
-              onFilterChange({ inStock: filters.inStock ? undefined : true });
-            }}
-            className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-              filters.inStock
-                ? 'border-primary-500 bg-primary-100 text-primary-700 dark:border-primary-500/50 dark:bg-primary-500/10 dark:text-primary-300'
-                : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-200 dark:hover:bg-white/10'
-            }`}
-          >
-            In Stock
-            {filters.inStock && <span className="text-xs">&#10003;</span>}
-          </button>
-
-          {/* Clear All */}
-          {hasActiveFilters && (
-            <button
-              onClick={onClear}
-              className="ml-auto flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400 transition-all hover:bg-red-500/20"
-            >
-              <HiOutlineX className="h-4 w-4" />
-              Clear All ({activeFilterCount})
-            </button>
-          )}
-        </div>
-
-        {/* Expanded Filter Content */}
-        {openFilter && (
-          <div className="border-t border-gray-100 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] px-4 py-4">
-            {/* Sort Options */}
-            {openFilter === 'sort' && (
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
-                {sortOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => {
-                      onFilterChange({ sort: opt.value });
-                      setOpenFilter(null);
-                    }}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                      (filters.sort || 'newest') === opt.value
-                        ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                        : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Brand Options */}
-            {openFilter === 'brand' && (
-              <div>
-                <input
-                  type="text"
-                  placeholder="Search brand..."
-                  value={brandSearch}
-                  onChange={(e) => setBrandSearch(e.target.value)}
-                  className="mb-3 w-full rounded-lg border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-600 outline-none transition-colors focus:border-primary-500/40"
-                />
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
-                  {filteredBrands.map((brand) => {
-                    const active = filters.brand?.includes(brand);
-                    return (
-                      <button
-                        key={brand}
-                        onClick={() => toggleArrayFilter('brand', brand)}
-                        className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                          active
-                            ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                            : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                        }`}
-                      >
-                        {active && <span className="text-xs">✓</span>}
-                        {brand}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Price Range */}
-            {openFilter === 'price' && (
-              <div className="max-w-2xl">
-                <PriceRangeSlider
-                  min={PRICE_MIN}
-                  max={PRICE_MAX}
-                  valueMin={localPriceMin}
-                  valueMax={localPriceMax}
-                  step={PRICE_STEP}
-                  onChange={handlePriceChange}
-                />
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {[
-                    { label: 'Under ₹10K', min: undefined, max: 10000 },
-                    { label: '₹10K - ₹20K', min: 10000, max: 20000 },
-                    { label: '₹20K - ₹40K', min: 20000, max: 40000 },
-                    { label: '₹40K - ₹80K', min: 40000, max: 80000 },
-                    { label: 'Above ₹80K', min: 80000, max: undefined },
-                  ].map((preset) => {
-                    const isActive = filters.priceMin === preset.min && filters.priceMax === preset.max;
-                    return (
-                      <button
-                        key={preset.label}
-                        onClick={() => {
-                          onFilterChange({ priceMin: preset.min, priceMax: preset.max });
-                          setLocalPriceMin(preset.min ?? PRICE_MIN);
-                          setLocalPriceMax(preset.max ?? PRICE_MAX);
-                        }}
-                        className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                          isActive
-                            ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                            : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* RAM Options */}
-            {openFilter === 'ram' && (
-              <div className="flex flex-wrap gap-2">
-                {ramOptions.map((ram) => {
-                  const active = filters.ram?.includes(ram);
-                  return (
-                    <button
-                      key={ram}
-                      onClick={() => toggleArrayFilter('ram', ram)}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                        active
-                          ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                          : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                      }`}
-                    >
-                      {active && <span className="text-xs">✓</span>}
-                      {ram}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Storage Options */}
-            {openFilter === 'storage' && (
-              <div className="flex flex-wrap gap-2">
-                {storageOptions.map((storage) => {
-                  const active = filters.storage?.includes(storage);
-                  return (
-                    <button
-                      key={storage}
-                      onClick={() => toggleArrayFilter('storage', storage)}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                        active
-                          ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                          : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                      }`}
-                    >
-                      {active && <span className="text-xs">✓</span>}
-                      {storage}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Battery Options */}
-            {openFilter === 'battery' && (
-              <div className="flex flex-wrap gap-2">
-                {batteryOptions.map((battery) => {
-                  const active = filters.battery?.includes(battery);
-                  return (
-                    <button
-                      key={battery}
-                      onClick={() => toggleArrayFilter('battery', battery)}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                        active
-                          ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                          : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                      }`}
-                    >
-                      {active && <span className="text-xs">✓</span>}
-                      {battery}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Rating Options */}
-            {openFilter === 'rating' && (
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                {[4, 3, 2, 1].map((rating) => {
-                  const active = filters.rating === rating;
-                  return (
-                    <button
-                      key={rating}
-                      onClick={() => {
-                        onFilterChange({ rating: active ? undefined : rating });
-                        if (!active) setOpenFilter(null);
-                      }}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                        active
-                          ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                          : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <HiStar
-                            key={i}
-                            className={`h-3.5 w-3.5 ${i < rating ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'}`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-xs">{rating}★ & up</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Condition Options */}
-            {openFilter === 'condition' && (
-              <div className="flex flex-wrap gap-2">
-                {conditionOptions.map((opt) => {
-                  const active = filters.condition === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        onFilterChange({ condition: active ? undefined : opt.value });
-                        if (!active) setOpenFilter(null);
-                      }}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                        active
-                          ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                          : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                      }`}
-                    >
-                      {active && <span className="text-xs">&#10003;</span>}
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Discount Options */}
-            {openFilter === 'discount' && (
-              <div className="flex flex-wrap gap-2">
-                {discountOptions.map((opt) => {
-                  const active = filters.discount === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        onFilterChange({ discount: active ? undefined : opt.value });
-                        if (!active) setOpenFilter(null);
-                      }}
-                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
-                        active
-                          ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-300 dark:bg-primary-500/20 dark:text-primary-300 dark:ring-primary-500/30'
-                          : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:text-gray-700 dark:text-gray-200'
-                      }`}
-                    >
-                      {active && <span className="text-xs">&#10003;</span>}
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         )}
       </div>
+
+      <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-thin-desktop">
+        
+        {/* Brand */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('brand')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            Brand
+            {(openSection === 'brand') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 space-y-2.5 overflow-hidden transition-all duration-300 ${(openSection === 'brand') ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {brands.slice(0, 8).map(brand => (
+              <label key={brand} className="flex cursor-pointer items-center gap-3 group">
+                <div className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${filters.brand?.includes(brand) ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white group-hover:border-primary-400'}`}>
+                  {filters.brand?.includes(brand) && <span className="text-[10px] text-white">✓</span>}
+                </div>
+                <input type="checkbox" className="hidden" checked={filters.brand?.includes(brand) || false} onChange={() => toggleArrayFilter('brand', brand)} />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">{brand}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Price Range */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('price')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            Price Range
+            {(openSection === 'price') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 overflow-hidden transition-all duration-300 ${(openSection === 'price') ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <PriceRangeSlider min={PRICE_MIN} max={PRICE_MAX} valueMin={localPriceMin} valueMax={localPriceMax} step={PRICE_STEP} onChange={handlePriceChange} />
+          </div>
+        </div>
+
+        {/* RAM */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('ram')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            RAM
+            {(openSection === 'ram') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 space-y-2.5 overflow-hidden transition-all duration-300 ${(openSection === 'ram') ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {ramOptions.map(ram => (
+              <label key={ram} className="flex cursor-pointer items-center gap-3 group">
+                <div className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${filters.ram?.includes(ram) ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white group-hover:border-primary-400'}`}>
+                  {filters.ram?.includes(ram) && <span className="text-[10px] text-white">✓</span>}
+                </div>
+                <input type="checkbox" className="hidden" checked={filters.ram?.includes(ram) || false} onChange={() => toggleArrayFilter('ram', ram)} />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">{ram}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Storage */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('storage')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            Storage
+            {(openSection === 'storage') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 space-y-2.5 overflow-hidden transition-all duration-300 ${(openSection === 'storage') ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {storageOptions.map(storage => (
+              <label key={storage} className="flex cursor-pointer items-center gap-3 group">
+                <div className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${filters.storage?.includes(storage) ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white group-hover:border-primary-400'}`}>
+                  {filters.storage?.includes(storage) && <span className="text-[10px] text-white">✓</span>}
+                </div>
+                <input type="checkbox" className="hidden" checked={filters.storage?.includes(storage) || false} onChange={() => toggleArrayFilter('storage', storage)} />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">{storage}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Battery */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('battery')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            Battery Capacity
+            {(openSection === 'battery') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 space-y-2.5 overflow-hidden transition-all duration-300 ${(openSection === 'battery') ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {batteryOptions.map(battery => (
+              <label key={battery} className="flex cursor-pointer items-center gap-3 group">
+                <div className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${filters.battery?.includes(battery) ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white group-hover:border-primary-400'}`}>
+                  {filters.battery?.includes(battery) && <span className="text-[10px] text-white">✓</span>}
+                </div>
+                <input type="checkbox" className="hidden" checked={filters.battery?.includes(battery) || false} onChange={() => toggleArrayFilter('battery', battery)} />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">{battery}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Condition */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('condition')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            Condition
+            {(openSection === 'condition') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 space-y-2.5 overflow-hidden transition-all duration-300 ${(openSection === 'condition') ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {conditionOptions.map(opt => (
+              <label key={opt.value} className="flex cursor-pointer items-center gap-3 group">
+                <div className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${filters.condition === opt.value ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white group-hover:border-primary-400'}`}>
+                  {filters.condition === opt.value && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                </div>
+                <input type="radio" className="hidden" name="condition" checked={filters.condition === opt.value} onChange={() => onFilterChange({ condition: filters.condition === opt.value ? undefined : opt.value })} />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Rating */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('rating')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            Rating
+            {(openSection === 'rating') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 space-y-2.5 overflow-hidden transition-all duration-300 ${(openSection === 'rating') ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {[4, 3, 2, 1].map(rating => (
+              <label key={rating} className="flex cursor-pointer items-center gap-3 group">
+                <div className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${filters.rating === rating ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white group-hover:border-primary-400'}`}>
+                  {filters.rating === rating && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                </div>
+                <input type="radio" className="hidden" name="rating" checked={filters.rating === rating} onChange={() => onFilterChange({ rating: filters.rating === rating ? undefined : rating })} />
+                <span className="flex items-center text-sm font-medium text-gray-600 group-hover:text-gray-900">
+                  {rating} <HiStar className="ml-1 h-4 w-4 text-yellow-400" /> & up
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Discount */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('discount')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            Discount
+            {(openSection === 'discount') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 space-y-2.5 overflow-hidden transition-all duration-300 ${(openSection === 'discount') ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            {[10, 20, 30, 40, 50].map(discount => (
+              <label key={discount} className="flex cursor-pointer items-center gap-3 group">
+                <div className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${filters.discount === discount ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white group-hover:border-primary-400'}`}>
+                  {filters.discount === discount && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                </div>
+                <input type="radio" className="hidden" name="discount" checked={filters.discount === discount} onChange={() => onFilterChange({ discount: filters.discount === discount ? undefined : discount })} />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">{discount}% Off or more</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Availability */}
+        <div className="border-b border-gray-100 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+          <button onClick={() => toggleSection('availability')} className="flex w-full items-center justify-between py-2 text-sm font-semibold text-gray-900 transition-colors hover:text-primary-600">
+            Availability
+            {(openSection === 'availability') ? <HiChevronUp className="h-4 w-4" /> : <HiChevronDown className="h-4 w-4" />}
+          </button>
+          <div className={`mt-3 space-y-2.5 overflow-hidden transition-all duration-300 ${(openSection === 'availability') ? 'max-h-[100px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <label className="flex cursor-pointer items-center gap-3 group">
+              <div className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${filters.inStock ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white group-hover:border-primary-400'}`}>
+                {filters.inStock && <span className="text-[10px] text-white">✓</span>}
+              </div>
+              <input type="checkbox" className="hidden" checked={filters.inStock || false} onChange={() => onFilterChange({ inStock: filters.inStock ? undefined : true })} />
+              <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">In Stock</span>
+            </label>
+          </div>
+        </div>
+        
+      </div>
+
+      <div className="border-t border-border-light p-4 bg-white/40">
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={onClear}
+            disabled={!hasActiveFilters}
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Reset Filters
+          </button>
+          <button
+            onClick={() => { if (onClose) onClose(); }}
+            className="w-full rounded-xl bg-primary-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary-600/25 transition-all hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30"
+          >
+            Apply Filters
+          </button>
+        </div>
+      </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block w-[280px] xl:w-[300px] flex-shrink-0">
+        <div className="sticky top-24 h-[calc(100vh-6rem)]">
+          {sidebarContent}
+        </div>
+      </div>
+
+      {/* Mobile Drawer Overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] lg:hidden">
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
+          <div className="absolute inset-y-0 right-0 w-[85vw] max-w-[340px] bg-white shadow-2xl transition-transform animate-slide-left">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

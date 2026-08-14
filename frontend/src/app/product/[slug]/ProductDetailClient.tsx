@@ -1,25 +1,28 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  HiStar,
-  HiOutlineHeart,
-  HiHeart,
-  HiOutlineShoppingBag,
-  HiOutlineShieldCheck,
-  HiOutlineTruck,
-  HiOutlineRefresh,
-  HiOutlineChevronRight,
-  HiOutlineShare,
-  HiOutlineChevronLeft,
-  HiOutlineCreditCard,
-  HiOutlineClock,
-  HiOutlineCheckCircle,
-} from 'react-icons/hi';
+  Star as HiStar,
+  Heart as HiOutlineHeart,
+  Heart as HiHeart,
+  ShoppingBag as HiOutlineShoppingBag,
+  ShieldCheck as HiOutlineShieldCheck,
+  Truck as HiOutlineTruck,
+  RefreshCcw as HiOutlineRefresh,
+  ChevronRight as HiOutlineChevronRight,
+  Share2 as HiOutlineShare,
+  ChevronLeft as HiOutlineChevronLeft,
+  CreditCard as HiOutlineCreditCard,
+  Clock as HiOutlineClock,
+  CheckCircle2 as HiOutlineCheckCircle,
+  ArrowRightLeft as HiOutlineSwitchHorizontal,
+  Check as HiCheck
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { Product } from '@/types';
 import { productService } from '@/services/product.service';
@@ -30,7 +33,7 @@ import { useCompareStore } from '@/store/compare.store';
 import { formatPrice, getStockStatus, getRatingColor, formatDate } from '@/lib/utils';
 import ProductCard from '@/components/ui/ProductCard';
 import { ProductDetailSkeleton } from '@/components/ui/Skeletons';
-import { HiOutlineSwitchHorizontal } from 'react-icons/hi';
+
 
 const ProductQA = dynamic(() => import('@/components/ui/ProductQA'), {
   loading: () => <div className="h-48 animate-pulse rounded-lg bg-gray-100 dark:bg-white/5" />,
@@ -100,7 +103,7 @@ export default function ProductDetailClient() {
   // Track product view for logged-in users
   useEffect(() => {
     if (product && isAuthenticated) {
-      productService.trackView(product._id).catch(() => {});
+      productService.trackView(product._id).catch(() => { });
     }
   }, [product?._id, isAuthenticated]);
 
@@ -294,7 +297,7 @@ export default function ProductDetailClient() {
     : [];
 
   return (
-    <main className="min-h-screen">
+    <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-gray-50/50 dark:bg-[#0A0A0A] selection:bg-indigo-500/30">
       {/* ── Breadcrumb ── */}
       <nav aria-label="Breadcrumb" className="border-b border-gray-200 dark:border-white/5 bg-surface-50/50">
         <div className="page-container flex items-center gap-2 py-3 text-xs text-gray-500">
@@ -313,7 +316,7 @@ export default function ProductDetailClient() {
           {/* ── Image Gallery ── */}
           <section className="flex flex-col gap-3 sm:gap-4">
             {/* Main Image */}
-            <div className="glass-card group relative overflow-hidden">
+            <div className="glass-card group relative overflow-hidden rounded-[24px] bg-gradient-to-b from-white to-gray-50/50 dark:from-white/[0.03] dark:to-transparent shadow-[0_8px_32px_-8px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_-8px_rgba(255,255,255,0.05)] border border-white/40 dark:border-white/10">
               <div
                 className={`relative aspect-square cursor-zoom-in transition-transform duration-500 ${imageZoomed ? 'scale-150 cursor-zoom-out origin-center' : ''}`}
                 onClick={() => setImageZoomed((z) => !z)}
@@ -325,13 +328,18 @@ export default function ProductDetailClient() {
                   fill
                   priority
                   quality={90}
-                  className="object-contain p-4 sm:p-6 lg:p-8"
+                  className="object-contain p-12 sm:p-16 lg:p-24"
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 45vw"
                   onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
                 />
               </div>
 
               {/* Discount badge */}
+
+              <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+                <span className="inline-flex items-center rounded-full bg-blue-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 backdrop-blur-md">Used Certified</span>
+                <span className="inline-flex items-center rounded-full bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 backdrop-blur-md">Best Deal</span>
+              </div>
               {product.discount > 0 && (
                 <span className="absolute left-3 top-3 z-10 inline-flex items-center rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-bold text-white shadow-lg sm:text-sm">
                   {product.discount}% OFF
@@ -380,11 +388,10 @@ export default function ProductDetailClient() {
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
-                    className={`relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200 md:h-20 md:w-20 ${
-                      selectedImage === idx
+                    className={`relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200 md:h-20 md:w-20 ${selectedImage === idx
                         ? 'border-primary-500 ring-2 ring-primary-500/30'
                         : 'border-gray-200 dark:border-white/10 opacity-60 hover:border-white/25 hover:opacity-100'
-                    }`}
+                      }`}
                     aria-label={`Select image ${idx + 1}`}
                   >
                     <Image
@@ -418,7 +425,7 @@ export default function ProductDetailClient() {
             </div>
 
             {/* Title */}
-            <h1 className="mt-2 text-xl font-bold leading-tight text-gray-900 dark:text-white sm:text-2xl lg:text-3xl">
+            <h1 className="mt-4 text-3xl font-extrabold leading-tight text-slate-900 dark:text-white sm:text-4xl lg:text-[48px] tracking-tight">
               {product.name}
             </h1>
 
@@ -500,19 +507,44 @@ export default function ProductDetailClient() {
                   Color: <span className="font-semibold text-gray-900 dark:text-white">{selectedColor}</span>
                 </p>
                 <div className="mt-2.5 flex flex-wrap gap-2">
-                  {product.colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      className={`rounded-xl border px-4 py-2 text-xs font-semibold transition-all duration-200 sm:px-5 sm:py-2.5 sm:text-sm ${
-                        selectedColor === color
-                          ? 'border-primary-500 bg-primary-500/10 text-primary-400 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
-                          : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-100 dark:bg-white/[0.06]'
-                      }`}
-                    >
-                      {color}
-                    </button>
-                  ))}
+                  {product.colors.map((color) => {
+                    const name = color.toLowerCase();
+                    let bg = '#e2e8f0';
+                    let text = '#0f172a';
+                    let isDark = false;
+                    
+                    if (name.includes('black') || name.includes('dark') || name.includes('midnight')) { bg = '#171717'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('navy') || name.includes('cloud navy')) { bg = '#1e3a8a'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('arctic') || name.includes('cyan') || name.includes('light blue')) { bg = '#e0f2fe'; text = '#0369a1'; isDark = false; }
+                    else if (name.includes('blue')) { bg = '#3b82f6'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('lime') || name.includes('mint')) { bg = '#d9f99d'; text = '#3f6212'; isDark = false; }
+                    else if (name.includes('green')) { bg = '#22c55e'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('gold')) { bg = '#fcd34d'; text = '#78350f'; isDark = false; }
+                    else if (name.includes('white') || name.includes('silver')) { bg = '#f8fafc'; text = '#0f172a'; isDark = false; }
+                    else if (name.includes('red')) { bg = '#ef4444'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('purple')) { bg = '#a855f7'; text = '#ffffff'; isDark = true; }
+                    else if (name.includes('pink')) { bg = '#fbcfe8'; text = '#831843'; isDark = false; }
+                    else if (name.includes('yellow')) { bg = '#fef08a'; text = '#713f12'; isDark = false; }
+
+                    const isSelected = selectedColor === color;
+
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => setSelectedColor(color)}
+                        style={{
+                          backgroundColor: bg,
+                          color: text,
+                        }}
+                        className="flex h-[42px] min-w-[5rem] items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-opacity duration-300 hover:opacity-80"
+                      >
+                        {isSelected && (
+                          <HiCheck className={`h-4 w-4 flex-shrink-0 ${isDark ? 'text-white' : 'text-gray-900'}`} strokeWidth={3} />
+                        )}
+                        <span>{color}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -546,29 +578,27 @@ export default function ProductDetailClient() {
               <button
                 onClick={handleAddToCart}
                 disabled={!inStock || addPending}
-                className="flex flex-1 items-center justify-center gap-2.5 rounded-xl bg-primary-600 py-3.5 text-sm font-bold text-white transition-all duration-200 hover:bg-primary-500 hover:shadow-[0_0_24px_rgba(99,102,241,0.25)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:py-4 sm:text-base"
+                className="flex flex-1 items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-[0_8px_20px_-4px_rgba(79,70,229,0.4)] py-4 text-sm font-bold text-white transition-all duration-200 hover:bg-primary-500 hover:shadow-[0_0_24px_rgba(99,102,241,0.25)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:py-4 sm:text-base"
               >
                 <HiOutlineShoppingBag className="h-5 w-5" />
                 {!inStock ? 'Out of Stock' : addPending ? 'Adding...' : 'Add to Cart'}
               </button>
               <button
                 onClick={handleCompare}
-                className={`flex h-auto w-14 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:w-16 ${
-                  compared
+                className={`flex h-auto w-14 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:w-16 ${compared
                     ? 'border-primary-500/30 bg-primary-500/10 text-primary-400 shadow-[0_0_12px_rgba(99,102,241,0.15)]'
                     : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                  }`}
                 aria-label={compared ? 'Remove from compare' : 'Add to compare'}
               >
                 <HiOutlineSwitchHorizontal className="h-5 w-5" />
               </button>
               <button
                 onClick={handleWishlist}
-                className={`flex h-auto w-14 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:w-16 ${
-                  wishlisted
+                className={`flex h-auto w-14 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:w-16 ${wishlisted
                     ? 'border-pink-500/30 bg-pink-500/10 text-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.15)]'
                     : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/20 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                  }`}
                 aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
               >
                 {wishlisted ? <HiHeart className="h-5 w-5" /> : <HiOutlineHeart className="h-5 w-5" />}
@@ -603,11 +633,10 @@ export default function ProductDetailClient() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`relative px-5 py-3.5 text-sm font-semibold transition-colors sm:px-8 sm:text-base ${
-                  activeTab === tab
+                className={`relative px-5 py-3.5 text-sm font-semibold transition-colors sm:px-8 sm:text-base ${activeTab === tab
                     ? 'text-primary-400'
                     : 'text-gray-500 hover:text-gray-600 dark:text-gray-300'
-                }`}
+                  }`}
               >
                 {tab === 'specs' ? 'Specifications' : tab === 'reviews' ? `Reviews (${reviewCount})` : 'Q&A'}
                 {activeTab === tab && (
@@ -629,9 +658,8 @@ export default function ProductDetailClient() {
                         {displaySpecEntries.map(([key, value], idx) => (
                           <tr
                             key={key}
-                            className={`border-b border-gray-100 dark:border-white/[0.04] last:border-0 ${
-                              idx % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.015]' : ''
-                            }`}
+                            className={`border-b border-gray-100 dark:border-white/[0.04] last:border-0 ${idx % 2 === 0 ? 'bg-gray-50 dark:bg-white/[0.015]' : ''
+                              }`}
                           >
                             <td className="whitespace-normal px-3 py-3 font-semibold capitalize text-gray-600 dark:text-gray-300 w-[35%] sm:w-2/5 sm:px-5 sm:py-3.5">
                               {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -705,9 +733,8 @@ export default function ProductDetailClient() {
                               aria-label={`Rate ${star} stars`}
                             >
                               <HiStar
-                                className={`h-8 w-8 transition-colors ${
-                                  star <= (hoverRating || reviewRating) ? 'text-amber-400' : 'text-gray-600'
-                                }`}
+                                className={`h-8 w-8 transition-colors ${star <= (hoverRating || reviewRating) ? 'text-amber-400' : 'text-gray-600'
+                                  }`}
                               />
                             </button>
                           ))}
@@ -816,6 +843,6 @@ export default function ProductDetailClient() {
           </div>
         </div>
       )}
-    </main>
+    </motion.main>
   );
 }

@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import inventoryLedger from './inventory-ledger.service';
@@ -95,7 +95,15 @@ class ReturnService {
     if (query.userId) qb = qb.eq('user_id', query.userId);
     if (query.status && query.status !== 'all') qb = qb.eq('status', query.status);
     if (query.type) qb = qb.eq('return_type', query.type);
-    if (query.search) qb = qb.ilike('return_number', `%${query.search}%`);
+    if (query.search) {
+      const { data: searchUsers } = await supabase.from('users').select('id').or(`name.ilike.%${query.search}%,email.ilike.%${query.search}%,phone.ilike.%${query.search}%`);
+      const searchUserIds = (searchUsers || []).map((u: any) => u.id);
+      let orStr = `return_number.ilike.%${query.search}%`;
+      if (searchUserIds.length > 0) {
+        orStr += `,user_id.in.("${searchUserIds.join('","')}")`;
+      }
+      qb = qb.or(orStr);
+    }
     qb = qb.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
 
     const { data, error, count } = await qb;

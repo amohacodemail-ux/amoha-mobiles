@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { crmService, CrmCustomer, SegmentSummary, CreateCustomerPayload } from '@/services/crm.service';
 import { formatCurrency, formatDate, getInitials } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 
 const EMPTY_FORM: CreateCustomerPayload = {
   name: '', phone: '', email: '', address: '', city: '', state: '', pincode: '', notes: '', tags: '',
@@ -163,6 +164,8 @@ export default function CrmPage() {
   const [segments, setSegments] = useState<SegmentSummary[]>([]);
   const [showModal, setShowModal] = useState(false);
 
+  const { canCreate, canEdit, canDelete } = useModulePermissions(MODULES.CRM);
+
   const debouncedSearch = useDebouncedValue(search, 350);
 
   const load = useCallback(async () => {
@@ -207,15 +210,15 @@ export default function CrmPage() {
       key: 'name',
       header: 'Customer',
       render: (c) => (
-        <div className="flex items-center gap-3">
+        <Link href={`/crm/${c._id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
             {getInitials(c.name)}
           </div>
           <div>
-            <p className="font-medium text-foreground text-sm">{c.name}</p>
+            <p className="font-medium text-foreground text-sm hover:underline">{c.name}</p>
             <p className="text-xs text-muted-foreground">{c.email}</p>
           </div>
-        </div>
+        </Link>
       ),
     },
     {
@@ -268,13 +271,15 @@ export default function CrmPage() {
     },
   ];
 
+  const visibleColumns = (canCreate || canEdit || canDelete) ? columns : columns.filter(c => c.key !== 'actions');
+
   return (
     <div>
       {showModal && <AddCustomerModal onClose={() => setShowModal(false)} onCreated={handleCustomerCreated} />}
       <PageHeader
         title="CRM"
         description="Customer relationship management and segmentation"
-        action={<Button onClick={() => setShowModal(true)}><UserPlus className="h-4 w-4 mr-2" />Add Customer</Button>}
+        action={canCreate ? <Button onClick={() => setShowModal(true)}><UserPlus className="h-4 w-4 mr-2" />Add Customer</Button> : undefined}
       />
 
       {/* Segment summary cards */}
@@ -324,7 +329,7 @@ export default function CrmPage() {
       </div>
 
       <DataTable
-        columns={columns}
+        columns={visibleColumns}
         data={customers}
         loading={loading}
         searchValue={search}

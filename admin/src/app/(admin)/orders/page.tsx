@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { orderService } from '@/services/order.service';
 import { formatCurrency, formatDate, getOrderStatusColor, getPaymentStatusColor } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import type { Order, OrderStatus } from '@/types';
 
 const LIMIT = 10;
@@ -25,6 +26,17 @@ const STATUS_OPTIONS: { label: string; value: string }[] = [
   { label: 'Cancelled', value: 'cancelled' },
   { label: 'Returned', value: 'returned' },
 ];
+
+const formatPaymentMethod = (method: string) => {
+  if (!method) return '-';
+  const m = method.toLowerCase();
+  if (m === 'cod') return 'Cash on Delivery';
+  if (m === 'razorpay') return 'Razorpay';
+  if (m === 'upi') return 'UPI';
+  if (m === 'pos_cash' || m === 'cash') return 'Cash';
+  if (m === 'pos_card' || m === 'card') return 'Card';
+  return method;
+};
 
 const SOURCE_OPTIONS: { label: string; value: string }[] = [
   { label: 'All Sources', value: 'all' },
@@ -41,6 +53,8 @@ export default function OrdersPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+
+  const { canDelete } = useModulePermissions(MODULES.ORDERS);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -94,12 +108,23 @@ export default function OrdersPage() {
       ),
     },
     {
-      key: 'paymentStatus', header: 'Payment',
+      key: 'paymentStatus', header: 'Payment Status',
       render: (o) => (
         <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${getPaymentStatusColor(o.paymentStatus)}`}>
           {o.paymentStatus}
         </span>
       ),
+    },
+    {
+      key: 'paymentMethod', header: 'Payment Method',
+      render: (o) => {
+        const pm = (o as any).posPaymentMethod || o.paymentMethod;
+        return (
+          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+            {pm ? formatPaymentMethod(pm) : '-'}
+          </span>
+        );
+      },
     },
     { key: 'createdAt', header: 'Date', render: (o) => <span className="text-xs text-muted-foreground">{formatDate(o.createdAt)}</span> },
     {
@@ -117,24 +142,26 @@ export default function OrdersPage() {
           >
             <Download className="h-3.5 w-3.5" />
           </Button>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            title="Delete Order"
-            onClick={async () => {
-              if (window.confirm(`Are you sure you want to delete order ${o.orderNumber}? This action cannot be undone.`)) {
-                try {
-                  await orderService.deleteOrder(o._id);
-                  toast.success('Order deleted successfully');
-                  load();
-                } catch (err) {
-                  toast.error('Failed to delete order');
+          {canDelete && (
+            <Button
+              variant="outline"
+              size="icon-sm"
+              title="Delete Order"
+              onClick={async () => {
+                if (window.confirm(`Are you sure you want to delete order ${o.orderNumber}? This action cannot be undone.`)) {
+                  try {
+                    await orderService.deleteOrder(o._id);
+                    toast.success('Order deleted successfully');
+                    load();
+                  } catch (err) {
+                    toast.error('Failed to delete order');
+                  }
                 }
-              }
-            }}
-          >
-            <Trash2 className="h-3.5 w-3.5 text-red-600" />
-          </Button>
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5 text-red-600" />
+            </Button>
+          )}
         </div>
       ),
     },

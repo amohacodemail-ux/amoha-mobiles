@@ -42,6 +42,23 @@ class ServiceRequestController {
     }
   }
 
+  // Authenticated: get single my service request
+  async getMyRequestById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const request = await serviceRequestService.getById(req.params.id);
+      
+      // Ensure the request belongs to the logged-in user
+      if (request.userId && request.userId !== authReq.user!.userId) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+      
+      sendSuccess(res, request, 'Service request fetched');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // Admin: list all with filters
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {

@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { HiOutlineArrowRight, HiOutlineTruck, HiOutlineShieldCheck, HiOutlineRefresh, HiX, HiStar } from 'react-icons/hi';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import { HiOutlineArrowRight, HiOutlineTruck, HiOutlineShieldCheck, HiOutlineRefresh, HiX, HiStar, HiOutlineCheck, HiOutlineLockClosed } from 'react-icons/hi';
 import { HiOutlineBolt } from 'react-icons/hi2';
 import type { Product, Banner, Category, HomepageReview } from '@/types';
 import { productService } from '@/services/product.service';
@@ -15,6 +18,8 @@ import { useSettingsStore } from '@/store/settings.store';
 import ProductCard from '@/components/ui/ProductCard';
 import RecentlyViewed from '@/components/ui/RecentlyViewed';
 import { ProductGridSkeleton, BannerSkeleton } from '@/components/ui/Skeletons';
+import TrustSection from '@/components/ui/TrustSection';
+import TestimonialSection from '@/components/ui/TestimonialSection';
 import { safeImageSrc } from '@/lib/utils';
 
 const PLACEHOLDER_BANNER = '/images/no-banner.svg';
@@ -33,6 +38,24 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeBanner, setActiveBanner] = useState(0);
   const [showPopup, setShowPopup] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX;
+    if (diff > 50) {
+      setActiveBanner((prev) => (prev + 1) % banners.length);
+    } else if (diff < -50) {
+      setActiveBanner((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
+    }
+    touchStartX.current = null;
+  };
 
   const toArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
 
@@ -73,12 +96,12 @@ export default function HomePage() {
   }, [fetchCart, fetchWishlist, isAuthenticated]);
 
   useEffect(() => {
-    if (banners.length <= 1) return;
+    if (banners.length <= 1 || isPaused) return;
     const interval = setInterval(() => {
       setActiveBanner((prev) => (prev + 1) % banners.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, [banners.length]);
+  }, [banners.length, isPaused]);
 
   // Show popup after 3 seconds if enabled and not dismissed this session
   useEffect(() => {
@@ -94,12 +117,7 @@ export default function HomePage() {
     sessionStorage.setItem('popup_dismissed', '1');
   };
 
-  const features = [
-    { icon: HiOutlineBolt, title: 'Fast Delivery', desc: 'Within 2-3 days' },
-    { icon: HiOutlineShieldCheck, title: 'Warranty', desc: 'Product warranty included' },
-    { icon: HiOutlineTruck, title: 'Free Shipping', desc: 'On orders above Rs.999' },
-    { icon: HiOutlineRefresh, title: 'Easy Returns', desc: '7 day return policy' },
-  ];
+
 
   const activeDiscoverBanners = (settings?.discoverBanners || [])
     .filter((b: any) => b.isActive && b.image && b.image.trim() !== '')
@@ -129,9 +147,9 @@ export default function HomePage() {
     };
 
     const defaults = [
-      { title: fallbackTitle(0, 'Latest Launches'),   image: fallbackImg(0), link: catList[0] ? `/products?category=${catList[0].slug}` : '/products?sort=newest' },
-      { title: fallbackTitle(1, 'Trending Deals'),     image: fallbackImg(1), link: catList[1] ? `/products?category=${catList[1].slug}` : '/products?sort=popular' },
-      { title: fallbackTitle(2, 'Featured Picks'),     image: fallbackImg(2), link: catList[2] ? `/products?category=${catList[2].slug}` : '/products?isFeatured=true' },
+      { title: fallbackTitle(0, 'Latest Launches'), image: fallbackImg(0), link: catList[0] ? `/products?category=${catList[0].slug}` : '/products?sort=newest' },
+      { title: fallbackTitle(1, 'Trending Deals'), image: fallbackImg(1), link: catList[1] ? `/products?category=${catList[1].slug}` : '/products?sort=popular' },
+      { title: fallbackTitle(2, 'Featured Picks'), image: fallbackImg(2), link: catList[2] ? `/products?category=${catList[2].slug}` : '/products?isFeatured=true' },
       { title: fallbackTitle(3, 'Accessories & More'), image: fallbackImg(3), link: catList[3] ? `/products?category=${catList[3].slug}` : '/products' },
     ];
 
@@ -152,135 +170,89 @@ export default function HomePage() {
       <h1 className="sr-only">Amohamobiles – Best Mobile Shop in Idikarai, Coimbatore | Smartphones, Accessories & Repairs</h1>
 
       {/* Hero Banner */}
-      <section className="bg-gray-50 dark:bg-surface-50">
-        <div className="page-container py-3 sm:py-5 lg:py-6">
-          {isLoading ? (
-            <BannerSkeleton />
-          ) : banners.length > 0 ? (
-            <div className="relative mx-auto max-w-7xl">
-              <div className="relative aspect-[16/9] sm:aspect-[21/8] lg:aspect-[24/8] overflow-visible">
-                {banners.length > 1 && (
-                  <>
-                    <div className="pointer-events-none absolute inset-y-4 left-0 hidden w-[18%] -translate-x-2 rotate-[-7deg] overflow-hidden rounded-2xl opacity-40 blur-[1px] shadow-2xl lg:block">
-                      <Image
-                        src={getSafeImage(banners[(activeBanner - 1 + banners.length) % banners.length]?.image, PLACEHOLDER_BANNER)}
-                        alt="Previous banner preview"
-                        fill
-                        className="object-cover"
-                        sizes="20vw"
-                        onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
-                      />
-                    </div>
-                    <div className="pointer-events-none absolute inset-y-4 right-0 hidden w-[18%] translate-x-2 rotate-[7deg] overflow-hidden rounded-2xl opacity-40 blur-[1px] shadow-2xl lg:block">
-                      <Image
-                        src={getSafeImage(banners[(activeBanner + 1) % banners.length]?.image, PLACEHOLDER_BANNER)}
-                        alt="Next banner preview"
-                        fill
-                        className="object-cover"
-                        sizes="20vw"
-                        onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="absolute inset-2 rounded-[22px] bg-gradient-to-br from-accent-500/10 via-transparent to-slate-500/10 blur-2xl" />
-
-                <Link
-                  href={banners[activeBanner]?.link || '/products'}
-                  className="relative h-full overflow-hidden rounded-[20px] border border-white/60 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] ring-1 ring-black/5 dark:border-white/10 dark:bg-white/[0.02] dark:ring-white/10 block"
-                >
-                  <Image
-                    key={banners[activeBanner]?._id || activeBanner}
-                    src={getSafeImage(banners[activeBanner]?.image, PLACEHOLDER_BANNER)}
-                    alt={banners[activeBanner]?.title ? `${banners[activeBanner].title} – Amohamobiles Coimbatore` : 'Amohamobiles – Best Mobile Shop in Idikarai, Coimbatore'}
-                    fill
-                    priority
-                    className="object-cover transition-all duration-700 ease-out"
-                    sizes="100vw"
-                    onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_BANNER; }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/10 dark:from-black/20 dark:to-transparent" />
-                </Link>
-              </div>
-
-              {banners.length > 1 && (
-                <div className="mt-3 flex items-center justify-center gap-2">
-                  {banners.map((banner, idx) => (
-                    <button
-                      key={banner._id || idx}
-                      type="button"
-                      aria-label={`Show slide ${idx + 1}`}
-                      onClick={() => setActiveBanner(idx)}
-                      className={`h-2 rounded-full transition-all duration-300 ${idx === activeBanner ? 'w-8 bg-slate-700 dark:bg-accent-400' : 'w-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/25 dark:hover:bg-white/45'}`}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="relative overflow-hidden rounded-[20px] border border-white/60 bg-white shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)] ring-1 ring-black/5 dark:border-white/10 dark:bg-white/[0.02] dark:ring-white/10">
-              <div className="relative aspect-[16/9] sm:aspect-[21/8] lg:aspect-[24/8]">
-                <Image
-                  src={PLACEHOLDER_BANNER}
-                  alt="Hero banner"
-                  fill
-                  priority
-                  className="object-cover"
-                  sizes="100vw"
-                />
-              </div>
-            </div>
-          )}
+      <section className="w-full bg-black">
+        <div
+          className="relative w-full max-w-none overflow-hidden flex justify-center items-center"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          <video
+            src="/PixVerse_V6_Image_Text_540P_Create_an_ultrapre.mp4"
+            className="w-full max-w-none h-auto block"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
         </div>
       </section>
 
-      {/* Features Bar */}
-      <section className="border-y border-gray-100 dark:border-white/5">
-        <div className="page-container grid grid-cols-2 gap-2 sm:gap-3 py-2 sm:py-3 lg:grid-cols-4 lg:py-4">
-          {features.map((feature) => (
-            <div key={feature.title} className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-surface-200 dark:text-slate-400">
-                <feature.icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-bold text-gray-900 dark:text-white sm:text-sm">{feature.title}</p>
-                <p className="truncate text-[11px] text-gray-500 dark:text-gray-400 sm:text-xs">{feature.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Trust Section */}
+      <TrustSection />
 
       {/* Shop by Category */}
       {categories.length > 0 && (
-        <section className="py-6 sm:py-8">
-          <div className="page-container">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Shop by Category</h2>
-            </div>
-            {/* Mobile/tablet: horizontal scroll | Desktop: grid */}
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x-mandatory pb-1 lg:grid lg:grid-cols-5 xl:grid-cols-6 lg:overflow-visible lg:pb-0">
+        <section className="py-10 sm:py-14 bg-white dark:bg-transparent overflow-hidden">
+          <div className="page-container mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl text-left">
+              Shop by Category
+            </h2>
+          </div>
+          <div className="relative">
+            <style jsx global>{`
+              .category-carousel .swiper-wrapper {
+                transition-timing-function: linear !important;
+              }
+            `}</style>
+            <Swiper
+              modules={[Autoplay]}
+              spaceBetween={30}
+              loop={categories.length > 8}
+              speed={4000}
+              autoplay={{
+                delay: 0,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }}
+              allowTouchMove={true}
+              breakpoints={{
+                0: {
+                  slidesPerView: 3,
+                },
+                640: {
+                  slidesPerView: 5,
+                },
+                1024: {
+                  slidesPerView: 7.5,
+                },
+              }}
+              className="category-carousel"
+            >
               {categories.map((cat) => (
-                <Link
-                  key={cat._id}
-                  href={`/products?category=${cat.slug}`}
-                  className="group flex flex-shrink-0 snap-start lg:flex-shrink items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 transition-all hover:border-slate-300 hover:shadow-sm dark:border-white/[0.05] dark:bg-white/[0.02] dark:hover:border-white/[0.10]"
-                >
-                  <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-gray-50 dark:bg-white/5">
-                    <Image src={getSafeImage(cat.image, PLACEHOLDER_CATEGORY)} alt={cat.name} fill className="object-cover" sizes="40px" onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_CATEGORY; }} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="whitespace-nowrap lg:whitespace-normal lg:truncate text-sm font-medium text-slate-700 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-white">
+                <SwiperSlide key={cat._id}>
+                  <Link
+                    href={`/products?category=${cat.slug}`}
+                    className="group flex flex-col items-center justify-center gap-4 transition-transform duration-300 hover:scale-[1.08] hover:-translate-y-1"
+                  >
+                    <div className="relative h-[100px] w-[100px] sm:h-[120px] sm:w-[120px] lg:h-[140px] lg:w-[140px] flex-shrink-0 overflow-hidden rounded-full bg-white shadow-[0_4px_15px_rgba(0,0,0,0.06)] group-hover:shadow-[0_8px_30px_rgba(59,130,246,0.3)] transition-shadow duration-300 dark:bg-[#1e293b] dark:shadow-[0_4px_15px_rgba(0,0,0,0.4)] border border-transparent dark:border-white/5">
+                      <Image
+                        src={getSafeImage(cat.image, PLACEHOLDER_CATEGORY)}
+                        alt={cat.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 100px, (max-width: 1024px) 120px, 140px"
+                        onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_CATEGORY; }}
+                      />
+                    </div>
+                    <p className="text-[14px] sm:text-[16px] font-semibold text-slate-800 group-hover:text-blue-600 dark:text-slate-200 dark:group-hover:text-blue-400 text-center transition-colors max-w-full truncate px-2">
                       {cat.name}
                     </p>
-                    {(cat.productCount ?? 0) > 0 && (
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">{cat.productCount} products</p>
-                    )}
-                  </div>
-                </Link>
+                  </Link>
+                </SwiperSlide>
               ))}
-            </div>
+            </Swiper>
           </div>
         </section>
       )}
@@ -354,134 +326,132 @@ export default function HomePage() {
       </section>
 
       {/* Discover More */}
-      <section className="py-6 sm:py-8 border-t border-gray-50 dark:border-white/5">
+      <section className="py-12 sm:py-20 border-t border-gray-100 dark:border-white/5 bg-white dark:bg-[#0a0a0a]">
         <div className="page-container">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Discover More</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Find the latest releases, offers and exclusives right here</p>
+          <div className="mb-10 sm:mb-12">
+            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-4xl">Discover More</h2>
+            <p className="mt-3 text-base text-gray-500 dark:text-gray-400">Find the latest releases, offers and exclusives right here</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 md:grid-rows-2 md:gap-4">
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 auto-rows-fr">
+            {/* Featured Card (Left) */}
             {firstDiscover && (
               <Link
                 href={firstDiscover.link || '/products'}
-                className="group relative col-span-2 aspect-[2/1] overflow-hidden rounded-xl border border-gray-100 bg-gray-100 shadow-sm md:col-span-1 md:row-span-2 md:aspect-auto md:min-h-[280px] md:rounded-2xl dark:border-white/[0.06] dark:bg-white/[0.02]"
+                className="group relative flex flex-col justify-end overflow-hidden rounded-[24px] bg-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-white/[0.02] md:col-span-5 lg:col-span-6 md:min-h-[500px] min-h-[350px]"
               >
                 <Image
                   src={getSafeImage(firstDiscover.image, PLACEHOLDER_BANNER)}
                   alt={firstDiscover.title || 'Discover'}
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 33vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                  sizes="(max-width: 768px) 100vw, 50vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                <div className="absolute bottom-4 left-4 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
-                  {firstDiscover.title || 'Latest Launches'}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-colors duration-300 group-hover:from-black/90" />
+                <div className="relative z-10 p-6 sm:p-10 w-full">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight">
+                    {firstDiscover.title || 'Latest Launches'}
+                  </h3>
+                  <div className="flex items-center text-sm font-medium text-white/90 group-hover:text-white">
+                    Explore
+                    <svg className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </div>
                 </div>
               </Link>
             )}
 
-            {secondDiscover && (
-              <Link
-                href={secondDiscover.link || '/products'}
-                className="group relative col-span-2 aspect-[2/1] overflow-hidden rounded-xl border border-gray-100 bg-gray-100 shadow-sm md:col-span-2 md:row-span-1 md:aspect-auto md:min-h-[130px] md:rounded-2xl dark:border-white/[0.06] dark:bg-white/[0.02]"
-              >
-                <Image
-                  src={getSafeImage(secondDiscover.image, PLACEHOLDER_BANNER)}
-                  alt={secondDiscover.title || 'Discover'}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 100vw, 66vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-4 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
-                  {secondDiscover.title || 'Trending Deals'}
-                </div>
-              </Link>
-            )}
+            {/* Right Side Column */}
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:col-span-7 lg:col-span-6">
 
-            {thirdDiscover && (
-              <Link
-                href={thirdDiscover.link || '/products'}
-                className="group relative col-span-1 aspect-[4/3] overflow-hidden rounded-xl border border-gray-100 bg-gray-100 shadow-sm md:col-span-1 md:row-span-1 md:aspect-auto md:rounded-2xl dark:border-white/[0.06] dark:bg-white/[0.02]"
-              >
-                <Image
-                  src={getSafeImage(thirdDiscover.image, PLACEHOLDER_PRODUCT)}
-                  alt={thirdDiscover.title || 'Discover'}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md sm:text-[11px]">
-                  {thirdDiscover.title || 'Featured Picks'}
-                </div>
-              </Link>
-            )}
+              {/* Trending Deals (Top Right) */}
+              {secondDiscover && (
+                <Link
+                  href={secondDiscover.link || '/products'}
+                  className="group relative flex flex-col justify-end col-span-2 overflow-hidden rounded-[24px] bg-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-white/[0.02] min-h-[200px] sm:min-h-[240px]"
+                >
+                  <Image
+                    src={getSafeImage(secondDiscover.image, PLACEHOLDER_BANNER)}
+                    alt={secondDiscover.title || 'Discover'}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    sizes="(max-width: 768px) 100vw, 60vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-colors duration-300 group-hover:from-black/90" />
+                  <div className="relative z-10 p-6 sm:p-8 flex items-end justify-between w-full">
+                    <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                      {secondDiscover.title || 'Trending Deals'}
+                    </h3>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+                      <svg className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              )}
 
-            {fourthDiscover && (
-              <Link
-                href={fourthDiscover.link || '/products'}
-                className="group relative col-span-1 aspect-[4/3] overflow-hidden rounded-xl border border-gray-100 bg-gray-100 shadow-sm md:col-span-1 md:row-span-1 md:aspect-auto md:rounded-2xl dark:border-white/[0.06] dark:bg-white/[0.02]"
-              >
-                <Image
-                  src={getSafeImage(fourthDiscover.image, PLACEHOLDER_CATEGORY)}
-                  alt={fourthDiscover.title || 'Discover'}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md sm:text-[11px]">
-                  {fourthDiscover.title || 'Accessories & More'}
-                </div>
-              </Link>
-            )}
+              {/* Featured Picks (Bottom Left) */}
+              {thirdDiscover && (
+                <Link
+                  href={thirdDiscover.link || '/products'}
+                  className="group relative flex flex-col justify-end col-span-1 overflow-hidden rounded-[24px] bg-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-white/[0.02] min-h-[200px] sm:min-h-[240px]"
+                >
+                  <Image
+                    src={getSafeImage(thirdDiscover.image, PLACEHOLDER_PRODUCT)}
+                    alt={thirdDiscover.title || 'Discover'}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    sizes="(max-width: 768px) 50vw, 30vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-colors duration-300 group-hover:from-black/90" />
+                  <div className="relative z-10 p-5 sm:p-6 flex items-end justify-between w-full">
+                    <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight pr-2">
+                      {thirdDiscover.title || 'Featured Picks'}
+                    </h3>
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+                      <svg className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              )}
+
+              {/* Accessories & More (Bottom Right) */}
+              {fourthDiscover && (
+                <Link
+                  href={fourthDiscover.link || '/products'}
+                  className="group relative flex flex-col justify-end col-span-1 overflow-hidden rounded-[24px] bg-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-white/[0.02] min-h-[200px] sm:min-h-[240px]"
+                >
+                  <Image
+                    src={getSafeImage(fourthDiscover.image, PLACEHOLDER_CATEGORY)}
+                    alt={fourthDiscover.title || 'Discover'}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    sizes="(max-width: 768px) 50vw, 30vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-colors duration-300 group-hover:from-black/90" />
+                  <div className="relative z-10 p-5 sm:p-6 flex items-end justify-between w-full">
+                    <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight leading-tight pr-2">
+                      {fourthDiscover.title || 'Accessories & More'}
+                    </h3>
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white transition-colors duration-300 group-hover:bg-white group-hover:text-black">
+                      <svg className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Customer Reviews */}
-      {topReviews.length > 0 && (
-        <section className="py-6 sm:py-8 border-t border-gray-50 dark:border-white/5">
-          <div className="page-container">
-            <div className="mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">What Our Customers Say</h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Real reviews from verified buyers</p>
-            </div>
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x-mandatory pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
-              {topReviews.map((review) => (
-                <div key={review._id} className="w-[220px] flex-shrink-0 snap-start sm:w-[260px] lg:w-auto rounded-xl border border-gray-100 bg-white p-3 sm:p-4 dark:border-white/[0.06] dark:bg-white/[0.02]">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 font-bold text-sm dark:bg-surface-200 dark:text-slate-300">
-                      {review.user.avatar ? (
-                        <Image src={getSafeImage(review.user.avatar, PLACEHOLDER_PRODUCT)} alt={review.user.name || 'User'} width={36} height={36} className="rounded-full object-cover" />
-                      ) : (
-                        (review.user.name || 'U').charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{review.user.name}</p>
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <HiStar key={i} className={`h-3 w-3 ${i < review.rating ? 'text-amber-400' : 'text-gray-200 dark:text-gray-700'}`} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {review.title && <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">{review.title}</p>}
-                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">{review.comment}</p>
-                  <Link href={`/product/${review.productSlug}`} className="mt-3 flex items-center gap-2">
-                    <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-md bg-gray-50 dark:bg-white/5">
-                      <Image src={getSafeImage(review.productThumbnail, PLACEHOLDER_PRODUCT)} alt={review.productName} fill className="object-cover" sizes="32px" onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_PRODUCT; }} />
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{review.productName}</p>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {topReviews.length > 0 && <TestimonialSection reviews={topReviews} />}
 
       {/* New Arrivals Grid */}
       {!isLoading && newArrivals.length > 0 && (

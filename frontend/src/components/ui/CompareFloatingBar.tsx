@@ -4,6 +4,7 @@ import { useCompareStore } from '@/store/compare.store';
 import Image from 'next/image';
 import Link from 'next/link';
 import { HiOutlineX, HiOutlineSwitchHorizontal } from 'react-icons/hi';
+import { usePathname } from 'next/navigation';
 
 const PLACEHOLDER_IMG = '/images/no-product.svg';
 
@@ -11,8 +12,9 @@ export default function CompareFloatingBar() {
   const items = useCompareStore((s) => Array.isArray(s.items) ? s.items : []);
   const removeFromCompare = useCompareStore((s) => s.removeFromCompare);
   const clearCompare = useCompareStore((s) => s.clearCompare);
+  const pathname = usePathname();
 
-  if (items.length === 0) return null;
+  if (items.length === 0 || pathname?.includes('/compare')) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:border-white/10 dark:bg-surface-100/95 dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">

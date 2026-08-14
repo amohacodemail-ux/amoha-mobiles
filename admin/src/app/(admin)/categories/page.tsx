@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { categoryService } from '@/services/category.service';
 import { ImageUploader } from '@/components/shared/image-uploader';
 import { formatDate } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import type { Category } from '@/types';
 
 const schema = z.object({
@@ -35,6 +36,8 @@ export default function CategoriesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
+
+  const { canCreate, canEdit, canDelete } = useModulePermissions(MODULES.CATEGORIES);
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -100,20 +103,22 @@ export default function CategoriesPage() {
       key: 'actions', header: 'Actions',
       render: (c) => (
         <div className="flex gap-2">
-          <Button variant="outline" size="icon-sm" onClick={() => openEdit(c)}><Pencil className="h-3.5 w-3.5" /></Button>
-          <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => setDeleteId(c._id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+          {canEdit && <Button variant="outline" size="icon-sm" onClick={() => openEdit(c)}><Pencil className="h-3.5 w-3.5" /></Button>}
+          {canDelete && <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => setDeleteId(c._id)}><Trash2 className="h-3.5 w-3.5" /></Button>}
         </div>
       ),
     },
   ];
 
+  const visibleColumns = (canEdit || canDelete) ? columns : columns.filter(c => c.key !== 'actions');
+
   return (
     <div>
       <PageHeader title="Categories" description={`${categories.length} total categories`}>
-        <Button onClick={openAdd}><Plus className="h-4 w-4" />Add Category</Button>
+        {canCreate && <Button onClick={openAdd}><Plus className="h-4 w-4" />Add Category</Button>}
       </PageHeader>
 
-      <DataTable columns={columns} data={filtered} loading={loading} searchValue={search} onSearchChange={setSearch} searchPlaceholder="Search categories..." rowKey={(c) => c._id} />
+      <DataTable columns={visibleColumns} data={filtered} loading={loading} searchValue={search} onSearchChange={setSearch} searchPlaceholder="Search categories..." rowKey={(c) => c._id} />
 
       {/* Add/Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

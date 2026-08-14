@@ -15,6 +15,7 @@ const footerLinks = {
   account: [
     { label: 'My Profile', href: '/profile' },
     { label: 'My Orders', href: '/orders' },
+    { label: 'My Requests', href: '/my-requests' },
     { label: 'Wishlist', href: '/wishlist' },
     { label: 'Contact Us', href: '/contact' },
     { label: 'About Us', href: '/about' },
@@ -80,14 +81,14 @@ export default function Footer() {
                 WhatsApp Us
               </a>
               <a
-              href="https://maps.google.com/?q=Idikarai,Coimbatore,Tamil+Nadu"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 transition-colors"
-            >
-              <HiOutlineLocationMarker className="h-4 w-4 flex-shrink-0 mt-0.5" />
-              <span>{address}</span>
-            </a>
+                href="https://maps.google.com/?q=Idikarai,Coimbatore,Tamil+Nadu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 transition-colors"
+              >
+                <HiOutlineLocationMarker className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>{address}</span>
+              </a>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               {footerHighlights.map((item) => (

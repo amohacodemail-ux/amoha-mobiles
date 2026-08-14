@@ -7,7 +7,7 @@ import { HiOutlineChevronRight, HiOutlineViewGrid } from 'react-icons/hi';
 import type { Category, Product, ProductFilters } from '@/types';
 import { categoryService } from '@/services/category.service';
 import { productService } from '@/services/product.service';
-import ProductCard from '@/components/ui/ProductCard';
+import ListingProductCard from '@/components/ui/ListingProductCard';
 import FilterSidebar from '@/components/ui/FilterSidebar';
 import Pagination from '@/components/ui/Pagination';
 import { ProductGridSkeleton } from '@/components/ui/Skeletons';
@@ -119,7 +119,7 @@ export default function CategoryPage() {
               <>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
                   {products.map((product) => (
-                    <ProductCard key={product._id} product={product} />
+                    <ListingProductCard key={product._id} product={product} />
                   ))}
                 </div>
                 <div className="mt-8">
@@ -132,7 +132,7 @@ export default function CategoryPage() {
                   <HiOutlineViewGrid className="h-8 w-8 text-gray-400" />
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No products in this category</h3>
-                <p className="mt-1 text-sm text-gray-500">Check back later or browse other categories.</p>
+                <p className="mt-1 text-sm text-gray-500">Check back later or browse other categories</p>
                 <Link href="/products" className="mt-4 rounded-xl bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white">
                   Browse All
                 </Link>

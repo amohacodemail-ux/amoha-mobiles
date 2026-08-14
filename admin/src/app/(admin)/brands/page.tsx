@@ -133,6 +133,8 @@ export default function BrandsPage() {
     },
   ];
 
+  const visibleColumns = (canEdit || canDelete) ? columns : columns.filter(c => c.key !== 'actions');
+
   return (
     <div>
       <PageHeader title="Brands" description={`${brands.length} total brands`}>
@@ -141,7 +143,7 @@ export default function BrandsPage() {
         )}
       </PageHeader>
 
-      <DataTable columns={columns} data={filtered} loading={loading} searchValue={search} onSearchChange={setSearch} searchPlaceholder="Search brands..." rowKey={(b) => b._id} />
+      <DataTable columns={visibleColumns} data={filtered} loading={loading} searchValue={search} onSearchChange={setSearch} searchPlaceholder="Search brands..." rowKey={(b) => b._id} />
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">

@@ -90,13 +90,64 @@ class PosController {
         pincode: '',
       };
 
+      let customerId = req.user!.userId;
+      if (customerPhone) {
+        // 1. Check if user exists with this phone and role='user'
+        const { data: existingUsers } = await supabase
+          .from('users')
+          .select('id')
+          .eq('phone', customerPhone)
+          .eq('role', 'user')
+          .limit(1);
+
+        if (existingUsers && existingUsers.length > 0) {
+          customerId = existingUsers[0].id;
+        } else {
+          // 2. Create new customer
+          const newUserId = uuidv4();
+          const { error: userError } = await supabase.from('users').insert({
+            id: newUserId,
+            name: customerName || 'Walk-in Customer',
+            phone: customerPhone,
+            email: customerEmail || null,
+            role: 'user',
+            password: uuidv4(), // generate a random password for walk-in
+            is_verified: true,
+          });
+
+          if (userError) {
+            logger.error(`[POS] Failed to create walk-in customer: ${userError.message}`);
+          } else {
+            customerId = newUserId;
+            // Add a default segment for the new customer
+            await supabase.from('customer_segments').insert({
+               user_id: customerId,
+               segment: 'new',
+               assigned_by: req.user!.userId
+            });
+            // Add tags to denote source and type
+            await supabase.from('customer_tags').insert([
+               { user_id: customerId, tag: 'Walk-in', created_by: req.user!.userId },
+               { user_id: customerId, tag: 'POS', created_by: req.user!.userId }
+            ]);
+            // Add a note
+            await supabase.from('customer_notes').insert({
+               user_id: customerId,
+               admin_id: req.user!.userId,
+               note: 'Customer created from POS Walk-in.',
+               type: 'note'
+            });
+          }
+        }
+      }
+
       const { data: order, error } = await supabase.from('orders').insert({
-        order_number: orderNumber, user_id: req.user!.userId,
+        order_number: orderNumber, user_id: customerId,
         shipping_address: shippingAddress,
         payment_method: 'cod', payment_status: 'paid', status: 'delivered',
         subtotal, discount, shipping_fee: 0, total: totalAmount,
         is_walk_in: true, walk_in_customer_name: customerName || 'Walk-in Customer',
-        walk_in_customer_phone: customerPhone || '', walk_in_customer_email: customerEmail || '',
+        walk_in_customer_phone: customerPhone || '', walk_in_customer_email: customerEmail || null,
         walk_in_customer_address: walkInAddr || null,
         pos_payment_method: paymentMethod, pos_discount: posDiscount || 0, pos_discount_type: posDiscountType || 'fixed',
         gst_amount: gstAmount, gst_rate: enableGst ? defaultGstRate : 0, invoice_number: invoiceNumber,

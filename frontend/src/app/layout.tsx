@@ -244,6 +244,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://amoha-backend-v2.onrender.com" />
         <link rel="preconnect" href="https://amoha-backend-v2.onrender.com" crossOrigin="anonymous" />
+      </head>
+      <body suppressHydrationWarning className="flex min-h-screen flex-col bg-[var(--background)] font-sans text-[var(--foreground)] antialiased">
         <GoogleAnalytics />
         <script
           type="application/ld+json"
@@ -253,8 +255,6 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteJsonLd) }}
         />
-      </head>
-      <body className="flex min-h-screen flex-col bg-[var(--background)] font-sans text-[var(--foreground)] antialiased">
         <ThemeProvider>
           <LoadingBar />
           <Toaster
@@ -272,3 +272,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+// Force Next.js cache invalidation

@@ -38,13 +38,19 @@ export default function ShippingInfoPage() {
         </div>
 
         <div className="space-y-6 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-          <div className="glass-card p-6 sm:p-8 rounded-xl space-y-7">
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">1</span>
-                Domestic Shipping Coverage
-              </h2>
-              <p>
+          <div className="space-y-4">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">1</span>
+                  <h2 className="text-lg">Domestic Shipping Coverage</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <p>
                 We currently deliver across most serviceable PIN codes in India through trusted courier partners. Orders are shipped
                 from our warehouse or authorised store locations and are subject to stock availability, payment confirmation, address
                 verification, and courier serviceability.
@@ -54,14 +60,21 @@ export default function ShippingInfoPage() {
                 <li>Remote or high-risk areas may take longer or may require prepaid orders only.</li>
                 <li>Orders are processed on business days only, excluding Sundays and public holidays.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">2</span>
-                Order Processing & Courier Partners
-              </h2>
-              <p className="mb-3">After successful order placement, most orders are packed and dispatched within <strong className="text-gray-700 dark:text-gray-200">1–2 business days</strong>.</p>
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">2</span>
+                  <h2 className="text-lg">Order Processing & Courier Partners</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <p className="mb-3">After successful order placement, most orders are packed and dispatched within <strong className="text-gray-700 dark:text-gray-200">1–2 business days</strong>.</p>
               <div className="grid sm:grid-cols-2 gap-2">
                 {[
                   "Blue Dart — premium domestic delivery",
@@ -74,14 +87,21 @@ export default function ShippingInfoPage() {
                   </div>
                 ))}
               </div>
-            </section>
+              </div>
+            </details>
 
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">3</span>
-                Estimated Delivery Timeline
-              </h2>
-              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">3</span>
+                  <h2 className="text-lg">Estimated Delivery Timeline</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03]">
@@ -110,14 +130,21 @@ export default function ShippingInfoPage() {
                 </table>
               </div>
               <p className="mt-3 text-xs">These timelines are estimates only and may be affected by weather events, public holidays, political disruptions, natural disasters, or courier delays outside our control.</p>
-            </section>
+              </div>
+            </details>
 
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">4</span>
-                Shipping Charges
-              </h2>
-              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">4</span>
+                  <h2 className="text-lg">Shipping Charges</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/10">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03]">
@@ -134,67 +161,103 @@ export default function ShippingInfoPage() {
                   </tbody>
                 </table>
               </div>
-            </section>
+              </div>
+            </details>
 
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">5</span>
-                International Shipping
-              </h2>
-              <ul className="list-disc list-inside space-y-1.5">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">5</span>
+                  <h2 className="text-lg">International Shipping</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <ul className="list-disc list-inside space-y-1.5">
                 <li>International delivery may be available for selected products and countries subject to customs rules, export restrictions, and courier acceptance.</li>
                 <li>All international shipping charges, import duties, VAT/GST, customs clearance fees, and local taxes are generally the buyer&apos;s responsibility unless explicitly stated otherwise.</li>
                 <li>International delivery timelines vary by destination and usually range from <strong className="text-gray-700 dark:text-gray-200">5–14 business days</strong> after dispatch.</li>
                 <li>We comply with applicable Indian foreign trade, RBI, and FEMA guidelines for cross-border transactions where applicable.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">6</span>
-                Order Tracking
-              </h2>
-              <ul className="list-disc list-inside space-y-1.5">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">6</span>
+                  <h2 className="text-lg">Order Tracking</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <ul className="list-disc list-inside space-y-1.5">
                 <li>Once your order is shipped, a tracking ID is sent by <strong className="text-gray-700 dark:text-gray-200">SMS, email, and your account dashboard</strong>.</li>
                 <li>You can track the shipment anytime from the <span className="text-primary-500">My Orders</span> section.</li>
                 <li>If tracking does not update for more than 48 hours, please contact our support team for assistance.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">7</span>
-                Packaging, Insurance & Delivery Security
-              </h2>
-              <ul className="list-disc list-inside space-y-1.5">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">7</span>
+                  <h2 className="text-lg">Packaging, Insurance & Delivery Security</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <ul className="list-disc list-inside space-y-1.5">
                 <li>All devices are securely packed with protective cushioning and tamper-evident sealing.</li>
                 <li>High-value shipments may require OTP-based delivery confirmation or signature on delivery.</li>
                 <li>Customers should inspect the package at delivery and report visible damage within <strong className="text-gray-700 dark:text-gray-200">24 hours</strong>.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">8</span>
-                Failed or Undelivered Orders
-              </h2>
-              <ul className="list-disc list-inside space-y-1.5">
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">8</span>
+                  <h2 className="text-lg">Failed or Undelivered Orders</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <ul className="list-disc list-inside space-y-1.5">
                 <li>Our courier partners generally make up to <strong className="text-gray-700 dark:text-gray-200">3 delivery attempts</strong>.</li>
                 <li>If delivery fails due to customer unavailability, incorrect address, or refusal to accept the parcel, the order may be returned to origin.</li>
                 <li>Refunds for prepaid returned-to-origin orders are processed after deducting applicable shipping / handling charges, unless the failure was due to our error.</li>
               </ul>
-            </section>
+              </div>
+            </details>
 
-            <section>
-              <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500/10 text-primary-500 text-xs font-bold">9</span>
-                Restricted Items & Non-Serviceable Areas
-              </h2>
-              <p>
+            <details className="group bg-white dark:bg-surface-50 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-6 text-gray-900 dark:text-white font-semibold outline-none hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-sm font-bold">9</span>
+                  <h2 className="text-lg">Restricted Items & Non-Serviceable Areas</h2>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-white/5 group-open:-rotate-180 transition-transform duration-300">
+                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-500 dark:text-gray-400" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </summary>
+              <div className="px-6 pb-6 pt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-white/5 mt-2">
+                <p>
                 We may decline or delay shipment for certain items, bulk orders, suspicious transactions, government-restricted products,
                 or locations that are temporarily non-serviceable due to courier, legal, weather, or safety reasons.
               </p>
-            </section>
+              </div>
+            </details>
           </div>
         </div>
 
