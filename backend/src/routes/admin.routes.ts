@@ -22,6 +22,7 @@ import {
   canAccessDashboard,
   canAccessReports,
   canAccessNotifications,
+  canViewCatalog,
   isAdmin
 } from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
