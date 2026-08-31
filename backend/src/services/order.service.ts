@@ -209,13 +209,7 @@ class OrderService {
     if (query.source === 'pos') qb = qb.eq('is_walk_in', true);
     else if (query.source === 'online') qb = qb.eq('is_walk_in', false);
     if (query.search) {
-      const { data: searchUsers } = await supabase.from('users').select('id').or(`name.ilike.%${query.search}%,email.ilike.%${query.search}%,phone.ilike.%${query.search}%`);
-      const searchUserIds = (searchUsers || []).map((u: any) => u.id);
-      let orStr = `order_number.ilike.%${query.search}%,walk_in_customer_name.ilike.%${query.search}%,walk_in_customer_phone.ilike.%${query.search}%`;
-      if (searchUserIds.length > 0) {
-        orStr += `,user_id.in.("${searchUserIds.join('","')}")`;
-      }
-      qb = qb.or(orStr);
+      qb = qb.or(`order_number.ilike.%${query.search}%`);
     }
     if (query.startDate) qb = qb.gte('created_at', query.startDate);
     if (query.endDate) qb = qb.lte('created_at', query.endDate);
@@ -271,13 +265,40 @@ class OrderService {
 
     // Fetch order_items separately (PostgREST join blocked by RLS)
     const { data: itemsData } = await supabase.from('order_items').select('*').eq('order_id', orderId);
+
+    // Fetch product details for items to retrieve HSN / specifications
+    const productIds = [...new Set((itemsData || []).map((i: any) => i.product_id).filter(Boolean))];
+    const productsMap: Record<string, any> = {};
+    if (productIds.length > 0) {
+      const { data: prods } = await supabase.from('products').select('id, name, sku, specifications, category_id, categories(name, slug)').in('id', productIds);
+      (prods || []).forEach((p: any) => { productsMap[p.id] = transformRow(p); });
+    }
+
     // Get user info
     const { data: user } = await supabase.from('users').select('id, name, email, phone').eq('id', order.user_id).maybeSingle();
 
     const transformed = transformRow(order);
     transformed.items = (itemsData || []).map((item: any) => {
       const ti = transformRow(item);
-      if (!ti.product) ti.product = { name: ti.productName || 'Product', images: ti.productImage ? [ti.productImage] : [] };
+      const prod = productsMap[item.product_id] || {};
+      const catName = prod.categories?.name || prod.category || '';
+      const hsn = ti.hsnCode || ti.hsn_code || prod.hsnCode || prod.hsn_code || prod.specifications?.hsnCode || prod.specifications?.hsn || '';
+      if (!ti.product) {
+        ti.product = {
+          _id: item.product_id || '',
+          id: item.product_id || '',
+          name: ti.productName || prod.name || 'Product',
+          images: ti.productImage ? [ti.productImage] : (prod.images || []),
+          specifications: prod.specifications || {},
+          category: catName,
+          hsnCode: hsn,
+        };
+      } else {
+        ti.product.specifications = ti.product.specifications || prod.specifications || {};
+        ti.product.category = ti.product.category || catName;
+        ti.product.hsnCode = ti.product.hsnCode || hsn;
+      }
+      ti.hsnCode = ti.hsnCode || hsn;
       return ti;
     });
     transformed.statusHistory = (order.order_status_history || []).map(transformRow);

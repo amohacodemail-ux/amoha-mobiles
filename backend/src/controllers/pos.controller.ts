@@ -6,15 +6,20 @@ import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import { notifyOrder } from '../utils/notify';
 import { v4 as uuidv4 } from 'uuid';
 import { sendOrderConfirmationEmail } from '../utils/email.util';
+import { inferHsnCode } from '../utils/invoice.util';
 import inventoryLedger from '../services/inventory-ledger.service';
 import logger from '../utils/logger.util';
 
 class PosController {
   async createOrder(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const { items, customerName, customerPhone, customerEmail, paymentMethod, posDiscount, posDiscountType, gstEnabled: gstEnabledOverride, notes } = req.body;
+      const { items, customerName, customerPhone, customerEmail, customerAddress, paymentMethod, posDiscount, posDiscountType, gstEnabled: gstEnabledOverride, notes } = req.body;
       if (!items || !Array.isArray(items) || items.length === 0) return sendMessage(res, 'At least one item is required', 400);
       if (!paymentMethod) return sendMessage(res, 'Payment method is required', 400);
+
+      const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
+      const billing: any = (settings as any)?.billing || {};
+      const fallbackHsn = billing?.hsnCode || '8517';
 
       const orderItems: any[] = [];
       let subtotal = 0;
@@ -24,7 +29,17 @@ class PosController {
         if (!product) return sendMessage(res, `Product not found: ${item.productId}`, 404);
         const price = item.price ?? product.selling_price;
         const itemGstRate = typeof item.gstRate === 'number' ? item.gstRate : null;
-        orderItems.push({ product_id: product.id, product_name: product.name, product_image: product.images?.[0] || null, quantity: item.quantity, price, total: price * item.quantity, _itemGstRate: itemGstRate });
+        const itemHsn = product.specifications?.hsnCode || product.specifications?.hsn || product.hsn_code || inferHsnCode(product.name, '', fallbackHsn);
+        orderItems.push({
+          product_id: product.id,
+          product_name: product.name,
+          product_image: product.images?.[0] || null,
+          quantity: item.quantity,
+          price,
+          total: price * item.quantity,
+          _itemGstRate: itemGstRate,
+          _hsnCode: itemHsn,
+        });
         subtotal += price * item.quantity;
       }
 
@@ -33,9 +48,6 @@ class PosController {
         discount = posDiscountType === 'percentage' ? Math.round((subtotal * posDiscount) / 100) : posDiscount;
         if (discount > subtotal) discount = subtotal;
       }
-
-      const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
-      const billing: any = (settings as any)?.billing || {};
       // Frontend can override the GST toggle; fall back to DB setting
       const enableGst: boolean = typeof gstEnabledOverride === 'boolean' ? gstEnabledOverride : (billing?.enableGst ?? false);
       const defaultGstRate: number = billing?.gstRate ?? 18;
@@ -67,6 +79,16 @@ class PosController {
       // Append random suffix to prevent race-condition duplicates on busy counters
       const posSuffix = Math.random().toString(36).slice(2, 5).toUpperCase();
       const invoiceNumber = `${prefix}-${todayStr}-${String((countToday || 0) + 1).padStart(4, '0')}-${posSuffix}`;
+
+      const walkInAddr = typeof customerAddress === 'string' ? customerAddress.trim() : '';
+      const shippingAddress = {
+        fullName: customerName || 'Walk-in Customer',
+        phone: customerPhone || '',
+        addressLine1: walkInAddr || 'In-Store Purchase',
+        city: '',
+        state: '',
+        pincode: '',
+      };
 
       let customerId = req.user!.userId;
       if (customerPhone) {
@@ -121,11 +143,12 @@ class PosController {
 
       const { data: order, error } = await supabase.from('orders').insert({
         order_number: orderNumber, user_id: customerId,
-        shipping_address: { fullName: customerName || 'Walk-in Customer', phone: customerPhone || '0000000000', addressLine1: billing?.billingAddress || 'Counter Sale', city: billing?.billingCity || 'Store', state: billing?.billingState || 'Store', pincode: billing?.billingPincode || '000000' },
+        shipping_address: shippingAddress,
         payment_method: 'cod', payment_status: 'paid', status: 'delivered',
         subtotal, discount, shipping_fee: 0, total: totalAmount,
         is_walk_in: true, walk_in_customer_name: customerName || 'Walk-in Customer',
         walk_in_customer_phone: customerPhone || '', walk_in_customer_email: customerEmail || null,
+        walk_in_customer_address: walkInAddr || null,
         pos_payment_method: paymentMethod, pos_discount: posDiscount || 0, pos_discount_type: posDiscountType || 'fixed',
         gst_amount: gstAmount, gst_rate: enableGst ? defaultGstRate : 0, invoice_number: invoiceNumber,
         notes: notes || 'POS Order',
@@ -134,7 +157,7 @@ class PosController {
       if (error) throw error;
 
       // Strip internal fields before DB insert
-      const itemsInsert = orderItems.map(({ _itemGstRate, ...i }) => ({ ...i, order_id: order.id }));
+      const itemsInsert = orderItems.map(({ _itemGstRate, _hsnCode, ...i }) => ({ ...i, order_id: order.id }));
       const { error: itemsErr } = await supabase.from('order_items').insert(itemsInsert);
       if (itemsErr) logger.error('[POS] order_items insert error:', itemsErr);
       await supabase.from('order_status_history').insert([
@@ -178,7 +201,8 @@ class PosController {
         price: item.price,
         total: item.total,
         gstRate: item._itemGstRate,
-        product: { name: item.product_name, images: item.product_image ? [item.product_image] : [] },
+        hsnCode: item._hsnCode,
+        product: { name: item.product_name, images: item.product_image ? [item.product_image] : [], hsnCode: item._hsnCode },
       }));
       const t = transformRow(order);
       t.totalAmount = t.total ?? 0;

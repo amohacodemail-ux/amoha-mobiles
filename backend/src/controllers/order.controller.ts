@@ -6,7 +6,7 @@ import { AuthenticatedRequest } from '../types';
 import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import { notifyOrder } from '../utils/notify';
 import { sendOrderConfirmationEmail, sendOrderStatusEmail, sendOrderCancellationEmail } from '../utils/email.util';
-import { generateInvoicePDF } from '../utils/invoice.util';
+import { generateInvoicePDF, inferHsnCode } from '../utils/invoice.util';
 import activityLogService from '../services/activity-log.service';
 import settingsService from '../services/settings.service';
 
@@ -76,21 +76,54 @@ class OrderController {
       const order: any = await orderService.getOrderById(req.params.id);
       const { data: user } = await supabase.from('users').select('name, email, phone').eq('id', req.user!.userId).maybeSingle();
 
-      // Business/billing info — same source the admin invoice endpoint uses,
-      // so customer-downloaded invoices show the company name/address/GST too.
       const settings: any = await settingsService.getSettings().catch(() => null);
       const billing: any = settings?.billing || {};
+      const fallbackHsn = billing.hsnCode || '8517';
       const bizAddrParts = [billing.billingAddress, billing.billingCity, billing.billingState, billing.billingPincode].filter(Boolean);
       const businessAddress = bizAddrParts.join(', ') || settings?.address || '';
+
+      let shippingAddress: any = order.shippingAddress;
+      if (order.isWalkIn) {
+        const rawAddr = order.shippingAddress || {};
+        const isShopAddress = (val?: string) => !val || val === billing.billingAddress || val === 'Counter Sale' || val === 'Store';
+        const isShopCity = (val?: string) => !val || val === billing.billingCity || val === 'Store';
+        const isShopState = (val?: string) => !val || val === billing.billingState || val === 'Store';
+        const isShopPin = (val?: string) => !val || val === billing.billingPincode || val === '000000';
+
+        const custAddr = order.walkInCustomerAddress || (!isShopAddress(rawAddr.addressLine1) ? rawAddr.addressLine1 : '');
+        const custCity = !isShopCity(rawAddr.city) ? rawAddr.city : '';
+        const custState = !isShopState(rawAddr.state) ? rawAddr.state : '';
+        const custPin = !isShopPin(rawAddr.pincode) ? rawAddr.pincode : '';
+
+        shippingAddress = {
+          fullName: order.walkInCustomerName || user?.name || 'Customer',
+          addressLine1: custAddr || 'In-Store Purchase',
+          city: custCity,
+          state: custState,
+          pincode: custPin,
+          phone: order.walkInCustomerPhone || user?.phone || '',
+        };
+      }
 
       generateInvoicePDF(res, {
         orderNumber: order.orderNumber,
         orderDate: order.createdAt,
-        customerName: user?.name || 'Customer',
-        customerEmail: user?.email || '',
-        customerPhone: user?.phone || '',
-        shippingAddress: order.shippingAddress,
-        items: (order.items || []).map((i: any) => ({ name: i.productName || 'Product', quantity: i.quantity, price: i.price })),
+        customerName: order.isWalkIn ? (order.walkInCustomerName || 'Walk-in Customer') : (user?.name || 'Customer'),
+        customerEmail: order.isWalkIn ? (order.walkInCustomerEmail || '') : (user?.email || ''),
+        customerPhone: order.isWalkIn ? (order.walkInCustomerPhone || '') : (user?.phone || ''),
+        shippingAddress: shippingAddress || order.shippingAddress,
+        items: (order.items || []).map((i: any) => {
+          const prod = i.product || {};
+          const itemHsn = i.hsnCode || i.hsn_code || prod.hsnCode || prod.hsn_code ||
+            prod.specifications?.hsnCode || prod.specifications?.hsn ||
+            inferHsnCode(prod.name || i.productName || '', prod.category?.name || prod.category || '', fallbackHsn);
+          return {
+            name: prod.name || i.productName || 'Product',
+            quantity: i.quantity,
+            price: i.price,
+            hsnCode: itemHsn,
+          };
+        }),
         subtotal: order.subtotal,
         discount: order.discount,
         deliveryCharge: order.shippingFee,
@@ -107,7 +140,7 @@ class OrderController {
         businessEmail: billing.billingEmail || settings?.contactEmail || '',
         termsOnInvoice: billing.termsOnInvoice || '',
         footerNote: billing.footerNote || 'Thank you for shopping with us!',
-        hsnCode: billing.hsnCode || '',
+        hsnCode: fallbackHsn,
       });
     } catch (error) { next(error); }
   }

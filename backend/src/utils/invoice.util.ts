@@ -49,6 +49,24 @@ export interface InvoiceData {
   hsnCode?: string;
 }
 
+/**
+ * Infer standard Indian GST HSN code by product title or category name
+ * when product does not have an explicitly assigned HSN code.
+ */
+export function inferHsnCode(productName: string = '', categoryName: string = '', fallbackHsn: string = '8517'): string {
+  const text = `${productName} ${categoryName}`.toLowerCase();
+  if (/\b(cover|case|pouch|skin|back cover|silicone|flip cover|sleeve|housing)\b/i.test(text)) return '3926';
+  if (/\b(charger|adapter|power adapter|fast charger|warp charger|dock|wireless charger)\b/i.test(text)) return '8504';
+  if (/\b(cable|usb|type-c|lightning|aux|wire|charging cable|data cable)\b/i.test(text)) return '8544';
+  if (/\b(power bank|powerbank|battery|battery pack)\b/i.test(text)) return '8507';
+  if (/\b(earphone|headphone|airpod|earbud|tws|neckband|speaker|audio|soundbar|mic|headset)\b/i.test(text)) return '8518';
+  if (/\b(glass|tempered|screen guard|screen protector|protector|film)\b/i.test(text)) return '7007';
+  if (/\b(memory card|sd card|pendrive|pen drive|flash drive|microsd|ssd|hard drive)\b/i.test(text)) return '8523';
+  if (/\b(smartwatch|smart watch|band|fitness tracker)\b/i.test(text)) return '8517';
+  if (/\b(phone|mobile|smartphone|poco|redmi|realme|samsung|iphone|apple|vivo|oppo|oneplus|motorola|nokia|iqoo|pixel|xiaomi)\b/i.test(text)) return '8517';
+  return fallbackHsn;
+}
+
 export function generateInvoicePDF(res: Response, data: InvoiceData) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
@@ -128,19 +146,28 @@ export function generateInvoicePDF(res: Response, data: InvoiceData) {
   const addr = data.shippingAddress;
   doc.fontSize(9).font('Helvetica').text(addr.fullName, 300, shipY, { width: SHIP_COL_WIDTH });
   shipY = doc.y + 2;
-  doc.text(addr.addressLine1, 300, shipY, { width: SHIP_COL_WIDTH });
-  shipY = doc.y + 2;
+  if (addr.addressLine1 && addr.addressLine1 !== '—') {
+    doc.text(addr.addressLine1, 300, shipY, { width: SHIP_COL_WIDTH });
+    shipY = doc.y + 2;
+  }
   if (addr.addressLine2) {
     doc.text(addr.addressLine2, 300, shipY, { width: SHIP_COL_WIDTH });
     shipY = doc.y + 2;
   }
-  let addrLine = `${addr.city}`;
-  if (addr.state) addrLine += `, ${addr.state}`;
-  if (addr.pincode) addrLine += ` - ${addr.pincode}`;
-  doc.text(addrLine, 300, shipY, { width: SHIP_COL_WIDTH });
-  shipY = doc.y + 2;
-  doc.text(`Phone: ${addr.phone || '—'}`, 300, shipY, { width: SHIP_COL_WIDTH });
-  shipY = doc.y;
+  const isPlaceholderLocation = (v?: string) => !v || ['store', '000000', '—', '-'].includes(v.trim().toLowerCase());
+  const cityPart = !isPlaceholderLocation(addr.city) ? addr.city : '';
+  const statePart = !isPlaceholderLocation(addr.state) ? addr.state : '';
+  const pinPart = !isPlaceholderLocation(addr.pincode) ? addr.pincode : '';
+  let addrLine = [cityPart, statePart].filter(Boolean).join(', ');
+  if (pinPart) addrLine += (addrLine ? ` - ${pinPart}` : pinPart);
+  if (addrLine.trim()) {
+    doc.text(addrLine, 300, shipY, { width: SHIP_COL_WIDTH });
+    shipY = doc.y + 2;
+  }
+  if (addr.phone && addr.phone !== '0000000000' && addr.phone !== '—') {
+    doc.text(`Phone: ${addr.phone}`, 300, shipY, { width: SHIP_COL_WIDTH });
+    shipY = doc.y;
+  }
 
   // ── Items table ──────────────────────────────────────────
   const tableTop = Math.max(billY, shipY) + 20;

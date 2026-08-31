@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, X, Plus, Loader2, RefreshCw, Lock, Unlock } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/shared/page-header';
-import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import { MultiImageUploader } from '@/components/shared/image-uploader';
 import { BarcodeVisual } from '@/components/shared/barcode-visual';
 import { Button } from '@/components/ui/button';
@@ -40,6 +39,7 @@ const schema = z.object({
   isFeatured: z.boolean().default(false),
   isTrending: z.boolean().default(false),
   isActive: z.boolean().default(true),
+  hsnCode: z.string().optional(),
   barcode: z.string().optional(),
   barcodeType: z.enum(['EAN13', 'EAN8', 'UPCA', 'CODE128', 'CODE39']).default('CODE128'),
 });
@@ -82,8 +82,7 @@ export function ProductForm({ productId }: Props) {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([{ key: '', value: '' }]);
-  const { canEdit: hasEditPermission } = useModulePermissions(MODULES.PRODUCTS);
-  const [editMode, setEditMode] = useState(hasEditPermission);
+  const [editMode, setEditMode] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(!!productId);
   const [imagesUploading, setImagesUploading] = useState(false);
@@ -93,7 +92,7 @@ export function ProductForm({ productId }: Props) {
 
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, isActive: true, barcodeType: 'CODE128' },
+    defaultValues: { brand: '', category: '', isFeatured: false, isTrending: false, isActive: true, hsnCode: '', barcodeType: 'CODE128' },
   });
 
   const barcodeType = watch('barcodeType');
@@ -126,6 +125,7 @@ export function ProductForm({ productId }: Props) {
             isFeatured: p.isFeatured,
             isTrending: p.isTrending,
             isActive: (p as any).isActive ?? true,
+            hsnCode: (p as any).hsnCode || (p as any).hsn_code || p.specifications?.hsnCode || p.specifications?.hsn || '',
             barcode: p.barcode || '',
             barcodeType: (p.barcodeType as BarcodeType) || 'CODE128',
           });
@@ -191,6 +191,9 @@ export function ProductForm({ productId }: Props) {
     setSubmitting(true);
     try {
       const specsObj = Object.fromEntries(specs.filter((s) => s.key).map((s) => [s.key, s.value]));
+      if (data.hsnCode?.trim()) {
+        specsObj.hsnCode = data.hsnCode.trim();
+      }
       const discount = data.originalPrice > 0
         ? Math.round(((data.originalPrice - data.price) / data.originalPrice) * 100)
         : 0;
@@ -219,6 +222,7 @@ export function ProductForm({ productId }: Props) {
         originalPrice: data.originalPrice,
         purchasePrice: typeof data.purchasePrice === 'number' ? data.purchasePrice : 0,
         discount: Math.max(0, discount),
+        hsnCode: data.hsnCode?.trim() || undefined,
         specifications: specsObj,
         tags: data.tags ? data.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
         colors: data.colors ? data.colors.split(',').map((c: string) => c.trim()).filter(Boolean) : [],
@@ -277,9 +281,9 @@ export function ProductForm({ productId }: Props) {
 
   return (
     <div>
-      <PageHeader title={productId ? (hasEditPermission ? 'Edit Product' : 'Product Details') : 'Add Product'} description={productId ? (hasEditPermission ? 'Update product details' : 'View product information') : 'Create a new product listing'}>
+      <PageHeader title={productId ? 'Edit Product' : 'Add Product'} description={productId ? 'Update product details' : 'Create a new product listing'}>
         <div className="flex items-center gap-2">
-          {productId && hasEditPermission && (
+          {productId && (
             <Button
               type="button"
               variant="outline"
@@ -309,248 +313,247 @@ export function ProductForm({ productId }: Props) {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Main Details */}
-            <div className="xl:col-span-2 space-y-6">
-              <Card>
-                <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <Input label="Product Name" placeholder="e.g. Samsung Galaxy S24 Ultra" error={errors.name?.message} {...register('name')} />
-                  <Textarea label="Description" placeholder="Full product description..." rows={4} error={errors.description?.message} {...register('description')} />
-                  <Textarea label="Short Description" placeholder="Brief summary..." rows={2} error={errors.shortDescription?.message} {...register('shortDescription')} />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">Brand <span className="text-destructive">*</span></label>
-                      <Controller
-                        name="brand"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value || ''}>
-                            <SelectTrigger error={errors.brand?.message}><SelectValue placeholder="Select brand" /></SelectTrigger>
-                            <SelectContent>
-                              {brands.map((b) => {
-                                const brandValue = String((b as any).id || b._id || (b as any).slug || b.name || '');
-                                if (!brandValue) return null;
-                                return <SelectItem key={brandValue} value={brandValue}>{b.name}</SelectItem>;
-                              })}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                      {errors.brand && <p className="mt-1 text-xs text-destructive">{errors.brand.message}</p>}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1.5">Category <span className="text-destructive">*</span></label>
-                      <Controller
-                        name="category"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value || ''}>
-                            <SelectTrigger error={errors.category?.message}><SelectValue placeholder="Select category" /></SelectTrigger>
-                            <SelectContent>
-                              {categories.map((c) => {
-                                const categoryValue = String((c as any).id || c._id || (c as any).slug || c.name || '');
-                                if (!categoryValue) return null;
-                                return <SelectItem key={categoryValue} value={categoryValue}>{c.name}</SelectItem>;
-                              })}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                      {errors.category && <p className="mt-1 text-xs text-destructive">{errors.category.message}</p>}
-                    </div>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Main Details */}
+          <div className="xl:col-span-2 space-y-6">
+            <Card>
+              <CardHeader><CardTitle>Basic Information</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <Input label="Product Name" placeholder="e.g. Samsung Galaxy S24 Ultra" error={errors.name?.message} {...register('name')} />
+                <Textarea label="Description" placeholder="Full product description..." rows={4} error={errors.description?.message} {...register('description')} />
+                <Textarea label="Short Description" placeholder="Brief summary..." rows={2} error={errors.shortDescription?.message} {...register('shortDescription')} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">Brand <span className="text-destructive">*</span></label>
+                    <Controller
+                      name="brand"
+                      control={control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <SelectTrigger error={errors.brand?.message}><SelectValue placeholder="Select brand" /></SelectTrigger>
+                          <SelectContent>
+                            {brands.map((b) => {
+                              const brandValue = String((b as any).id || b._id || (b as any).slug || b.name || '');
+                              if (!brandValue) return null;
+                              return <SelectItem key={brandValue} value={brandValue}>{b.name}</SelectItem>;
+                            })}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.brand && <p className="mt-1 text-xs text-destructive">{errors.brand.message}</p>}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Input label="Sale Price" type="number" error={errors.price?.message} {...register('price')} preventScroll disabled={!!productId && !editMode} />
-                    <Input label="Original Price" type="number" error={errors.originalPrice?.message} {...register('originalPrice')} preventScroll disabled={!!productId && !editMode} />
-                    <Input label="Purchase Price" type="number" placeholder="Cost price" error={errors.purchasePrice?.message} {...register('purchasePrice')} preventScroll disabled={!!productId && !editMode} />
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">Category <span className="text-destructive">*</span></label>
+                    <Controller
+                      name="category"
+                      control={control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <SelectTrigger error={errors.category?.message}><SelectValue placeholder="Select category" /></SelectTrigger>
+                          <SelectContent>
+                            {categories.map((c) => {
+                              const categoryValue = String((c as any).id || c._id || (c as any).slug || c.name || '');
+                              if (!categoryValue) return null;
+                              return <SelectItem key={categoryValue} value={categoryValue}>{c.name}</SelectItem>;
+                            })}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.category && <p className="mt-1 text-xs text-destructive">{errors.category.message}</p>}
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input label="Stock Quantity" type="number" error={errors.stock?.message} {...register('stock')} preventScroll disabled={!!productId && !editMode} />
-                  </div>
-                  <Input label="Tags (comma separated)" placeholder="smartphone, 5g, flagship" {...register('tags')} />
-                  <Input label="Colors (comma separated)" placeholder="Black, Silver, Gold" {...register('colors')} />
-                  <Input label="Warranty" placeholder="e.g. 1 Year, 6 Months" {...register('warranty')} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Input label="Sale Price" type="number" error={errors.price?.message} {...register('price')} preventScroll disabled={!!productId && !editMode} />
+                  <Input label="Original Price" type="number" error={errors.originalPrice?.message} {...register('originalPrice')} preventScroll disabled={!!productId && !editMode} />
+                  <Input label="Purchase Price" type="number" placeholder="Cost price" error={errors.purchasePrice?.message} {...register('purchasePrice')} preventScroll disabled={!!productId && !editMode} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input label="Stock Quantity" type="number" error={errors.stock?.message} {...register('stock')} preventScroll disabled={!!productId && !editMode} />
+                  <Input label="HSN Code" placeholder="e.g. 8517, 3926, 8504" {...register('hsnCode')} disabled={!!productId && !editMode} />
+                </div>
+                <Input label="Tags (comma separated)" placeholder="smartphone, 5g, flagship" {...register('tags')} />
+                <Input label="Colors (comma separated)" placeholder="Black, Silver, Gold" {...register('colors')} />
+                <Input label="Warranty" placeholder="e.g. 1 Year, 6 Months" {...register('warranty')} />
 
-                  {/* Barcode Section */}
-                  <div className="border-t pt-4 mt-4">
-                    <h4 className="text-sm font-medium mb-3">Barcode Information</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-1.5">Barcode Type</label>
+                {/* Barcode Section */}
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-sm font-medium mb-3">Barcode Information</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">Barcode Type</label>
+                      <Controller
+                        name="barcodeType"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setBarcodePreview(barcodeValue || '');
+                            }}
+                            value={field.value || 'CODE128'}
+                          >
+                            <SelectTrigger><SelectValue placeholder="Select barcode type" /></SelectTrigger>
+                            <SelectContent>
+                              {BARCODE_TYPES.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  <div>
+                                    <div>{type.label}</div>
+                                    <div className="text-xs text-muted-foreground">{type.description}</div>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">Barcode</label>
+                      <div className="flex gap-2">
                         <Controller
-                          name="barcodeType"
+                          name="barcode"
                           control={control}
                           render={({ field }) => (
-                            <Select
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                setBarcodePreview(barcodeValue || '');
+                            <Input
+                              placeholder={barcodeType === 'CODE128' ? 'Enter manually or use SKU' : 'Enter barcode value'}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                field.onChange(e.target.value);
+                                setBarcodePreview(e.target.value);
                               }}
-                              value={field.value || 'CODE128'}
-                            >
-                              <SelectTrigger><SelectValue placeholder="Select barcode type" /></SelectTrigger>
-                              <SelectContent>
-                                {BARCODE_TYPES.map((type) => (
-                                  <SelectItem key={type.value} value={type.value}>
-                                    <div>
-                                      <div>{type.label}</div>
-                                      <div className="text-xs text-muted-foreground">{type.description}</div>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            />
                           )}
                         />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-1.5">Barcode</label>
-                        <div className="flex gap-2">
-                          <Controller
-                            name="barcode"
-                            control={control}
-                            render={({ field }) => (
-                              <Input
-                                placeholder={barcodeType === 'CODE128' ? 'Enter manually or use SKU' : 'Enter barcode value'}
-                                value={field.value || ''}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
-                                  setBarcodePreview(e.target.value);
-                                }}
-                              />
-                            )}
-                          />
-                          {productId && productSku && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={handleUseSkuAsBarcode}
-                              title="Use product SKU as Code 128 barcode"
-                            >
-                              Use SKU
-                            </Button>
-                          )}
-                          {productId && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={handleRegenerateBarcode}
-                              disabled={regeneratingBarcode}
-                              title={barcodeType === 'CODE128' ? 'Set barcode from SKU' : 'Regenerate barcode'}
-                            >
-                              <RefreshCw className={`h-4 w-4 ${regeneratingBarcode ? 'animate-spin' : ''}`} />
-                            </Button>
-                          )}
-                        </div>
-                        {productSku && (
-                          <p className="text-xs text-muted-foreground mt-1">SKU: <code className="font-mono">{productSku}</code></p>
+                        {productId && productSku && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleUseSkuAsBarcode}
+                            title="Use product SKU as Code 128 barcode"
+                          >
+                            Use SKU
+                          </Button>
                         )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {barcodeTypeHint(barcodeType as BarcodeType)}
-                        </p>
+                        {productId && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={handleRegenerateBarcode}
+                            disabled={regeneratingBarcode}
+                            title={barcodeType === 'CODE128' ? 'Set barcode from SKU' : 'Regenerate barcode'}
+                          >
+                            <RefreshCw className={`h-4 w-4 ${regeneratingBarcode ? 'animate-spin' : ''}`} />
+                          </Button>
+                        )}
+                      </div>
+                      {productSku && (
+                        <p className="text-xs text-muted-foreground mt-1">SKU: <code className="font-mono">{productSku}</code></p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {barcodeTypeHint(barcodeType as BarcodeType)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Barcode Preview */}
+                  {barcodeValue && (
+                    <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-2">Preview:</p>
+                      <div className="flex items-center gap-4">
+                        <BarcodeVisual
+                          key={`${barcodeValue}-${barcodeType}`}
+                          code={barcodeValue}
+                          type={barcodeType as any}
+                          compact
+                          height={40}
+                        />
+                        <code className="text-sm font-mono bg-background px-2 py-1 rounded">
+                          {barcodeValue}
+                        </code>
                       </div>
                     </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-                    {/* Barcode Preview */}
-                    {barcodeValue && (
-                      <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-2">Preview:</p>
-                        <div className="flex items-center gap-4">
-                          <BarcodeVisual
-                            key={`${barcodeValue}-${barcodeType}`}
-                            code={barcodeValue}
-                            type={barcodeType as any}
-                            compact
-                            height={40}
-                          />
-                          <code className="text-sm font-mono bg-background px-2 py-1 rounded">
-                            {barcodeValue}
-                          </code>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Specifications */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>Specifications</CardTitle>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setSpecs((p) => [...p, { key: '', value: '' }])}>
-                      <Plus className="h-3.5 w-3.5" /> Add Row
+            {/* Specifications */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Specifications</CardTitle>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setSpecs((p) => [...p, { key: '', value: '' }])}>
+                    <Plus className="h-3.5 w-3.5" /> Add Row
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {specs.map((spec, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input placeholder="e.g. RAM" value={spec.key} onChange={(e) => setSpecs((p) => p.map((s, idx) => idx === i ? { ...s, key: e.target.value } : s))} />
+                    <Input placeholder="e.g. 8GB" value={spec.value} onChange={(e) => setSpecs((p) => p.map((s, idx) => idx === i ? { ...s, value: e.target.value } : s))} />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setSpecs((p) => p.filter((_, idx) => idx !== i))}>
+                      <X className="h-4 w-4" />
                     </Button>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {specs.map((spec, i) => (
-                    <div key={i} className="flex gap-2">
-                      <Input placeholder="e.g. RAM" value={spec.key} onChange={(e) => setSpecs((p) => p.map((s, idx) => idx === i ? { ...s, key: e.target.value } : s))} />
-                      <Input placeholder="e.g. 8GB" value={spec.value} onChange={(e) => setSpecs((p) => p.map((s, idx) => idx === i ? { ...s, value: e.target.value } : s))} />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => setSpecs((p) => p.filter((_, idx) => idx !== i))}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader><CardTitle>Product Images</CardTitle></CardHeader>
-                <CardContent>
-                  <MultiImageUploader
-                    value={existingImages}
-                    onChange={setExistingImages}
-                    folder="products"
-                    max={10}
-                    onUploadingChange={setImagesUploading}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader><CardTitle>Visibility</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Active</p>
-                      <p className="text-xs text-muted-foreground">Show on frontend (required for visibility)</p>
-                    </div>
-                    <Controller name="isActive" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Featured</p>
-                      <p className="text-xs text-muted-foreground">Show on homepage</p>
-                    </div>
-                    <Controller name="isFeatured" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">Trending</p>
-                      <p className="text-xs text-muted-foreground">Show in trending section</p>
-                    </div>
-                    <Controller name="isTrending" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} disabled={!!productId && !editMode} />} />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {(!productId || editMode) && (
-                <Button type="submit" className="w-full" size="lg" loading={submitting || imagesUploading} disabled={submitting || imagesUploading}>
-                  {imagesUploading ? 'Uploading Images...' : productId ? 'Update Product' : 'Create Product'}
-                </Button>
-              )}
-            </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
-        </form>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader><CardTitle>Product Images</CardTitle></CardHeader>
+              <CardContent>
+                <MultiImageUploader
+                  value={existingImages}
+                  onChange={setExistingImages}
+                  folder="products"
+                  max={10}
+                  onUploadingChange={setImagesUploading}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Visibility</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Active</p>
+                    <p className="text-xs text-muted-foreground">Show on frontend (required for visibility)</p>
+                  </div>
+                  <Controller name="isActive" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Featured</p>
+                    <p className="text-xs text-muted-foreground">Show on homepage</p>
+                  </div>
+                  <Controller name="isFeatured" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Trending</p>
+                    <p className="text-xs text-muted-foreground">Show in trending section</p>
+                  </div>
+                  <Controller name="isTrending" control={control} render={({ field }) => <Switch checked={field.value} onCheckedChange={field.onChange} />} />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button type="submit" className="w-full" size="lg" loading={submitting || imagesUploading} disabled={submitting || imagesUploading}>
+              {imagesUploading ? 'Uploading Images...' : productId ? 'Update Product' : 'Create Product'}
+            </Button>
+          </div>
+        </div>
+      </form>
       )}
     </div>
   );
