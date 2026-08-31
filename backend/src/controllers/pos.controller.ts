@@ -148,7 +148,6 @@ class PosController {
         subtotal, discount, shipping_fee: 0, total: totalAmount,
         is_walk_in: true, walk_in_customer_name: customerName || 'Walk-in Customer',
         walk_in_customer_phone: customerPhone || '', walk_in_customer_email: customerEmail || null,
-        walk_in_customer_address: walkInAddr || null,
         pos_payment_method: paymentMethod, pos_discount: posDiscount || 0, pos_discount_type: posDiscountType || 'fixed',
         gst_amount: gstAmount, gst_rate: enableGst ? defaultGstRate : 0, invoice_number: invoiceNumber,
         notes: notes || 'POS Order',
