@@ -299,6 +299,39 @@ export default function Header() {
                     </Link>
                   );
                 })}
+                
+                {isAuthenticated && (
+                  <>
+                    <Link
+                      href="/my-requests"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-bold transition-colors ${pathname === '/my-requests' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/10 dark:hover:text-blue-400'}`}
+                    >
+                      <FileText className="h-[20px] w-[20px]" />
+                      Service Requests
+                    </Link>
+                    <Link
+                      href="/my-reviews"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[15px] font-bold transition-colors ${pathname === '/my-reviews' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/10 dark:hover:text-blue-400'}`}
+                    >
+                      <Star className="h-[20px] w-[20px]" />
+                      My Reviews
+                    </Link>
+                  </>
+                )}
+
+                <button
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="flex items-center gap-3 w-full text-left px-4 py-3 rounded-xl text-[15px] font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/10 dark:hover:text-blue-400 transition-colors"
+                >
+                  {mounted && theme === 'dark' ? (
+                    <Sun className="h-[20px] w-[20px]" />
+                  ) : (
+                    <Moon className="h-[20px] w-[20px]" />
+                  )}
+                  {mounted && theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                </button>
               </nav>
 
               <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/10">
