@@ -16,6 +16,7 @@ const footerLinks = {
     { label: 'My Profile', href: '/profile' },
     { label: 'My Orders', href: '/orders' },
     { label: 'My Requests', href: '/my-requests' },
+    { label: 'My Reviews', href: '/my-reviews' },
     { label: 'Wishlist', href: '/wishlist' },
     { label: 'Contact Us', href: '/contact' },
     { label: 'About Us', href: '/about' },

@@ -8,6 +8,8 @@ import rateLimit from 'express-rate-limit';
 import corsOptions from './config/cors';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import adminRoutes from './routes/admin.routes';
+import homeRoutes from './routes/home.routes';
 import logger from './utils/logger.util';
 import { getRateLimitKey } from './utils/rate-limit.util';
 

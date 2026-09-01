@@ -112,13 +112,13 @@ export default function TrustSection() {
           ].map((feature, idx) => (
             <div 
               key={feature.title} 
-              className={`group relative flex cursor-pointer flex-col items-center rounded-[24px] border border-[#EAEAEA] bg-white p-8 text-center shadow-sm transition-all duration-300 hover:-translate-y-2 hover:scale-[1.03] hover:border-blue-500/40 hover:shadow-[0_20px_40px_rgb(59,130,246,0.12)] dark:border-white/10 dark:bg-zinc-900/50 dark:hover:border-blue-500/50 transform ${hasScrolledIn ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'} ${feature.delay}`}
+              className={`group relative flex cursor-pointer flex-col items-center rounded-[24px] border border-[#EAEAEA] bg-white p-8 text-center shadow-sm transition-all duration-300 md:hover:-translate-y-2 md:hover:scale-[1.03] md:hover:border-blue-500/40 md:hover:shadow-[0_20px_40px_rgb(59,130,246,0.12)] dark:border-white/10 dark:bg-zinc-900/50 dark:md:hover:border-blue-500/50 transform ${hasScrolledIn ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'} ${feature.delay}`}
             >
               {/* Sparkle shine effect */}
-              <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-gradient-to-tr from-transparent via-white to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-20" />
+              <div className="pointer-events-none absolute inset-0 rounded-[24px] bg-gradient-to-tr from-transparent via-white to-transparent opacity-0 transition-opacity duration-700 md:group-hover:opacity-20" />
               
-              <div className="mb-6 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/20 transition-transform duration-300 group-hover:scale-110 relative">
-                <div className="absolute inset-0 rounded-full bg-blue-400 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-40" />
+              <div className="mb-6 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/20 transition-transform duration-300 md:group-hover:scale-110 relative">
+                <div className="absolute inset-0 rounded-full bg-blue-400 opacity-0 blur-md transition-opacity duration-300 md:group-hover:opacity-40" />
                 <feature.icon className="relative h-7 w-7 text-white z-10" />
               </div>
               <h3 className="mb-2 text-lg font-bold text-slate-900 dark:text-white">{feature.title}</h3>

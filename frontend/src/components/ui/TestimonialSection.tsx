@@ -19,6 +19,8 @@ export default function TestimonialSection({ reviews }: TestimonialSectionProps)
   const [hasScrolledIn, setHasScrolledIn] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -34,6 +36,42 @@ export default function TestimonialSection({ reviews }: TestimonialSectionProps)
     }
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const checkActive = () => {
+      if (window.innerWidth >= 1024) {
+        setActiveCardIndex(-1); // disabled on desktop
+      } else if (activeCardIndex === -1) {
+        setActiveCardIndex(0);
+      }
+    };
+    checkActive();
+    window.addEventListener('resize', checkActive);
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && window.innerWidth < 1024) {
+          const index = Number(entry.target.getAttribute('data-index'));
+          setActiveCardIndex(index);
+        }
+      });
+    }, {
+      root: scrollContainerRef.current,
+      threshold: 0.6
+    });
+
+    const currentRefs = cardRefs.current;
+    currentRefs.forEach(card => {
+      if (card) observer.observe(card);
+    });
+
+    return () => {
+      window.removeEventListener('resize', checkActive);
+      currentRefs.forEach(card => {
+        if (card) observer.unobserve(card);
+      });
+    };
+  }, [reviews, activeCardIndex]);
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
@@ -82,13 +120,21 @@ export default function TestimonialSection({ reviews }: TestimonialSectionProps)
               ref={scrollContainerRef}
               className={`flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-8 pt-4 px-4 -mx-4 ${displayReviews.length <= 3 ? 'lg:grid lg:grid-cols-3 lg:justify-center' : ''}`}
             >
-              {displayReviews.map((review, idx) => (
+              {displayReviews.map((review, idx) => {
+                const isActive = activeCardIndex === idx;
+                return (
                 <div 
                   key={review._id || idx} 
-                  className={`group relative flex w-[85vw] max-w-[340px] flex-shrink-0 snap-center flex-col justify-between rounded-[24px] border border-[#EAEAEA] bg-white p-6 sm:p-8 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:scale-[1.02] hover:border-blue-500 hover:shadow-[0_20px_40px_rgb(59,130,246,0.12)] dark:border-white/10 dark:bg-zinc-900/60 dark:hover:border-blue-500/50 sm:w-[340px] ${displayReviews.length <= 3 ? 'lg:w-auto' : ''}`}
+                  ref={el => { cardRefs.current[idx] = el; }}
+                  data-index={idx}
+                  className={`group relative flex w-[85vw] max-w-[340px] flex-shrink-0 snap-center flex-col justify-between rounded-[24px] border bg-white p-6 sm:p-8 transition-all duration-300 dark:bg-zinc-900/60 sm:w-[340px] ${displayReviews.length <= 3 ? 'lg:w-auto' : ''} ${
+                    isActive 
+                      ? 'border-blue-500 shadow-[0_20px_40px_rgb(59,130,246,0.12)] -translate-y-2 scale-[1.02] dark:border-blue-500/50' 
+                      : 'border-[#EAEAEA] shadow-sm dark:border-white/10'
+                  } lg:hover:-translate-y-2 lg:hover:scale-[1.02] lg:hover:border-blue-500 lg:hover:shadow-[0_20px_40px_rgb(59,130,246,0.12)] lg:dark:hover:border-blue-500/50`}
                 >
                   {/* Subtle Quotation Icon Background */}
-                  <div className="absolute right-6 top-6 text-slate-100 dark:text-white/5 opacity-50 transition-opacity duration-300 group-hover:text-blue-50 group-hover:dark:text-blue-900/20">
+                  <div className={`absolute right-6 top-6 transition-opacity duration-300 ${isActive ? 'text-blue-50 dark:text-blue-900/20 opacity-100' : 'text-slate-100 dark:text-white/5 opacity-50 lg:group-hover:text-blue-50 lg:group-hover:dark:text-blue-900/20 lg:group-hover:opacity-100'}`}>
                     <svg className="h-16 w-16" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
                     </svg>
@@ -96,7 +142,7 @@ export default function TestimonialSection({ reviews }: TestimonialSectionProps)
 
                   <div className="relative z-10 flex flex-col h-full">
                     <div className="mb-5 flex items-center gap-4">
-                      <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-md ring-2 ring-slate-100 dark:border-zinc-800 dark:ring-zinc-700 group-hover:ring-blue-100 transition-colors">
+                      <div className={`relative h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-md transition-colors dark:border-zinc-800 dark:ring-zinc-700 ${isActive ? 'ring-2 ring-blue-100' : 'ring-2 ring-slate-100 lg:group-hover:ring-blue-100'}`}>
                         {review.user?.avatar ? (
                           <Image src={safeImageSrc(review.user.avatar, PLACEHOLDER_PRODUCT)} alt={review.user.name || 'User'} fill className="object-cover" sizes="48px" />
                         ) : (
@@ -136,7 +182,7 @@ export default function TestimonialSection({ reviews }: TestimonialSectionProps)
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}

@@ -228,7 +228,6 @@ class OrderService {
     for (const item of allItems || []) {
       if (!itemsByOrderId.has(item.order_id)) itemsByOrderId.set(item.order_id, []);
       const ti = transformRow(item);
-      if (!ti.product) ti.product = { name: ti.productName || 'Product', images: ti.productImage ? [ti.productImage] : [] };
       itemsByOrderId.get(item.order_id)!.push(ti);
     }
 

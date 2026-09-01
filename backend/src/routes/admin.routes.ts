@@ -527,7 +527,7 @@ router.get('/reviews', canAccessMarketing, async (req: Request, res: Response, n
     const status = (req.query.status as string) || '';
     const search = (req.query.search as string) || '';
 
-    let qb = supabase.from('reviews').select('*, products:product_id(name, slug), users:user_id(name, email)', { count: 'exact' });
+    let qb = supabase.from('reviews').select('*, products:product_id(name, slug), service_requests:service_request_id(service_type), users:user_id(name, email)', { count: 'exact' });
 
     // Filter by status
     if (status === 'approved') qb = qb.eq('is_approved', true);
@@ -550,6 +550,7 @@ router.get('/reviews', canAccessMarketing, async (req: Request, res: Response, n
       else transformed.status = 'pending';
       // Rename joined fields
       if (transformed.products) { transformed.product = transformed.products; delete transformed.products; }
+      if (transformed.service_requests) { transformed.service = transformed.service_requests; delete transformed.service_requests; }
       if (transformed.users) { transformed.user = transformed.users; delete transformed.users; }
       return transformed;
     });
@@ -564,11 +565,12 @@ router.patch('/reviews/:id/status', canAccessMarketing, async (req: Request, res
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
     const isApproved = req.body.status === 'approved';
-    const { data, error } = await supabase.from('reviews').update({ is_approved: isApproved }).eq('id', req.params.id).select('*, users:user_id(name, email), products:product_id(name)').single();
+    const { data, error } = await supabase.from('reviews').update({ is_approved: isApproved }).eq('id', req.params.id).select('*, users:user_id(name, email), products:product_id(name), service_requests:service_request_id(service_type)').single();
     if (error) throw error;
     const status = isApproved ? 'approved' : 'rejected';
     if (data?.users?.email) {
-      sendReviewStatusEmail(data.users.email, data.users.name, data.products?.name || 'a product', status).catch((err: any) => {
+      const reviewTargetName = data.review_type === 'service' ? (data.service_requests?.service_type || 'service') : (data.products?.name || 'a product');
+      sendReviewStatusEmail(data.users.email, data.users.name, reviewTargetName, status).catch((err: any) => {
         logger.error('Failed to send review status email: ' + err?.message);
       });
     }
@@ -581,10 +583,11 @@ router.patch('/reviews/:id/approve', canAccessMarketing, async (req: Request, re
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
-    const { data, error } = await supabase.from('reviews').update({ is_approved: true }).eq('id', req.params.id).select('*, users:user_id(name, email), products:product_id(name)').single();
+    const { data, error } = await supabase.from('reviews').update({ is_approved: true }).eq('id', req.params.id).select('*, users:user_id(name, email), products:product_id(name), service_requests:service_request_id(service_type)').single();
     if (error) throw error;
     if (data?.users?.email) {
-      sendReviewStatusEmail(data.users.email, data.users.name, data.products?.name || 'a product', 'approved').catch((err: any) => {
+      const reviewTargetName = data.review_type === 'service' ? (data.service_requests?.service_type || 'service') : (data.products?.name || 'a product');
+      sendReviewStatusEmail(data.users.email, data.users.name, reviewTargetName, 'approved').catch((err: any) => {
         logger.error('Failed to send review approve email: ' + err?.message);
       });
     }
@@ -598,11 +601,11 @@ router.delete('/reviews/:id', canAccessMarketing, async (req: Request, res: Resp
     const supabase = (await import('../config/supabase')).default;
     const adminId = (req as AuthenticatedRequest).user?.userId;
     // Get review details for audit log
-    const { data: review } = await supabase.from('reviews').select('product_id, rating, users:user_id(name)').eq('id', req.params.id).maybeSingle();
+    const { data: review } = await supabase.from('reviews').select('review_type, product_id, service_request_id, rating, users:user_id(name)').eq('id', req.params.id).maybeSingle();
     const { error } = await supabase.from('reviews').delete().eq('id', req.params.id);
     if (error) throw error;
-    // Recalculate product review stats
-    if (review) {
+    // Recalculate product review stats if it was a product review
+    if (review && review.review_type === 'product' && review.product_id) {
       const { data: stats } = await supabase.from('reviews').select('rating').eq('product_id', review.product_id);
       const count = (stats || []).length;
       const avg = count > 0 ? Math.round(((stats || []).reduce((s: number, r: any) => s + r.rating, 0) / count) * 10) / 10 : 0;
@@ -614,7 +617,7 @@ router.delete('/reviews/:id', canAccessMarketing, async (req: Request, res: Resp
       action: 'DELETE_REVIEW',
       entity: 'review',
       entityId: req.params.id,
-      details: { productId: review?.product_id, rating: review?.rating },
+      details: { reviewType: review?.review_type, productId: review?.product_id, serviceRequestId: review?.service_request_id, rating: review?.rating },
       ipAddress: req.ip
     }).catch(() => {});
     sendMessage(res, 'Review deleted');

@@ -332,14 +332,12 @@ export default function ContactPage() {
             <p className="mt-4 text-slate-500 dark:text-slate-400">Experience premium shopping directly at our showroom.</p>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-            {['/images/gallery/interior.jpg', '/images/gallery/smartphones.jpg', '/images/gallery/accessories.jpg', '/images/gallery/repairs.jpg'].map((img, idx) => (
-              <div key={idx} className="group relative aspect-square overflow-hidden rounded-[24px] bg-slate-100 dark:bg-zinc-900">
-                {/* Fallback pattern since real images don't exist */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-zinc-800 dark:to-zinc-900 transition-transform duration-500 group-hover:scale-110">
-                  <HiDevicePhoneMobile className="h-10 w-10 text-slate-300 dark:text-zinc-700 mb-2" />
-                  <span className="text-xs font-bold text-slate-400 dark:text-zinc-600">
-                    {['Store Interior', 'Smartphones', 'Accessories', 'Repair Desk'][idx]}
-                  </span>
+            {['/images/gallery/interior.png', '/images/gallery/smartphones.png', '/images/gallery/accessories.png', '/images/gallery/repairs.png'].map((img, idx) => (
+              <div key={idx} className="group relative aspect-square overflow-hidden rounded-[24px] bg-slate-100 dark:bg-zinc-900 shadow-sm">
+                <Image src={img} alt={['Store Interior', 'Smartphones', 'Accessories', 'Repair Desk'][idx]} fill className="object-cover transition-transform duration-700 group-hover:scale-110" sizes="(max-width: 768px) 50vw, 25vw" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
+                <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 right-4 text-white font-bold text-sm sm:text-base drop-shadow-md">
+                  {['Store Interior', 'Smartphones', 'Accessories', 'Repair Desk'][idx]}
                 </div>
                 <div className="absolute inset-0 border border-black/5 rounded-[24px] dark:border-white/5 pointer-events-none" />
               </div>
@@ -395,8 +393,8 @@ export default function ContactPage() {
               </p>
               
               <div className="mt-8 mb-10 flex items-center justify-center gap-3">
-                <div className="flex h-12 items-center rounded-full bg-black/20 px-6 backdrop-blur-md border border-white/10 text-white font-medium">
-                  <HiOutlineClock className="mr-2 h-5 w-5 opacity-80" />
+                <div className="inline-flex h-11 sm:h-12 items-center justify-center rounded-full bg-black/20 px-4 sm:px-6 backdrop-blur-md border border-white/10 text-white font-medium text-[13px] sm:text-base whitespace-nowrap">
+                  <HiOutlineClock className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 opacity-80 shrink-0" />
                   Mon – Sat: 10:00 AM – 8:00 PM
                 </div>
               </div>

@@ -28,7 +28,7 @@ const emptyAddress = {
 export default function ProfilePage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAuthenticated, logout, fetchProfile, updateProfile } = useAuthStore();
+  const { user, token, isAuthenticated, logout, fetchProfile, updateProfile } = useAuthStore();
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [addressForm, setAddressForm] = useState(emptyAddress);
@@ -128,7 +128,6 @@ export default function ProfilePage() {
     try {
       const formData = new FormData();
       formData.append('image', file);
-      const token = document.cookie.split('; ').find(c => c.startsWith('token='))?.split('=')[1] || '';
       const res = await fetch('/api/upload/avatar', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -238,12 +237,12 @@ export default function ProfilePage() {
 
   const handleDocUpload = async (file: File) => {
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('document', file);
     setIsUploadingDoc(true);
     try {
       const res = await fetch(`/api/upload/kyc`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${document.cookie.split('token=')[1]?.split(';')[0] || ''}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = await res.json();

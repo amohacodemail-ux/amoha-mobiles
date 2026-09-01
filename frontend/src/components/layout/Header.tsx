@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Smartphone, Wrench, Package, FileText, Home, ShoppingBag, ArrowRightLeft, Phone, Search, Menu, X, User, Heart, LogOut, CreditCard, RefreshCw, Inbox, Settings, ClipboardList, Sun, Moon } from 'lucide-react';
+import { Smartphone, Wrench, Package, FileText, Home, ShoppingBag, ArrowRightLeft, Phone, Search, Menu, X, User, Heart, LogOut, CreditCard, RefreshCw, Inbox, Settings, ClipboardList, Sun, Moon, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from 'next-themes';
 import { useAuthStore } from '@/store/auth.store';
@@ -131,12 +131,7 @@ export default function Header() {
 
         {/* Search Area */}
         <div className={`transition-all duration-300 ${isMobileSearchActive ? 'absolute inset-0 px-3 bg-white dark:bg-[#121212] rounded-full z-50 flex items-center' : 'hidden lg:block lg:flex-1 lg:max-w-md xl:max-w-lg ml-4 xl:ml-8'}`}>
-          <SearchBar onSelect={() => setIsMobileSearchActive(false)} className="flex-1" />
-          {isMobileSearchActive && (
-            <button onClick={() => setIsMobileSearchActive(false)} className="lg:hidden ml-2 p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
-              <X className="h-5 w-5" />
-            </button>
-          )}
+          <SearchBar onSelect={() => setIsMobileSearchActive(false)} onClear={() => setIsMobileSearchActive(false)} className="flex-1" />
         </div>
 
         {/* Middle Right: Navigation */}
@@ -219,6 +214,10 @@ export default function Header() {
                     <Link href="/my-requests" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3.5 px-3 py-2.5 rounded-xl hover:bg-slate-100/80 dark:hover:bg-white/10 transition-colors text-slate-700 dark:text-slate-200 font-semibold group">
                       <FileText className="h-[18px] w-[18px] text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white transition-colors" />
                       <span className="text-[14px]">Service Requests</span>
+                    </Link>
+                    <Link href="/my-reviews" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3.5 px-3 py-2.5 rounded-xl hover:bg-slate-100/80 dark:hover:bg-white/10 transition-colors text-slate-700 dark:text-slate-200 font-semibold group">
+                      <Star className="h-[18px] w-[18px] text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white transition-colors" />
+                      <span className="text-[14px]">My Reviews</span>
                     </Link>
                     <Link href="/wishlist" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3.5 px-3 py-2.5 rounded-xl hover:bg-slate-100/80 dark:hover:bg-white/10 transition-colors text-slate-700 dark:text-slate-200 font-semibold group">
                       <Heart className="h-[18px] w-[18px] text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-white transition-colors" />

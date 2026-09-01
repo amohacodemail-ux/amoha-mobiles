@@ -140,7 +140,7 @@ export default function ComparePage() {
                       <X className="h-4 w-4" />
                     </button>
                     
-                    <Link href={`/product/${product.slug}`} className="relative h-[140px] w-full max-w-[140px] mb-4 group">
+                    <Link href={`/product/${product.slug}`} className="relative h-[140px] w-full max-w-[140px] group">
                       <Image 
                         src={product.thumbnail || PLACEHOLDER_IMG} 
                         alt={product.name} 
@@ -150,29 +150,6 @@ export default function ComparePage() {
                         onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }} 
                       />
                     </Link>
-                    
-                    <Link href={`/product/${product.slug}`} className="text-[15px] font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors line-clamp-2 text-center leading-snug mb-1">
-                      {product.name}
-                    </Link>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">{product.brand}</p>
-                    
-                    <div className="flex items-center gap-2 mb-3 flex-wrap justify-center">
-                      <span className="text-[17px] font-extrabold text-slate-900 dark:text-white">{formatPrice(product.price)}</span>
-                      {product.originalPrice > product.price && (
-                        <span className="text-[12px] font-bold text-slate-400 line-through">{formatPrice(product.originalPrice)}</span>
-                      )}
-                      {discountPercent > 0 && (
-                        <span className="rounded-full bg-red-100 dark:bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400 ml-1">
-                          -{discountPercent}%
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="mt-auto pt-2">
-                       <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-bold ${product.inStock ? 'bg-red-50 dark:bg-red-500/10 text-red-500' : 'bg-red-50 dark:bg-red-500/10 text-red-500'}`}>
-                         {product.inStock ? 'In Stock' : 'Out of Stock'}
-                       </span>
-                    </div>
                   </div>
                 );
               })}
@@ -191,6 +168,28 @@ export default function ComparePage() {
             {/* 2. Specs Rows */}
             <div className="divide-y divide-slate-100 dark:divide-white/5 text-[14px]">
               
+              {/* Product Name Row */}
+              <div className="grid grid-cols-[240px_repeat(auto-fit,minmax(220px,1fr))] p-4 items-center bg-[#F8FAFC]/50 dark:bg-slate-800/20">
+                <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-bold px-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <Smartphone className="h-4 w-4" />
+                  </div>
+                  Product Name
+                </div>
+                {items.map(p => (
+                  <div key={p._id} className="flex flex-col items-center justify-center px-4 text-center">
+                    <Link href={`/product/${p.slug}`} className="text-[14px] font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
+                      {p.name}
+                    </Link>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">{p.brand}</p>
+                  </div>
+                ))}
+                {/* Empty placeholders for alignment */}
+                {Array.from({ length: Math.max(0, 4 - items.length) }).map((_, i) => (
+                  <div key={`empty-name-${i}`} />
+                ))}
+              </div>
+
               {/* Price Row */}
               <div className="grid grid-cols-[240px_repeat(auto-fit,minmax(220px,1fr))] p-4 items-center">
                 <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-bold px-4">
@@ -320,33 +319,16 @@ export default function ComparePage() {
             </div>
           </div>
           
-          <div className="flex justify-center py-6 border-t border-slate-100 dark:border-white/5">
-             <button 
-               onClick={() => setShowAllSpecs(!showAllSpecs)}
-               className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 px-6 py-2.5 text-[13px] font-bold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-             >
-               {showAllSpecs ? 'Hide Specifications' : 'View All Specifications'}
-               {showAllSpecs ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-             </button>
-          </div>
+          {/* Button removed as requested */}
         </div>
       </div>
 
       {/* 4. Bottom Sticky Action Bar */}
       <div 
-        className="animate-in slide-in-from-bottom-10 fade-in duration-500"
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 'min(1400px, calc(100% - 48px))',
-          zIndex: 9999,
-          overflow: 'visible',
-        }}
+        className="animate-in slide-in-from-bottom-10 fade-in duration-500 fixed bottom-[90px] sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-24px)] sm:w-[calc(100%-48px)] max-w-[1400px] z-[9999] overflow-visible"
       >
         <div 
-          className="flex items-center justify-between bg-white dark:bg-[#1E293B] p-3 pl-5 border border-slate-100 dark:border-white/10"
+          className="flex items-center justify-between bg-white dark:bg-[#1E293B] p-2 sm:p-3 sm:pl-5 border border-slate-100 dark:border-white/10"
           style={{
             borderRadius: '24px',
             boxShadow: '0 16px 40px rgba(0,0,0,0.12)'
@@ -354,7 +336,7 @@ export default function ComparePage() {
         >
           
           {/* Left Info */}
-          <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500">
               <ArrowRightLeft className="h-5 w-5" />
             </div>
@@ -367,9 +349,9 @@ export default function ComparePage() {
           </div>
 
           {/* Middle Thumbnails */}
-          <div className="flex items-center gap-2 ml-4 sm:ml-8">
+          <div className="flex items-center gap-1.5 sm:gap-2 ml-1 sm:ml-8">
             {items.map((product) => (
-              <div key={product._id} className="relative h-12 w-12 sm:h-14 sm:w-14 overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/10 flex items-center justify-center p-1">
+              <div key={product._id} className="relative h-10 w-10 sm:h-14 sm:w-14 overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/10 flex items-center justify-center p-1 shrink-0">
                 <Image 
                   src={product.thumbnail || PLACEHOLDER_IMG} 
                   alt={product.name} 
@@ -382,14 +364,14 @@ export default function ComparePage() {
             
             {/* Empty thumbnail slots */}
             {Array.from({ length: Math.max(0, 4 - items.length) }).map((_, i) => (
-               <div key={`empty-thumb-${i}`} className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 text-slate-300 dark:text-slate-600">
+               <div key={`empty-thumb-${i}`} className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30 text-slate-300 dark:text-slate-600 shrink-0">
                  <Plus className="h-5 w-5" />
                </div>
             ))}
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-4 ml-auto pl-4 border-l border-slate-100 dark:border-white/10">
+          <div className="flex items-center gap-2 sm:gap-4 ml-auto pl-2 sm:pl-4 border-l border-slate-100 dark:border-white/10 shrink-0">
             <button 
               onClick={clearCompare}
               className="text-[13px] font-bold text-red-500 hover:text-red-600 hidden sm:block"
@@ -398,7 +380,7 @@ export default function ComparePage() {
             </button>
             <button 
               onClick={handleScrollToTop}
-              className="flex items-center gap-2 h-12 sm:h-14 px-6 rounded-xl bg-[#334155] dark:bg-blue-600 text-[14px] font-bold text-white shadow-sm hover:bg-[#1E293B] dark:hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-1.5 sm:gap-2 h-10 sm:h-14 px-3 sm:px-6 rounded-xl bg-[#334155] dark:bg-blue-600 text-[12px] sm:text-[14px] font-bold text-white shadow-sm hover:bg-[#1E293B] dark:hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
               Compare ({items.length})
               <span className="text-white/60">→</span>

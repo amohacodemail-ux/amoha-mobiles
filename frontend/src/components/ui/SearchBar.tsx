@@ -9,10 +9,11 @@ import { formatPrice } from '@/lib/utils';
 
 interface SearchBarProps {
   onSelect?: () => void;
+  onClear?: () => void;
   className?: string;
 }
 
-export default function SearchBar({ onSelect, className = '' }: SearchBarProps) {
+export default function SearchBar({ onSelect, onClear, className = '' }: SearchBarProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -118,7 +119,12 @@ export default function SearchBar({ onSelect, className = '' }: SearchBarProps) 
         {query && (
           <button
             type="button"
-            onClick={clearSearch}
+            onClick={(e) => {
+              clearSearch();
+              onClear?.();
+              const input = e.currentTarget.parentElement?.querySelector('input');
+              if (input) input.blur();
+            }}
             className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white transition-colors"
           >
             <HiOutlineX className="h-4 w-4" />

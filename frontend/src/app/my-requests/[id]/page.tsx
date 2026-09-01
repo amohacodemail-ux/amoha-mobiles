@@ -15,8 +15,10 @@ import {
   HiOutlineCurrencyRupee
 } from 'react-icons/hi';
 import { serviceRequestService, ServiceRequest } from '@/services/service.service';
+import { reviewService } from '@/services/review.service';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { HiOutlineStar } from 'react-icons/hi';
 
 const STATUS_META: Record<string, { color: string; bg: string; label: string }> = {
   pending: { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10', label: 'Pending' },
@@ -92,6 +94,9 @@ export default function RequestDetailsPage() {
   const router = useRouter();
   const [request, setRequest] = useState<ServiceRequest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ rating: 0, title: '', comment: '' });
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -104,11 +109,40 @@ export default function RequestDetailsPage() {
       setLoading(true);
       const data = await serviceRequestService.getRequestById(id);
       setRequest(data);
+      if (data.status === 'completed') {
+        // Check if user already reviewed
+        try {
+          const myReviews = await reviewService.getMyReviews();
+          if (myReviews.some(r => 'serviceRequestId' in r && r.serviceRequestId === id)) {
+            setHasReviewed(true);
+          }
+        } catch (err) {
+          console.error("Failed to check review status:", err);
+        }
+      }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to load request details');
       router.push('/my-requests');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewForm.rating || !reviewForm.comment) {
+      toast.error('Please provide a rating and a comment');
+      return;
+    }
+    try {
+      setIsSubmittingReview(true);
+      await reviewService.addServiceReview(request!._id, reviewForm);
+      toast.success('Review submitted successfully!');
+      setHasReviewed(true);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -230,6 +264,72 @@ export default function RequestDetailsPage() {
               Last updated on {formatDate(request.updatedAt)}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Review Section */}
+      {request.status === 'completed' && (
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-surface-100">
+          <div className="mb-4 flex items-center gap-2">
+            <HiOutlineStar className="h-5 w-5 text-amber-400" />
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Service Review</h2>
+          </div>
+          
+          {hasReviewed ? (
+            <div className="rounded-xl bg-emerald-50 p-6 text-center dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
+              <HiOutlineCheckCircle className="mx-auto mb-2 h-10 w-10 text-emerald-500" />
+              <h3 className="text-lg font-bold text-emerald-700 dark:text-emerald-400">Review Submitted</h3>
+              <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-500">Thank you for sharing your feedback with us!</p>
+            </div>
+          ) : (
+            <form onSubmit={handleReviewSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Rating</label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                      className={`text-2xl transition-colors ${star <= reviewForm.rating ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'}`}
+                    >
+                      <HiOutlineStar className={star <= reviewForm.rating ? 'fill-amber-400' : ''} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Title (Optional)</label>
+                <input
+                  type="text"
+                  value={reviewForm.title}
+                  onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
+                  placeholder="Summarize your experience"
+                  className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-2.5 text-sm outline-none transition-all focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-white/10 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Comment</label>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  placeholder="Tell us what you liked or what we can improve..."
+                  className="w-full min-h-[100px] rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm outline-none transition-all focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-white/10 dark:text-white resize-y"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmittingReview || reviewForm.rating === 0 || !reviewForm.comment.trim()}
+                className="w-full sm:w-auto rounded-xl bg-primary-600 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </form>
+          )}
         </div>
       )}
     </div>

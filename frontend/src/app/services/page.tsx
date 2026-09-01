@@ -8,6 +8,7 @@ import {
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { serviceRequestService, type ServiceRequestData } from '@/services/service.service';
+import { reviewService, type ServiceReview } from '@/services/review.service';
 import { useAuthStore } from '@/store/auth.store';
 import Link from 'next/link';
 
@@ -67,11 +68,7 @@ const PROCESS_STEPS = [
   { step: '04', title: 'Fast Delivery', description: 'Get your device back, working perfectly.', icon: HiOutlineTruck },
 ];
 
-const REVIEWS = [
-  { name: 'Arun Kumar', text: 'Amazing service! They replaced my iPhone battery in 30 minutes. Highly recommended for everyone in Coimbatore.', rating: 5 },
-  { name: 'Priya Rajan', text: 'Professional and transparent pricing. My Samsung display works perfectly now, looks brand new.', rating: 5 },
-  { name: 'Karthik S', text: 'Best mobile repair shop. Honest people, fast delivery, and they actually honor their warranty.', rating: 5 },
-];
+// REVIEWS removed, will be fetched dynamically from the backend
 
 const ALL_SERVICE_NAMES = SERVICE_CATEGORIES.flatMap((cat) => cat.services.map((s) => s.name));
 
@@ -101,6 +98,23 @@ export default function ServicesPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isCarouselHovered, setIsCarouselHovered] = useState(false);
+  const [reviews, setReviews] = useState<ServiceReview[]>([]);
+  const [stats, setStats] = useState<{ averageRating: number; reviewCount: number } | null>(null);
+
+  useEffect(() => {
+    const loadReviewsAndStats = async () => {
+      try {
+        const fetchedReviews = await reviewService.getPublicServiceReviews(10);
+        setReviews(fetchedReviews);
+        
+        const fetchedStats = await reviewService.getServiceStats();
+        setStats(fetchedStats);
+      } catch (error) {
+        console.error('Failed to load service reviews or stats', error);
+      }
+    };
+    loadReviewsAndStats();
+  }, []);
 
   useEffect(() => {
     if (!carouselRef.current || isCarouselHovered) return;
@@ -255,7 +269,7 @@ export default function ServicesPage() {
                     const serviceImages: Record<string, string> = {
                       'Display Change': '/images/service_display.png',
                       'Tempered Glass Application': '/images/service_glass.png',
-                      'Panel Change': '/images/service_display.png',
+                      'Panel Change': '/images/service_panel.png',
                       'Battery Change': '/images/service_battery.png',
                       'Charging Port Repair': '/images/service_port.png',
                       'Power Module Repair': '/images/service_motherboard.png',
@@ -266,7 +280,7 @@ export default function ServicesPage() {
                       'Fingerprint Sensor Repair': '/images/service_fingerprint.png',
                       'Bluetooth Module Repair': '/images/service_bluetooth.png',
                       'WiFi Module Repair': '/images/service_wifi.png',
-                      'Front Case Change': '/images/service_display.png',
+                      'Front Case Change': '/images/service_front_case.png',
                       'Back Case Change': '/images/service_back_case.png'
                     };
                     
@@ -342,46 +356,75 @@ export default function ServicesPage() {
       {/* Customer Reviews */}
       <section className="py-24 px-4 bg-slate-50 dark:bg-[#0a0a0a] overflow-hidden">
         <div className="max-w-[1200px] mx-auto animate-[slideInUp_0.8s_ease-out]">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10">
             <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">Loved by Customers</h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium">Don&apos;t just take our word for it.</p>
           </div>
 
-          <div 
-            ref={carouselRef}
-            onMouseEnter={() => setIsCarouselHovered(true)}
-            onMouseLeave={() => setIsCarouselHovered(false)}
-            onTouchStart={() => setIsCarouselHovered(true)}
-            onTouchEnd={() => setIsCarouselHovered(false)}
-            className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory no-scrollbar"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {/* Duplicate array for seamless infinite scrolling effect if needed, but here we just loop the existing */}
-            {[...REVIEWS, ...REVIEWS].map((review, i) => (
-              <div key={i} className="min-w-[320px] max-w-[360px] sm:min-w-[350px] shrink-0 snap-center p-8 rounded-[24px] bg-white dark:bg-[#121212] border border-slate-200/50 dark:border-white/10 shadow-sm transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_20px_40px_rgb(0,0,0,0.4)] hover:-translate-y-2">
-                <div className="flex gap-1.5 mb-6">
-                  {[...Array(review.rating)].map((_, j) => (
-                    <HiOutlineStar key={j} className="w-6 h-6 fill-amber-400 text-amber-400 drop-shadow-sm" />
-                  ))}
+          {stats && stats.reviewCount > 0 && (
+            <div className="flex justify-center mb-12">
+              <div className="flex items-center gap-6 p-6 rounded-[24px] bg-white dark:bg-[#1a1a1a] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-white/10">
+                <div className="flex flex-col items-center">
+                  <div className="text-4xl font-extrabold text-slate-900 dark:text-white">{stats.averageRating.toFixed(1)}</div>
+                  <div className="flex gap-1 mt-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <HiOutlineStar key={star} className={`w-4 h-4 ${star <= Math.round(stats.averageRating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}`} />
+                    ))}
+                  </div>
                 </div>
-                <p className="text-slate-700 dark:text-slate-300 font-medium text-[15px] leading-relaxed mb-8">
-                  &quot;{review.text}&quot;
-                </p>
-                <div className="flex items-center gap-4 mt-auto">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-inner ring-4 ring-blue-50 dark:ring-blue-900/20">
-                      {review.name.charAt(0)}
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-[#121212] rounded-full"></div>
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 dark:text-white text-[15px]">{review.name}</div>
-                    <div className="text-xs font-medium text-slate-500">Verified Customer</div>
-                  </div>
+                <div className="w-px h-12 bg-slate-200 dark:bg-white/10"></div>
+                <div className="flex flex-col">
+                  <div className="text-lg font-bold text-slate-900 dark:text-white">{stats.reviewCount} Reviews</div>
+                  <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Based on verified services</div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {reviews.length > 0 ? (
+            <div 
+              ref={carouselRef}
+              onMouseEnter={() => setIsCarouselHovered(true)}
+              onMouseLeave={() => setIsCarouselHovered(false)}
+              onTouchStart={() => setIsCarouselHovered(true)}
+              onTouchEnd={() => setIsCarouselHovered(false)}
+              className="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory no-scrollbar"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {reviews.map((review, i) => (
+                <div key={`${review.id}-${i}`} className="min-w-[320px] max-w-[360px] sm:min-w-[350px] shrink-0 snap-center p-8 rounded-[24px] bg-white dark:bg-[#121212] border border-slate-200/50 dark:border-white/10 shadow-sm transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] dark:hover:shadow-[0_20px_40px_rgb(0,0,0,0.4)] hover:-translate-y-2">
+                  <div className="flex gap-1.5 mb-6">
+                    {[...Array(review.rating)].map((_, j) => (
+                      <HiOutlineStar key={j} className="w-6 h-6 fill-amber-400 text-amber-400 drop-shadow-sm" />
+                    ))}
+                  </div>
+                  <p className="text-slate-700 dark:text-slate-300 font-medium text-[15px] leading-relaxed mb-8">
+                    &quot;{review.text || review.comment}&quot;
+                  </p>
+                  <div className="flex items-center gap-4 mt-auto">
+                    <div className="relative">
+                      {review.avatar ? (
+                        <img src={review.avatar} alt={review.name || 'Customer'} className="w-12 h-12 rounded-full object-cover shadow-inner ring-4 ring-blue-50 dark:ring-blue-900/20" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-inner ring-4 ring-blue-50 dark:ring-blue-900/20">
+                          {(review.name || 'C').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-[#121212] rounded-full"></div>
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 dark:text-white text-[15px]">{review.name || 'Customer'}</div>
+                      <div className="text-xs font-medium text-slate-500">{review.serviceType || 'Verified Service'}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-slate-500 py-10">
+              <p>No reviews yet for our services. Be the first to leave a review!</p>
+            </div>
+          )}
         </div>
       </section>
 

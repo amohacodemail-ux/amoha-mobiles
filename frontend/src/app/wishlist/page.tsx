@@ -231,22 +231,29 @@ export default function WishlistPage() {
               
               {/* Circular Graphic */}
               <div className="relative mb-6 flex justify-center">
-                {/* Outer light blue circle */}
-                <div className="relative flex h-[150px] w-[150px] items-center justify-center rounded-full bg-[#F3F7FC] dark:bg-surface-200">
-                  {/* Colored dots */}
-                  <div className="absolute top-[20%] right-[25%] h-2 w-2 rounded-full bg-[#82B1FF]"></div>
-                  <div className="absolute bottom-[25%] left-[18%] h-2 w-2 rounded-full bg-[#FFD54F]"></div>
-                  <div className="absolute top-[50%] right-[10%] h-1.5 w-1.5 rounded-full bg-[#69F0AE]"></div>
-                  
-                  {/* Inner white circle with shadow */}
-                  <div className="relative flex h-[95px] w-[95px] items-center justify-center rounded-full bg-white dark:bg-surface-100 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-                    <HiOutlineHeart className="h-10 w-10 text-blue-600 stroke-[1.5]" />
+                {/* Inner white circle with shadow */}
+                <div className="relative flex h-[100px] w-[100px] items-center justify-center rounded-full bg-white dark:bg-surface-100 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+                  <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="mt-1">
+                    {/* Back inner diamond */}
+                    <path d="M25 45L50 35L75 45L50 55Z" fill="#CBD5E1" className="dark:fill-slate-800" />
                     
-                    {/* Orange Question mark badge */}
-                    <div className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#FFA000] border-2 border-white dark:border-surface-100 text-white font-bold text-xs shadow-sm">
-                      ?
-                    </div>
-                  </div>
+                    {/* Flap Fills */}
+                    <path d="M25 45L12 35L37 25L50 35Z" fill="#F8FAFC" className="dark:fill-slate-800" />
+                    <path d="M75 45L88 35L63 25L50 35Z" fill="#F1F5F9" className="dark:fill-slate-700" />
+                    
+                    {/* Back Box Strokes */}
+                    <path d="M25 45L12 35L37 25L50 35L63 25L88 35L75 45M25 45L50 35L75 45" stroke="#334155" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="dark:stroke-slate-300" fill="none" />
+                    
+                    {/* Heart */}
+                    <path d="M50 58 C 50 58 28 35 28 22 C 28 12 38 8 45 16 C 48 19 50 23 50 23 C 50 23 52 19 55 16 C 62 8 72 12 72 22 C 72 35 50 58 50 58 Z" fill="#EF4444" />
+                    
+                    {/* Front Wall Fills */}
+                    <path d="M25 45V70L50 82V55Z" fill="#F1F5F9" className="dark:fill-slate-700" />
+                    <path d="M75 45V70L50 82V55Z" fill="#E2E8F0" className="dark:fill-slate-600" />
+                    
+                    {/* Front Box Strokes */}
+                    <path d="M50 82V55M25 70L50 82L75 70M25 70V45L50 55L75 45V70" stroke="#334155" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="dark:stroke-slate-300" fill="none" />
+                  </svg>
                 </div>
               </div>
               

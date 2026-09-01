@@ -179,7 +179,7 @@ export default function HomePage() {
           onTouchEnd={handleTouchEnd}
         >
           <video
-            src="/PixVerse_V6_Image_Text_540P_Create_an_ultrapre.mp4"
+            src="/without-logo-video.mp4"
             className="w-full max-w-none h-auto block"
             autoPlay
             loop

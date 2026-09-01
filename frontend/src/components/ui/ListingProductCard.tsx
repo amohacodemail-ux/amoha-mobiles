@@ -90,7 +90,7 @@ function ListingProductCard({ product }: ProductCardProps) {
     : 0;
 
   return (
-    <div className="group relative flex h-full flex-col rounded-[24px] border border-border-light bg-white p-2 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-premium-hover">
+    <div className="group relative flex h-full flex-col rounded-[24px] border border-border-light bg-white p-2 shadow-card transition-all duration-300 md:hover:-translate-y-1 md:hover:shadow-premium-hover">
       
       {/* Image Section Wrapper */}
       <div className="relative h-[130px] sm:h-[160px] w-full rounded-[20px] bg-surface-50 flex items-center justify-center overflow-hidden">
@@ -104,8 +104,8 @@ function ListingProductCard({ product }: ProductCardProps) {
         {/* Top Right Wishlist */}
         <button
           onClick={handleWishlist}
-          className={`absolute right-2.5 top-2.5 z-10 flex h-[32px] w-[32px] items-center justify-center rounded-full bg-white shadow-card transition-all duration-200 hover:scale-110 hover:shadow-md ${
-            wishlisted ? 'text-red-500' : 'text-gray-400 hover:text-red-500'
+          className={`absolute right-2.5 top-2.5 z-10 flex h-[32px] w-[32px] items-center justify-center rounded-full bg-white shadow-card transition-all duration-200 md:hover:scale-110 md:hover:shadow-md ${
+            wishlisted ? 'text-red-500' : 'text-gray-400 md:hover:text-red-500'
           }`}
           title="Wishlist"
         >
@@ -117,7 +117,7 @@ function ListingProductCard({ product }: ProductCardProps) {
             src={safeImageSrc(product.thumbnail || product.images?.[0], PLACEHOLDER_IMG)}
             alt={product.name}
             fill
-            className="object-contain p-2 sm:p-3 transition-transform duration-500 group-hover:scale-105"
+            className="object-contain p-2 sm:p-3 transition-transform duration-500 md:group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             loading="lazy"
             onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMG; }}
@@ -144,7 +144,7 @@ function ListingProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Product Name */}
-        <Link href={`/product/${product.slug}`} prefetch={true} className="group-hover:text-primary-600 transition-colors">
+        <Link href={`/product/${product.slug}`} prefetch={true} className="md:group-hover:text-primary-600 transition-colors">
           <h3 className="line-clamp-2 text-[12px] sm:text-[13px] font-bold leading-snug text-gray-900">
             {product.name}
           </h3>
