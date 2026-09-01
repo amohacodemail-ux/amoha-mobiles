@@ -18,7 +18,7 @@ const serviceReviewSchema = z.object({
 router.get('/me', authenticate, reviewController.getMyReviews);
 
 // Get service reviews for public display
-router.get('/service', reviewController.getServiceReviews);
+router.get('/service/public', reviewController.getServiceReviews);
 
 // Get service reviews stats
 router.get('/service/stats', reviewController.getServiceStats);
