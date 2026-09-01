@@ -173,12 +173,21 @@ export default function TestimonialSection({ reviews }: TestimonialSectionProps)
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/10 relative z-10">
-                      <Link href={`/product/${review.productSlug}`} className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 transition-colors hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10">
-                        <HiOutlineDevicePhoneMobile className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[180px]">
-                          Purchased: {review.productName}
-                        </span>
-                      </Link>
+                      {review.reviewType === 'service' ? (
+                        <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 transition-colors hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10">
+                          <HiOutlineDevicePhoneMobile className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[180px]">
+                            Service: {review.serviceType || 'Service'}
+                          </span>
+                        </div>
+                      ) : (
+                        <Link href={`/product/${review.productSlug}`} className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 transition-colors hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10">
+                          <HiOutlineDevicePhoneMobile className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[180px]">
+                            Purchased: {review.productName}
+                          </span>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

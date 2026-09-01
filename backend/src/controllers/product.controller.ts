@@ -190,7 +190,7 @@ class ProductController {
 
       const { data: reviews } = await supabase
         .from('reviews')
-        .select('*, products(name, slug, images), users:user_id(name, avatar)')
+        .select('*, products(name, slug, images), service_requests(service_type), users:user_id(name, avatar)')
         .gte('rating', 4)
         .order('created_at', { ascending: false })
         .limit(limit);
@@ -205,6 +205,8 @@ class ProductController {
         productName: r.products?.name || '',
         productSlug: r.products?.slug || '',
         productThumbnail: r.products?.images?.[0] || '',
+        reviewType: r.review_type || 'product',
+        serviceType: r.service_requests?.service_type || '',
         user: r.users ? { name: r.users.name, avatar: r.users.avatar } : { name: 'Customer', avatar: '' },
       }));
       sendSuccess(res, result, 'Top reviews fetched');

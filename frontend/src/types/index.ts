@@ -326,6 +326,8 @@ export interface HomepageReview {
   productName: string;
   productSlug: string;
   productThumbnail: string;
+  reviewType?: 'product' | 'service';
+  serviceType?: string;
   user: { name: string; avatar?: string };
 }
 export interface PaginationInfo {
