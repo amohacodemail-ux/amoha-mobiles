@@ -20,7 +20,7 @@
   "author": "AMOHA",
   "license": "ISC",
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
