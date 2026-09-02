@@ -103,6 +103,7 @@ export default function BarcodePage() {
   const [deleting, setDeleting] = useState(false);
 
   const { canDelete } = useModulePermissions(MODULES.BARCODE_POS);
+  const { canEdit: canEditProduct } = useModulePermissions(MODULES.PRODUCTS);
 
   // Track whether user has explicitly toggled GST (so billingInfo load won't override it)
   const userToggledGst = useRef(false);
@@ -612,11 +613,15 @@ export default function BarcodePage() {
       key: 'actions', header: '',
       render: (p) => (
         <div className="flex items-center gap-2">
-          <Link href={`/products/${p._id}/edit`}><Button variant="outline" size="sm">Edit</Button></Link>
+          {canEditProduct && (
+            <>
+              <Link href={`/products/${p._id}/edit`}><Button variant="outline" size="sm">Edit</Button></Link>
+              <Button variant="outline" size="icon-sm" title="Regenerate barcode" disabled={regeneratingId === p._id} onClick={() => handleRegenerate(p._id)}>
+                <RefreshCw className={`h-3.5 w-3.5 ${regeneratingId === p._id ? 'animate-spin' : ''}`} />
+              </Button>
+            </>
+          )}
           <Button variant="outline" size="icon-sm" title="Print barcode label" onClick={() => printBarcodeLabel({ name: p.name, sku: p.sku, barcode: p.barcode, price: p.price })}><Printer className="h-3.5 w-3.5" /></Button>
-          <Button variant="outline" size="icon-sm" title="Regenerate barcode" disabled={regeneratingId === p._id} onClick={() => handleRegenerate(p._id)}>
-            <RefreshCw className={`h-3.5 w-3.5 ${regeneratingId === p._id ? 'animate-spin' : ''}`} />
-          </Button>
         </div>
       ),
     },

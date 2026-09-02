@@ -208,8 +208,12 @@ class ReturnService {
     return this.getReturnRequestById(id);
   }
 
-  async getReturnStats() {
-    const { data, error } = await supabase.from('return_requests').select('status');
+  async getReturnStats(createdBy?: string) {
+    let qb = supabase.from('return_requests').select('status, orders:order_id!inner(created_by)');
+    if (createdBy) {
+      qb = qb.eq('orders.created_by', createdBy);
+    }
+    const { data, error } = await qb;
     if (error) throw error;
     const rows = data || [];
     const inProgressStatuses = ['approved', 'pickup_scheduled', 'picked_up', 'received', 'inspected', 'refund_initiated', 'replacement_shipped'];

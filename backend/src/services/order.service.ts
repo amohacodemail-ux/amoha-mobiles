@@ -209,7 +209,22 @@ class OrderService {
     if (query.source === 'pos') qb = qb.eq('is_walk_in', true);
     else if (query.source === 'online') qb = qb.eq('is_walk_in', false);
     if (query.search) {
-      qb = qb.or(`order_number.ilike.%${query.search}%`);
+      const searchStr = query.search.trim();
+      const { data: users } = await supabase
+        .from('users')
+        .select('id')
+        .or(`name.ilike.%${searchStr}%,email.ilike.%${searchStr}%,phone.ilike.%${searchStr}%`);
+      const userIds = users?.map(u => u.id) || [];
+      
+      const orderMatch = `order_number.ilike.%${searchStr}%`;
+      const walkInName = `walk_in_customer_name.ilike.%${searchStr}%`;
+      const walkInPhone = `walk_in_customer_phone.ilike.%${searchStr}%`;
+      
+      if (userIds.length > 0) {
+        qb = qb.or(`${orderMatch},${walkInName},${walkInPhone},user_id.in.(${userIds.join(',')})`);
+      } else {
+        qb = qb.or(`${orderMatch},${walkInName},${walkInPhone}`);
+      }
     }
     if (query.startDate) qb = qb.gte('created_at', query.startDate);
     if (query.endDate) qb = qb.lte('created_at', query.endDate);

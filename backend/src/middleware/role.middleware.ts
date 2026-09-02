@@ -31,6 +31,7 @@ export const authorize = (...roles: UserRole[]) => {
     const normalizedRoles = roles.map(normalizeRole);
 
     if (!normalizedRoles.includes(userRole)) {
+      console.log(`[AUTH FAILED] User role: ${userRole}, Allowed: ${normalizedRoles.join(', ')}`);
       return next(new ForbiddenError('You do not have permission to access this resource'));
     }
 
@@ -99,6 +100,7 @@ export const canAccessSupplier = authorize('admin', 'supplier');
 // ---- SERVICE ENGINEER MODULE ----
 /** Service center operations: view and update service requests */
 export const canAccessServiceEngineer = authorize('admin', 'service_engineer');
+export const canViewServiceRequests = authorize('admin', 'service_engineer', 'sales');
 
 // ---- ADMIN-ONLY MODULES ----
 /** System settings, user management, activity logs */
@@ -114,6 +116,7 @@ export const canAccessReports = authorize('admin', 'sales', 'purchase', 'purchas
 
 /** Notifications - accessible by all internal roles */
 export const canAccessNotifications = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
+export const canModifyNotifications = authorize('admin', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
 
 /** Settings/Profile - accessible by all authenticated users */
 export const canAccessSettings = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');

@@ -14,6 +14,8 @@ import {
   type ContactMessage,
 } from '@/services/contact.service';
 import { formatDate } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
+import { AccessDenied } from '@/components/auth/access-denied';
 
 const LIMIT = 10;
 
@@ -28,9 +30,12 @@ export default function ContactMessagesPage() {
   const [deleting, setDeleting] = useState(false);
   const [detailMessage, setDetailMessage] = useState<ContactMessage | null>(null);
 
+  const { canAccess, canEdit, canDelete } = useModulePermissions(MODULES.CONTACT_MESSAGES);
+
   const debouncedSearch = useDebouncedValue(search, 350);
 
   const load = useCallback(async () => {
+    if (!canAccess) return;
     setLoading(true);
     try {
       const res = await contactService.getAll({ page, limit: LIMIT, search: debouncedSearch });
@@ -43,7 +48,7 @@ export default function ContactMessagesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch]);
+  }, [page, debouncedSearch, canAccess]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setPage(1); }, [debouncedSearch]);
@@ -55,6 +60,7 @@ export default function ContactMessagesPage() {
       await contactService.delete(deleteId);
       toast.success('Message deleted');
       setDeleteId(null);
+      setDetailMessage(null);
       load();
     } catch {
       toast.error('Delete failed');
@@ -123,16 +129,22 @@ export default function ContactMessagesPage() {
           <Button size="icon" variant="ghost" onClick={() => openDetail(m)}>
             <Eye className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" onClick={() => setDeleteId(m._id)} className="text-destructive">
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canDelete && (
+            <Button size="icon" variant="ghost" onClick={() => setDeleteId(m._id)} className="text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       ),
     },
   ];
 
+  if (!canAccess) {
+    return <AccessDenied />;
+  }
+
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader title="Contact Messages" description="View and manage customer messages" />
 
       <DataTable

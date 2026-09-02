@@ -107,6 +107,14 @@ export function SalesDashboard() {
           iconColor="text-indigo-600 dark:text-indigo-400"
           loading={loading}
         />
+        <StatCard
+          title="Pending Orders"
+          value={String(stats?.pendingOrders || 0)}
+          description="Awaiting processing/shipping"
+          icon={<ShoppingCart className="h-5 w-5" />}
+          iconColor="text-orange-600 dark:text-orange-400"
+          loading={loading}
+        />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

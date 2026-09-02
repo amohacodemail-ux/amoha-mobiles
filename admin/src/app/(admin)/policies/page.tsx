@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { settingsService } from '@/services/settings.service';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 
 const policyFields = [
   { key: 'termsAndConditions', label: 'Terms & Conditions', placeholder: 'Enter your terms and conditions...' },
@@ -26,6 +27,8 @@ export default function PoliciesPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  const { canEdit } = useModulePermissions(MODULES.POLICIES);
 
   useEffect(() => {
     settingsService.get().then((settings) => {
@@ -73,7 +76,9 @@ export default function PoliciesPage() {
   return (
     <div>
       <PageHeader title="Policies" description="Manage store terms, conditions and policy pages">
-        <Button onClick={handleSave} loading={saving}><Save className="h-4 w-4" />Save All Policies</Button>
+        {canEdit && (
+          <Button onClick={handleSave} loading={saving}><Save className="h-4 w-4" />Save All Policies</Button>
+        )}
       </PageHeader>
 
       <div className="space-y-6">
@@ -89,6 +94,7 @@ export default function PoliciesPage() {
                 placeholder={field.placeholder}
                 rows={10}
                 className="font-mono text-sm"
+                readOnly={!canEdit}
               />
               <p className="mt-2 text-xs text-muted-foreground">
                 {policies[field.key].length} characters

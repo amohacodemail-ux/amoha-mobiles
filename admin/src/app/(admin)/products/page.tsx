@@ -99,17 +99,29 @@ export default function ProductsPage() {
   const columns: Column<Product>[] = [
     {
       key: 'name', header: 'Product', sortable: true,
-      render: (p) => (
-        <Link href={`/products/${p._id}/edit`} className="flex items-center gap-3 hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors">
-          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-            {p.thumbnail ? <Image src={safeImageSrc(p.thumbnail)} alt={p.name} fill sizes="40px" className="object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/images/no-image.svg'; }} /> : <Package className="h-4 w-4 m-auto text-muted-foreground" />}
+      render: (p) => {
+        const content = (
+          <>
+            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+              {p.thumbnail ? <Image src={safeImageSrc(p.thumbnail)} alt={p.name} fill sizes="40px" className="object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/images/no-image.svg'; }} /> : <Package className="h-4 w-4 m-auto text-muted-foreground" />}
+            </div>
+            <div className="min-w-0">
+              <p className={`font-medium text-foreground truncate max-w-[200px] ${canEdit ? 'hover:underline' : ''}`}>{p.name}</p>
+              <p className="text-xs text-muted-foreground">{typeof p.brand === 'object' ? p.brand?.name : p.brand}</p>
+            </div>
+          </>
+        );
+
+        return canEdit ? (
+          <Link href={`/products/${p._id}/edit`} className="flex items-center gap-3 hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors">
+            {content}
+          </Link>
+        ) : (
+          <div className="flex items-center gap-3 p-1 -m-1">
+            {content}
           </div>
-          <div className="min-w-0">
-            <p className="font-medium text-foreground truncate max-w-[200px] hover:underline">{p.name}</p>
-            <p className="text-xs text-muted-foreground">{typeof p.brand === 'object' ? p.brand?.name : p.brand}</p>
-          </div>
-        </Link>
-      ),
+        );
+      },
     },
     { key: 'category', header: 'Category', render: (p) => <span className="text-sm">{typeof p.category === 'object' ? p.category?.name : p.category}</span> },
     { key: 'price', header: 'Price', sortable: true, render: (p) => <span className="font-semibold">{formatCurrency(p.price)}</span> },

@@ -6,6 +6,15 @@ import { useAuthStore } from '@/store/auth.store';
 import { getInitials, cn } from '@/lib/utils';
 import { ThemeToggle } from './theme-toggle';
 import { notificationService, type Notification } from '@/services/notification.service';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 
 const typeIcons: Record<string, React.ElementType> = {
   order: ShoppingCart,
@@ -37,6 +46,7 @@ export function Header({ onMobileMenuOpen, collapsed }: HeaderProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -71,7 +81,7 @@ export function Header({ onMobileMenuOpen, collapsed }: HeaderProps) {
       } catch {}
     }
     setOpen(false);
-    if (n.link) router.push(n.link);
+    setSelectedNotification(n);
   };
 
   const handleMarkAllRead = async () => {
@@ -96,121 +106,160 @@ export function Header({ onMobileMenuOpen, collapsed }: HeaderProps) {
   };
 
   return (
-    <header
-      className="fixed top-0 right-0 z-20 h-16 bg-background/80 backdrop-blur-sm border-b border-border flex items-center px-4 gap-4 transition-all duration-300"
-      style={{ left: collapsed ? '4rem' : '15rem' }}
-    >
-      <button
-        className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-        onClick={onMobileMenuOpen}
+    <>
+      <header
+        className="fixed top-0 right-0 z-20 h-16 bg-background/80 backdrop-blur-sm border-b border-border flex items-center px-4 gap-4 transition-all duration-300"
+        style={{ left: collapsed ? '4rem' : '15rem' }}
       >
-        <Menu className="h-5 w-5" />
-      </button>
-
-      <div className="flex-1" />
-
-      {/* Theme toggle */}
-      <ThemeToggle />
-
-      {/* Notification bell */}
-      <div className="relative" ref={dropdownRef}>
         <button
-          onClick={() => setOpen(!open)}
-          className="relative p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          className="lg:hidden p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          onClick={onMobileMenuOpen}
         >
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
+          <Menu className="h-5 w-5" />
         </button>
 
-        {open && (
-          <div className="absolute right-0 top-full mt-2 w-80 md:w-96 rounded-xl border border-border bg-background shadow-xl overflow-hidden z-50 animate-scale-in origin-top-right">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-              <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
-              <div className="flex items-center gap-2">
-                {unreadCount > 0 && (
-                  <button
-                    onClick={handleMarkAllRead}
-                    className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 px-2 py-1 rounded-md hover:bg-primary/10 transition-colors"
-                  >
-                    <CheckCheck className="h-3 w-3" />Mark all read
-                  </button>
+        <div className="flex-1" />
+
+        <ThemeToggle />
+
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setOpen(!open)}
+            className="relative p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground px-1">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {open && (
+            <div className="absolute right-0 top-full mt-2 w-80 md:w-96 rounded-xl border border-border bg-background shadow-xl overflow-hidden z-50 animate-scale-in origin-top-right">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 px-2 py-1 rounded-md hover:bg-primary/10 transition-colors"
+                    >
+                      <CheckCheck className="h-3 w-3" />Mark all read
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="max-h-80 overflow-y-auto">
+                {safeNotifications.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                      <Bell className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground mb-1">No notifications yet</p>
+                    <p className="text-xs text-muted-foreground">We'll notify you when something arrives</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {safeNotifications.map((n, index) => {
+                      const Icon = typeIcons[n.type] || Info;
+                      const color = typeColors[n.type] || typeColors.system;
+                      return (
+                        <button
+                          key={n._id}
+                          onClick={() => handleNotificationClick(n)}
+                          className={cn(
+                            'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/50 transition-all duration-150',
+                            !n.isRead && 'bg-primary/[0.03]'
+                          )}
+                          style={{ animationDelay: `${index * 30}ms` }}
+                        >
+                          <div className={cn('p-2 rounded-full shrink-0', color)}>
+                            <Icon className="h-3.5 w-3.5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={cn(
+                                'text-xs font-medium truncate',
+                                !n.isRead ? 'text-foreground' : 'text-muted-foreground'
+                              )}>
+                                {n.title}
+                              </span>
+                              {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 animate-pulse" />}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
+                            <span className="text-[10px] text-muted-foreground mt-1 block">{formatTime(n.createdAt)}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
-            </div>
 
-            <div className="max-h-80 overflow-y-auto">
-              {safeNotifications.length === 0 ? (
-                <div className="py-10 text-center">
-                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                    <Bell className="h-6 w-6 text-muted-foreground/50" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground mb-1">No notifications yet</p>
-                  <p className="text-xs text-muted-foreground">We'll notify you when something arrives</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  {safeNotifications.map((n, index) => {
-                    const Icon = typeIcons[n.type] || Info;
-                    const color = typeColors[n.type] || typeColors.system;
-                    return (
-                      <button
-                        key={n._id}
-                        onClick={() => handleNotificationClick(n)}
-                        className={cn(
-                          'w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-muted/50 transition-all duration-150',
-                          !n.isRead && 'bg-primary/[0.03]'
-                        )}
-                        style={{ animationDelay: `${index * 30}ms` }}
-                      >
-                        <div className={cn('p-2 rounded-full shrink-0', color)}>
-                          <Icon className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              'text-xs font-medium truncate',
-                              !n.isRead ? 'text-foreground' : 'text-muted-foreground'
-                            )}>
-                              {n.title}
-                            </span>
-                            {!n.isRead && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 animate-pulse" />}
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">{n.message}</p>
-                          <span className="text-[10px] text-muted-foreground mt-1 block">{formatTime(n.createdAt)}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="border-t border-border px-4 py-3 bg-muted/30">
+                <button
+                  onClick={() => { setOpen(false); router.push('/notifications'); }}
+                  className="w-full text-center text-xs font-medium text-primary hover:text-primary/80 py-1 rounded-md hover:bg-primary/10 transition-colors"
+                >
+                  View all notifications
+                </button>
+              </div>
             </div>
+          )}
+        </div>
 
-            <div className="border-t border-border px-4 py-3 bg-muted/30">
-              <button
-                onClick={() => { setOpen(false); router.push('/notifications'); }}
-                className="w-full text-center text-xs font-medium text-primary hover:text-primary/80 py-1 rounded-md hover:bg-primary/10 transition-colors"
-              >
-                View all notifications
-              </button>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-semibold text-foreground">{user?.name ?? 'Admin'}</p>
+            <p className="text-xs text-muted-foreground">{user?.email ?? ''}</p>
           </div>
-        )}
-      </div>
+          <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-sm font-bold text-primary">
+            {getInitials(user?.name ?? 'A')}
+          </div>
+        </div>
+      </header>
 
-      {/* User avatar */}
-      <div className="flex items-center gap-3">
-        <div className="text-right hidden sm:block">
-          <p className="text-sm font-semibold text-foreground">{user?.name ?? 'Admin'}</p>
-          <p className="text-xs text-muted-foreground">{user?.email ?? ''}</p>
-        </div>
-        <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-sm font-bold text-primary">
-          {getInitials(user?.name ?? 'A')}
-        </div>
-      </div>
-    </header>
+      <Dialog open={!!selectedNotification} onOpenChange={(isOpen) => !isOpen && setSelectedNotification(null)}>
+        <DialogContent className="max-w-md z-[100]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedNotification && (() => {
+                const Icon = typeIcons[selectedNotification.type] || Info;
+                const color = typeColors[selectedNotification.type] || typeColors.system;
+                return (
+                  <div className={cn('p-1.5 rounded-full', color)}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                );
+              })()}
+              {selectedNotification?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedNotification && formatTime(selectedNotification.createdAt)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 text-sm text-foreground">
+            {selectedNotification?.message}
+          </div>
+          
+          <DialogFooter className="flex justify-between items-center w-full">
+            <Button variant="outline" onClick={() => setSelectedNotification(null)}>
+              Close
+            </Button>
+            {selectedNotification?.link && (
+              <Button onClick={() => {
+                router.push(selectedNotification.link!);
+                setSelectedNotification(null);
+              }}>
+                View Related Details
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

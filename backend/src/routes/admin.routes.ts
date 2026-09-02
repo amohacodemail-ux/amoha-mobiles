@@ -19,9 +19,12 @@ import {
   canAccessMarketing,
   canAccessLogistics,
   canAccessServiceEngineer,
+  canViewServiceRequests,
   canAccessDashboard,
   canAccessReports,
   canAccessNotifications,
+  canModifyNotifications,
+  canAccessSettings,
   canViewCatalog,
   isAdmin
 } from '../middleware/role.middleware';
@@ -171,13 +174,13 @@ router.get('/reports/inventory', canAccessReports, async (_req: Request, res: Re
   }
 });
 
-// ====== Products - Purchase & Admin only ======
-// Purchase & Admin can see all products regardless of is_active; inject isActive=all to bypass the default filter
-router.get('/products', canAccessPurchase, (req: Request, res: Response, next: NextFunction) => {
+// ====== Products - Catalog viewers (Admin, Purchase, Sales, etc.) ======
+// All authorized roles can see all products regardless of is_active; inject isActive=all to bypass the default filter
+router.get('/products', canViewCatalog, (req: Request, res: Response, next: NextFunction) => {
   if (req.query.isActive === undefined) (req.query as any).isActive = 'all';
   productController.getAll(req, res, next);
 });
-router.get('/products/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/products/:id', canViewCatalog, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const product = await productService.getProductById(req.params.id);
     sendSuccess(res, product, 'Product fetched');
@@ -191,8 +194,8 @@ router.delete('/products/:id', canAccessPurchase, productController.delete);
 router.patch('/products/:id/stock', canAccessPurchase, productController.updateStock);
 
 // ====== Categories - Purchase & Admin only ======
-router.get('/categories', canAccessPurchase, categoryController.getAllAdmin);
-router.get('/categories/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/categories', canViewCatalog, categoryController.getAllAdmin);
+router.get('/categories/:id', canViewCatalog, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -209,8 +212,8 @@ router.put('/categories/:id', canAccessPurchase, categoryController.update);
 router.delete('/categories/:id', canAccessPurchase, categoryController.delete);
 
 // ====== Brands - Purchase & Admin only ======
-router.get('/brands', canAccessPurchase, brandController.getAllAdmin);
-router.get('/brands/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/brands', canViewCatalog, brandController.getAllAdmin);
+router.get('/brands/:id', canViewCatalog, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -346,9 +349,9 @@ router.get('/orders/:id/invoice', canAccessSales, async (req: Request, res: Resp
     next(error);
   }
 });
-router.patch('/orders/:id/status', canAccessSales, validate(updateOrderStatusSchema), orderController.updateOrderStatus);
-router.delete('/orders/:id', canAccessSales, orderController.deleteOrder);
-router.post('/orders/:id/refund', canAccessSales, async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/orders/:id/status', isAdmin, validate(updateOrderStatusSchema), orderController.updateOrderStatus);
+router.delete('/orders/:id', isAdmin, orderController.deleteOrder);
+router.post('/orders/:id/refund', isAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
     const { transformRow } = await import('../utils/transform.util');
@@ -628,9 +631,9 @@ router.delete('/reviews/:id', canAccessMarketing, async (req: Request, res: Resp
 });
 
 // ====== Service Requests - Admin & Service Engineer only ======
-router.get('/service-requests', canAccessServiceEngineer, serviceRequestController.getAll);
-router.get('/service-requests/stats', canAccessServiceEngineer, serviceRequestController.getStats);
-router.get('/service-requests/:id', canAccessServiceEngineer, serviceRequestController.getById);
+router.get('/service-requests', canViewServiceRequests, serviceRequestController.getAll);
+router.get('/service-requests/stats', canViewServiceRequests, serviceRequestController.getStats);
+router.get('/service-requests/:id', canViewServiceRequests, serviceRequestController.getById);
 router.patch('/service-requests/:id/status', canAccessServiceEngineer, serviceRequestController.updateStatus);
 router.delete('/service-requests/:id', canAccessServiceEngineer, serviceRequestController.delete);
 
@@ -661,18 +664,18 @@ router.patch('/orders/:id/tracking', canAccessLogistics, async (req: Request, re
   }
 });
 
-// ====== Site Settings - Admin only ======
-router.get('/settings', canAccessAdminOnly, settingsController.get);
+// ====== Site Settings ======
+router.get('/settings', canAccessSettings, settingsController.get);
 router.put('/settings', canAccessAdminOnly, settingsController.update);
 
 // ====== Notifications - All internal roles ======
 router.get('/notifications', canAccessNotifications, notificationController.getAll);
 router.get('/notifications/recent', canAccessNotifications, notificationController.getRecent);
 router.get('/notifications/unread-count', canAccessNotifications, notificationController.getUnreadCount);
-router.patch('/notifications/:id/read', canAccessNotifications, notificationController.markRead);
-router.patch('/notifications/read-all', canAccessNotifications, notificationController.markAllRead);
+router.patch('/notifications/:id/read', canModifyNotifications, notificationController.markRead);
+router.patch('/notifications/read-all', canModifyNotifications, notificationController.markAllRead);
 router.delete('/notifications/clear', canAccessAdminOnly, notificationController.clearAll);
-router.delete('/notifications/:id', canAccessNotifications, notificationController.delete);
+router.delete('/notifications/:id', canModifyNotifications, notificationController.delete);
 
 // ====== Product View Tracking - Marketing & Admin only ======
 router.get('/product-views', canAccessMarketing, productViewController.getAll);
@@ -731,10 +734,6 @@ router.get('/reports/orders', canAccessSales, async (req: Request, res: Response
     if (status) qb = qb.eq('status', status);
     if (search) {
       qb = qb.or(`order_number.ilike.%${search}%,invoice_number.ilike.%${search}%,walk_in_customer_name.ilike.%${search}%`);
-    }
-
-    if ((req as any).user?.role === 'sales') {
-      qb = qb.eq('created_by', (req as any).user.userId);
     }
 
     qb = qb.order('created_at', { ascending: false }).range(offset, offset + limitNum - 1);

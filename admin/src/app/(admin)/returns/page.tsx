@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useDebouncedValue } from '@/lib/hooks';
+import { useAuthStore } from '@/store/auth.store';
 import toast from 'react-hot-toast';
 import { Eye, RotateCcw, Package, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -62,6 +63,7 @@ function getReturnStatusColor(status: ReturnStatus): string {
 }
 
 export default function ReturnsPage() {
+  const { user } = useAuthStore();
   const [returns, setReturns] = useState<ReturnRequest[]>([]);
   const [stats, setStats] = useState<ReturnStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,20 +158,22 @@ export default function ReturnsPage() {
       key: 'createdAt', header: 'Date',
       render: (r) => <span className="text-xs text-muted-foreground">{formatDate(r.createdAt)}</span>,
     },
-    {
-      key: 'actions', header: 'Actions',
-      render: (r) => {
-        const transitions = STATUS_TRANSITIONS[r.status] ?? [];
-        return transitions.length > 0 ? (
-          <Button
-            variant="outline" size="icon-sm"
-            onClick={() => { setSelectedReturn(r); setNewStatus(transitions[0]); }}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-          </Button>
-        ) : null;
-      },
-    },
+    ...(user?.role === 'sales' ? [] : [
+      {
+        key: 'actions', header: 'Actions',
+        render: (r: ReturnRequest) => {
+          const transitions = STATUS_TRANSITIONS[r.status] ?? [];
+          return transitions.length > 0 ? (
+            <Button
+              variant="outline" size="icon-sm"
+              onClick={() => { setSelectedReturn(r); setNewStatus(transitions[0]); }}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          ) : null;
+        },
+      }
+    ]),
   ];
 
   return (

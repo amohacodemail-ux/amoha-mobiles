@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { walletService } from '@/services/wallet.service';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import type { AdminWallet } from '@/types';
 
 const LIMIT = 20;
@@ -29,6 +30,8 @@ export default function WalletsPage() {
   const [creditAmount, setCreditAmount] = useState('');
   const [creditDescription, setCreditDescription] = useState('');
   const [crediting, setCrediting] = useState(false);
+
+  const { canCreate, canEdit } = useModulePermissions(MODULES.WALLETS);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -118,16 +121,20 @@ export default function WalletsPage() {
     },
   ];
 
+  const visibleColumns = canEdit ? columns : columns.filter(c => c.key !== 'actions');
+
   return (
     <div>
       <PageHeader title="Wallets" description={`${totalItems} user wallets`}>
-        <Button onClick={() => setCreditOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Credit Wallet
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setCreditOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Credit Wallet
+          </Button>
+        )}
       </PageHeader>
 
       <DataTable
-        columns={columns} data={wallets} loading={loading}
+        columns={visibleColumns} data={wallets} loading={loading}
         searchValue={search} onSearchChange={setSearch}
         searchPlaceholder="Search customer..."
         rowKey={(w) => w._id}

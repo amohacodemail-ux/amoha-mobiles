@@ -22,7 +22,7 @@ class AdminService {
     // Fetch all relevant orders for this salesperson
     const { data: allOrders, error } = await supabase
       .from('orders')
-      .select('id, total, created_at')
+      .select('id, total, created_at, status')
       .eq('created_by', userId)
       .not('status', 'eq', 'cancelled')
       .not('status', 'eq', 'returned');
@@ -30,6 +30,9 @@ class AdminService {
     if (error) throw error;
 
     const orders = allOrders || [];
+
+    // Calculate Pending Orders
+    const pendingOrders = orders.filter((o: any) => o.status === 'pending' || o.status === 'processing').length;
 
     // Calculate Today's Stats
     const todayOrders = orders.filter((o: any) => o.created_at >= todayStr && o.created_at < tomorrowStr);
@@ -78,6 +81,7 @@ class AdminService {
       monthlyRevenue,
       monthlySales,
       averageSaleValue,
+      pendingOrders,
       chartData
     };
   }

@@ -148,9 +148,6 @@ class OrderController {
   async getAllOrders(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const query = { ...req.query };
-      if (req.user?.role === 'sales') {
-        query.createdBy = req.user.userId;
-      }
       const result = await orderService.getOrders(query);
       sendSuccess(res, result, 'All orders fetched');
     } catch (error) { next(error); }

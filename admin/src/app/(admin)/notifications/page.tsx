@@ -9,7 +9,17 @@ import {
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 import { notificationService, type Notification } from '@/services/notification.service';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 
 const typeConfig: Record<string, { icon: React.ElementType; color: string; label: string }> = {
   order: { icon: ShoppingCart, color: 'text-blue-500 bg-blue-500/10', label: 'Order' },
@@ -38,6 +48,9 @@ export default function NotificationsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filterType, setFilterType] = useState('');
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  
+  const { canEdit, canDelete } = useModulePermissions(MODULES.NOTIFICATIONS);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -56,14 +69,11 @@ export default function NotificationsPage() {
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   const handleClick = async (n: Notification) => {
-    if (!n.isRead) {
+    if (!n.isRead && canEdit) {
       try { await notificationService.markRead(n._id); } catch {}
-    }
-    if (n.link) {
-      router.push(n.link);
-    } else {
       setNotifications((prev) => prev.map((item) => item._id === n._id ? { ...item, isRead: true } : item));
     }
+    setSelectedNotification(n);
   };
 
   const handleMarkAllRead = async () => {
@@ -113,12 +123,16 @@ export default function NotificationsPage() {
     <div>
       <PageHeader title="Notifications" description="Stay updated on orders, messages and more">
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
-            <CheckCheck className="h-4 w-4" />Mark All Read
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleClearAll}>
-            <Trash2 className="h-4 w-4" />Clear Read
-          </Button>
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
+              <CheckCheck className="h-4 w-4" />Mark All Read
+            </Button>
+          )}
+          {canDelete && (
+            <Button variant="outline" size="sm" onClick={handleClearAll}>
+              <Trash2 className="h-4 w-4" />Clear Read
+            </Button>
+          )}
         </div>
       </PageHeader>
 
@@ -184,12 +198,14 @@ export default function NotificationsPage() {
                       <span className="text-xs text-muted-foreground">{formatTime(n.createdAt)}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => handleDelete(n._id, e)}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={(e) => handleDelete(n._id, e)}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </button>
               );
             })
@@ -205,6 +221,47 @@ export default function NotificationsPage() {
           <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
         </div>
       )}
+
+      {/* Notification Details Modal */}
+      <Dialog open={!!selectedNotification} onOpenChange={(open) => !open && setSelectedNotification(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedNotification && (() => {
+                const config = typeConfig[selectedNotification.type] || typeConfig.system;
+                const Icon = config.icon;
+                return (
+                  <div className={`p-1.5 rounded-full ${config.color}`}>
+                    <Icon className="h-4 w-4" />
+                  </div>
+                );
+              })()}
+              {selectedNotification?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedNotification && formatTime(selectedNotification.createdAt)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 text-sm text-foreground">
+            {selectedNotification?.message}
+          </div>
+          
+          <DialogFooter className="flex justify-between items-center w-full">
+            <Button variant="outline" onClick={() => setSelectedNotification(null)}>
+              Close
+            </Button>
+            {selectedNotification?.link && (
+              <Button onClick={() => {
+                router.push(selectedNotification.link);
+                setSelectedNotification(null);
+              }}>
+                View Related Details
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

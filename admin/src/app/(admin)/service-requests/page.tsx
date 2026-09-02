@@ -19,7 +19,7 @@ import {
   type ServiceStats,
 } from '@/services/service-request.service';
 import { formatDate } from '@/lib/utils';
-import { usePermissions } from '@/hooks/usePermissions';
+import { usePermissions, useModulePermissions, MODULES } from '@/hooks/usePermissions';
 
 const LIMIT = 10;
 
@@ -42,6 +42,7 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 
 export default function ServiceRequestsPage() {
   const { isAdmin, canDelete } = usePermissions();
+  const { canEdit } = useModulePermissions(MODULES.SERVICE_REQUESTS);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [stats, setStats] = useState<ServiceStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -304,24 +305,43 @@ export default function ServiceRequestsPage() {
                 </div>
               )}
               <hr className="border-border" />
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Update Status</label>
-                <Select value={newStatus} onValueChange={setNewStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.filter((o) => o.value && o.value !== 'all').map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Input label="Final Price" type="number" placeholder="Optional" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value)} />
-              <Textarea label="Admin Notes" placeholder="Internal notes..." rows={3} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} />
+              {canEdit ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">Update Status</label>
+                    <Select value={newStatus} onValueChange={setNewStatus}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.filter((o) => o.value && o.value !== 'all').map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input label="Final Price" type="number" placeholder="Optional" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value)} />
+                  <Textarea label="Admin Notes" placeholder="Internal notes..." rows={3} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} />
+                </>
+              ) : (
+                <>
+                  {detailRequest.finalPrice != null && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Final Price</p>
+                      <p className="text-foreground mt-0.5 font-semibold">₹{detailRequest.finalPrice}</p>
+                    </div>
+                  )}
+                  {detailRequest.adminNotes && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Admin Notes</p>
+                      <p className="text-foreground mt-0.5">{detailRequest.adminNotes}</p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDetailRequest(null)}>Cancel</Button>
-            <Button onClick={handleUpdateStatus} loading={updatingStatus}>Update</Button>
+            <Button variant="outline" onClick={() => setDetailRequest(null)}>{canEdit ? 'Cancel' : 'Close'}</Button>
+            {canEdit && <Button onClick={handleUpdateStatus} loading={updatingStatus}>Update</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>

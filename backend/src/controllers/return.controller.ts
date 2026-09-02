@@ -42,8 +42,7 @@ class ReturnController {
       const limit = parseInt(req.query.limit as string) || 20;
       const status = req.query.status as string;
       const search = req.query.search as string;
-      const createdBy = req.user?.role === 'sales' ? req.user.userId : undefined;
-      const result = await returnService.getReturnRequests({ page, limit, status, search, createdBy });
+      const result = await returnService.getReturnRequests({ page, limit, status, search });
       sendPaginated(res, result.returns, result.pagination, 'Returns fetched');
     } catch (error) {
       next(error);
