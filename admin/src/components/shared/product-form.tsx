@@ -239,7 +239,7 @@ export function ProductForm({ productId }: Props) {
         sellingPrice: payload.price
       });
 
-      // Only include stock in payload for new products(not updates)
+      // Only include stock in payload for new products (not updates)
       if (!productId) {
         payload.stock = data.stock;
       }

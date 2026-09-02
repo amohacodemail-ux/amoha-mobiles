@@ -15,6 +15,16 @@ class AdminController {
     }
   }
 
+  async getPurchaseDashboard(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const stats = await adminService.getPurchaseDashboardStats(userId);
+      sendSuccess(res, stats, 'Purchase dashboard stats fetched');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getDashboard(_req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const analytics = await adminService.getDashboardAnalytics();

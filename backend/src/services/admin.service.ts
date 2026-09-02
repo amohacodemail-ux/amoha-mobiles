@@ -203,6 +203,93 @@ class AdminService {
     if (error) throw error;
     return (data || []).map(transformRow);
   }
+
+  async getPurchaseDashboardStats(userId: string) {
+    // 1 & 4. Fetch all non-cancelled purchase orders for this user
+    const { data: allPos, error: posError } = await supabase
+      .from('purchase_orders')
+      .select('id, total_amount, status, payment_status')
+      .eq('created_by', userId)
+      .not('status', 'eq', 'cancelled');
+      
+    if (posError) throw posError;
+    const pos = allPos || [];
+
+    // Calculations
+    const totalPurchaseAmount = pos.reduce((sum, po: any) => sum + (po.total_amount || 0), 0);
+    const completedPurchases = pos.filter((po: any) => po.status === 'received').length;
+    
+    // Pending are anything not received or cancelled
+    const pendingStatuses = ['draft', 'sent', 'confirmed', 'partially_received'];
+    const pendingPurchaseOrders = pos.filter((po: any) => pendingStatuses.includes(po.status)).length;
+    
+    // Pending payments
+    const pendingPayments = pos
+      .filter((po: any) => po.payment_status === 'unpaid' || po.payment_status === 'partial')
+      .reduce((sum, po: any) => sum + (po.total_amount || 0), 0);
+
+    // 5. Products Purchased (Quantity sum from items)
+    const poIds = pos.map((po: any) => po.id);
+    let productsPurchased = 0;
+    if (poIds.length > 0) {
+      const { data: items, error: itemsError } = await supabase
+        .from('purchase_order_items')
+        .select('quantity')
+        .in('purchase_order_id', poIds);
+      if (itemsError) throw itemsError;
+      productsPurchased = (items || []).reduce((sum, item: any) => sum + (item.quantity || 0), 0);
+    }
+
+    // 6. Low Stock Alert
+    const lowStockAlert = await this.getLowStockProducts(10);
+
+    // 7. Recent Purchase Orders
+    const { data: recentPOsData, error: recentError } = await supabase
+      .from('purchase_orders')
+      .select('id, po_number, total_amount, status, created_at, supplier_id')
+      .eq('created_by', userId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    if (recentError) throw recentError;
+    
+    // Fetch suppliers for recent POs
+    let recentPurchaseOrders = [];
+    let recentSuppliers = [];
+    
+    if (recentPOsData && recentPOsData.length > 0) {
+      const supplierIds = [...new Set(recentPOsData.map((po: any) => po.supplier_id))];
+      const { data: suppliersData } = await supabase
+        .from('suppliers')
+        .select('id, name, status, created_at')
+        .in('id', supplierIds);
+        
+      const suppliersMap: any = {};
+      (suppliersData || []).forEach((s: any) => {
+        suppliersMap[s.id] = transformRow(s);
+      });
+      
+      recentPurchaseOrders = recentPOsData.map((po: any) => {
+        const t = transformRow(po);
+        t.supplier = suppliersMap[po.supplier_id] || { name: 'Unknown' };
+        return t;
+      });
+      
+      // 8. Recent Suppliers
+      recentSuppliers = (suppliersData || []).map(transformRow).slice(0, 10);
+    }
+
+    return {
+      totalPurchaseAmount,
+      pendingPurchaseOrders,
+      completedPurchases,
+      pendingPayments,
+      productsPurchased,
+      lowStockAlert,
+      recentPurchaseOrders,
+      recentSuppliers
+    };
+  }
 }
 
 export default new AdminService();

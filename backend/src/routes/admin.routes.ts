@@ -47,6 +47,7 @@ router.use(authenticate);
 
 // ====== Dashboard - Accessible by all internal roles ======
 router.get('/dashboard/sales-stats', canAccessDashboard, adminController.getSalesDashboard);
+router.get('/dashboard/purchase-stats', canAccessDashboard, adminController.getPurchaseDashboard);
 router.get('/dashboard/stats', canAccessDashboard, adminController.getDashboard);
 router.get('/dashboard/revenue', canAccessDashboard, adminController.getMonthlyRevenue);
 router.get('/dashboard/top-products', canAccessDashboard, adminController.getTopProducts);

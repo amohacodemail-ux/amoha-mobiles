@@ -121,11 +121,11 @@ class SupplierService {
       password,
     });
 
-    const dbData = toDbRow({ 
-      ...data, 
-      name: fallbackName, 
+    const dbData = toDbRow({
+      ...data,
+      name: fallbackName,
       companyName: companyName || fallbackName,
-      code, 
+      code,
       email: email || null,
       phone: phone || null
     });
@@ -482,7 +482,7 @@ class SupplierService {
           to: supplier.email,
           subject: `Purchase Order ${poNumber} - AMOHA Mobiles`,
           html: `<p>Dear ${supplier.name},</p><p>A new purchase order <strong>${poNumber}</strong> has been created for your review.</p><p>Total Amount: ₹${totalAmount.toLocaleString('en-IN')}</p><p>Please contact us if you have any questions.</p>`,
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
 

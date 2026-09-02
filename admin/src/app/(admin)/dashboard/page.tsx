@@ -17,6 +17,8 @@ import { downloadExcelFromBlob } from '@/lib/excel-export';
 
 import { useAuthStore } from '@/store/auth.store';
 import { SalesDashboard } from './SalesDashboard';
+import { PurchaseDashboard } from './PurchaseDashboard';
+import { MarketingDashboard } from './MarketingDashboard';
 
 const RevenueChart = dynamic(
   () => import('@/components/charts/revenue-chart').then((m) => ({ default: m.RevenueChart })),
@@ -29,6 +31,8 @@ const RevenueChart = dynamic(
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const isSales = user?.role === 'sales';
+  const isPurchase = user?.role === 'purchase' || user?.role === 'purchase_inventory';
+  const isMarketing = user?.role === 'marketing';
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [revenue, setRevenue] = useState<RevenueData[]>([]);
@@ -71,7 +75,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (isSales) return;
+    if (isSales || isPurchase) return;
     const load = async () => {
       try {
         const [s, r, tp, ro] = await Promise.all([
@@ -91,7 +95,7 @@ export default function DashboardPage() {
       }
     };
     load();
-  }, [isSales]);
+  }, [isSales, isPurchase, isMarketing]);
 
   if (!mounted) {
     return null; // Prevent hydration mismatch
@@ -102,6 +106,24 @@ export default function DashboardPage() {
       <div>
         <PageHeader title="My Dashboard" description="Welcome back! Here's your sales performance." />
         <SalesDashboard />
+      </div>
+    );
+  }
+
+  if (isPurchase) {
+    return (
+      <div>
+        <PageHeader title="My Dashboard" description="Welcome back! Here's your purchase overview." />
+        <PurchaseDashboard />
+      </div>
+    );
+  }
+
+  if (isMarketing) {
+    return (
+      <div>
+        <PageHeader title="My Dashboard" description="Welcome back! Here's your marketing performance overview." />
+        <MarketingDashboard />
       </div>
     );
   }
