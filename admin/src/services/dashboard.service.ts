@@ -8,6 +8,10 @@ export const dashboardService = {
     const { data } = await apiClient.get<ApiResponse<any>>(`/admin/dashboard/sales-stats?timeFilter=${timeFilter}`);
     return data?.data;
   },
+  getPurchaseStats: async (): Promise<any> => {
+    const { data } = await apiClient.get<ApiResponse<any>>('/admin/dashboard/purchase-stats');
+    return data?.data;
+  },
   getStats: async (): Promise<DashboardStats> => {
     const { data } = await apiClient.get<ApiResponse<DashboardStats>>('/admin/dashboard/stats');
     return data?.data || {

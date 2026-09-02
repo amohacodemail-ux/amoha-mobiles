@@ -83,7 +83,83 @@ export interface IPurchaseOrderItem {
   createdAt?: Date;
 }
 
+// ==================== GRN ====================
+export interface IGoodsReceiptNote {
+  id?: string;
+  grnNumber: string;
+  poId: string;
+  supplierId: string;
+  status: 'draft' | 'received';
+  receivedDate?: Date;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  purchaseOrder?: IPurchaseOrder;
+  supplier?: ISupplier;
+  items?: IGoodsReceiptNoteItem[];
+}
+
+export interface IGoodsReceiptNoteItem {
+  id?: string;
+  grnId: string;
+  productId: string;
+  orderedQty: number;
+  receivedQty: number;
+  damagedQty: number;
+  pendingQty: number;
+  createdAt?: Date;
+  product?: any;
+}
+
+// ==================== Purchase Return ====================
+export interface IPurchaseReturn {
+  id?: string;
+  returnNumber: string;
+  poId?: string;
+  grnId?: string;
+  supplierId: string;
+  status: 'draft' | 'pending' | 'approved' | 'returned' | 'cancelled';
+  returnDate?: Date;
+  totalAmount: number;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  supplier?: ISupplier;
+  items?: IPurchaseReturnItem[];
+}
+
+export interface IPurchaseReturnItem {
+  id?: string;
+  returnId: string;
+  productId: string;
+  returnQty: number;
+  unitPrice: number;
+  reason?: string;
+  createdAt?: Date;
+  product?: any;
+}
+
+// ==================== Purchase Payment ====================
+export interface IPurchasePayment {
+  id?: string;
+  poId: string;
+  supplierId: string;
+  amount: number;
+  paymentMethod: string;
+  paymentDate?: Date;
+  referenceNumber?: string;
+  notes?: string;
+  createdAt?: Date;
+  purchaseOrder?: IPurchaseOrder;
+  supplier?: ISupplier;
+}
+
 export const SUPPLIER_TABLE = 'suppliers';
 export const SUPPLIER_PRODUCT_TABLE = 'supplier_products';
 export const PURCHASE_ORDER_TABLE = 'purchase_orders';
 export const PURCHASE_ORDER_ITEM_TABLE = 'purchase_order_items';
+export const GRN_TABLE = 'goods_receipt_notes';
+export const GRN_ITEM_TABLE = 'goods_receipt_note_items';
+export const PURCHASE_RETURN_TABLE = 'purchase_returns';
+export const PURCHASE_RETURN_ITEM_TABLE = 'purchase_return_items';
+export const PURCHASE_PAYMENT_TABLE = 'purchase_payments';

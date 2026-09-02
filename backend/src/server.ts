@@ -6,7 +6,8 @@ import { runV4Migration } from './migrations/v4-order-items-nullable-product';
 import { runV7Migration } from './migrations/v7-purchase-price';
 import { runV8Migration } from './migrations/v8-ensure-is-active';
 import { runV9Migration } from './migrations/v9-ensure-service-requests';
-import { runV10Migration } from './migrations/v10-add-service-reviews';
+import { runV10Migration as runV10MigrationReviews } from './migrations/v10-add-service-reviews';
+import { runV10Migration as runV10MigrationPurchase } from './migrations/v10-purchase-module';
 
 // Keep-alive cron for Render free tier (pings health endpoint every 14 minutes)
 const startKeepAlive = (port: number | string): void => {
@@ -49,8 +50,11 @@ const startServer = async (): Promise<void> => {
     runV9Migration().catch((err) =>
       logger.warn('[migration-v9] unexpected error:', err),
     );
-    runV10Migration().catch((err) =>
-      logger.warn('[migration-v10] unexpected error:', err),
+    runV10MigrationReviews().catch((err: any) =>
+      logger.warn('[migration-v10-reviews] unexpected error:', err),
+    );
+    runV10MigrationPurchase().catch((err: any) =>
+      logger.warn('[migration-v10-purchase] unexpected error:', err),
     );
 
     // Render provides PORT dynamically

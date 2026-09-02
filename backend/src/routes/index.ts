@@ -26,6 +26,7 @@ import supplierEntryRoutes from './supplier-entry.routes';
 import inventoryLedgerRoutes from './inventory-ledger.routes';
 import rfqRoutes from './rfq.routes';
 import purchaseRequestRoutes from './purchase-request.routes';
+import purchaseRoutes from './purchase.routes';
 import healthRoutes from './health.routes';
 import reviewRoutes from './review.routes';
 
@@ -62,6 +63,7 @@ router.use('/inventory-ledger', inventoryLedgerRoutes);
 router.use('/rfq', rfqRoutes);
 router.use('/purchase-requests', purchaseRequestRoutes);
 router.use('/reviews', reviewRoutes);
+router.use('/purchase', purchaseRoutes);
 // Alias: old image URLs used /api/images/:id — redirect to canonical /api/upload/:id
 router.get('/images/:id', (req, res) => res.redirect(301, `/api/upload/${req.params.id}`));
 

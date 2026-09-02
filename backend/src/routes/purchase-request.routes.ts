@@ -238,7 +238,7 @@ router.post('/:id/convert-to-po', async (req: AuthenticatedRequest, res: Respons
           to: supplier.email,
           subject: `Purchase Order ${poNumber} - AMOHA Mobiles`,
           html: `<p>Dear ${supplier.name},</p><p>A new purchase order <strong>${poNumber}</strong> has been created for your review.</p><p>Total Amount: ₹${totalAmount.toLocaleString('en-IN')}</p><p>Please contact us if you have any questions.</p>`,
-        }).catch(() => {}); // fire and forget
+        }).catch(() => { }); // fire and forget
       }
     }
 

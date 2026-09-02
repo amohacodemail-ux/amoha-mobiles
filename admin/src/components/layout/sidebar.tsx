@@ -51,6 +51,10 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/supplier-portal', label: 'My Portal', icon: Store, module: 'supplier_portal' },
   { href: '/rfq', label: 'RFQ', icon: FileQuestion, module: 'rfq' },
   { href: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingBag, module: 'purchase_requests' },
+  { href: '/purchase/grn', label: 'Goods Received (GRN)', icon: Package, module: 'grn' },
+  { href: '/purchase/returns', label: 'Purchase Returns', icon: RotateCcw, module: 'purchase_returns' },
+  { href: '/purchase/payments', label: 'Payments', icon: IndianRupee, module: 'purchase_payments' },
+  { href: '/purchase/reports', label: 'Purchase Reports', icon: BarChart3, module: 'purchase_reports' },
   { href: '/inventory', label: 'Inventory', icon: Warehouse, module: 'inventory' },
   { href: '/policies', label: 'Policies', icon: FileText, module: 'policies' },
   { href: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
@@ -77,8 +81,15 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
 
   // Filter navigation items based on user permissions
   const filteredNavItems = useMemo(() => {
-    return ALL_NAV_ITEMS.filter(item => canAccess(item.module));
-  }, [canAccess]);
+    return ALL_NAV_ITEMS.filter(item => {
+      if (!canAccess(item.module)) return false;
+      // Hide certain modules from sidebar for purchase role
+      if (user?.role === 'purchase' && ['products', 'categories', 'brands', 'grn', 'purchase_returns', 'purchase_payments'].includes(item.module)) {
+        return false;
+      }
+      return true;
+    });
+  }, [canAccess, user?.role]);
 
   // Group items by category for better organization (optional enhancement)
   const navGroups = useMemo(() => {
@@ -93,7 +104,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {
         title: collapsed ? undefined : 'Purchase',
         items: filteredNavItems.filter(i =>
-          ['products', 'categories', 'brands', 'inventory', 'suppliers', 'supplier_entries', 'supplier_portal', 'rfq', 'purchase_requests'].includes(i.module)
+          ['products', 'categories', 'brands', 'inventory', 'suppliers', 'supplier_entries', 'supplier_portal', 'rfq', 'purchase_requests', 'grn', 'purchase_returns', 'purchase_payments', 'purchase_reports'].includes(i.module)
         ),
       },
       {
