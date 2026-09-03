@@ -49,6 +49,15 @@ export const errorHandler = (
     return;
   }
 
+  // PostgreSQL custom exception
+  if ((err as any).code === 'P0001') {
+    res.status(400).json({
+      success: false,
+      message: err.message || 'A database error occurred',
+    });
+    return;
+  }
+
   // PostgreSQL check constraint violation
   if ((err as any).code === '23514') {
     res.status(400).json({

@@ -228,12 +228,7 @@ class SupplierService {
     // Delete the supplier
     const { error } = await supabase.from('suppliers').delete().eq('id', id);
     if (error) {
-      if (error.code === '23503') {
-        // Foreign key constraint - log it but still allow deletion
-        logger.warn(`[DELETE] Supplier ${id} had FK constraint, continuing with deletion`);
-      } else {
-        throw error;
-      }
+      throw error;
     }
 
     // Audit log the deletion
