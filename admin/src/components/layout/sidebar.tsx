@@ -84,7 +84,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
     return ALL_NAV_ITEMS.filter(item => {
       if (!canAccess(item.module)) return false;
       // Hide certain modules from sidebar for purchase role
-      if (user?.role === 'purchase' && ['products', 'categories', 'brands', 'grn', 'purchase_returns', 'purchase_payments'].includes(item.module)) {
+      if (user?.role === 'purchase' && ['grn', 'purchase_returns', 'purchase_payments'].includes(item.module)) {
         return false;
       }
       return true;
