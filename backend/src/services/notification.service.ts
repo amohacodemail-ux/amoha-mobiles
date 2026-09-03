@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError } from '../errors/app-error';
 
@@ -68,15 +68,21 @@ class NotificationService {
     qb = qb.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
     const { data, error, count } = await qb;
     if (error) throw error;
-    const { count: unreadCount } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false);
+    let unreadQb = supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false);
+    if (type) unreadQb = unreadQb.eq('type', type);
+    const { count: unreadCount } = await unreadQb;
     return { notifications: (data || []).map(transformRow), pagination: { total: count || 0, page, limit, pages: Math.ceil((count || 0) / limit) }, unreadCount: unreadCount || 0 };
   }
-  async getRecent(limit: number = 10) {
-    const { data } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(limit);
+  async getRecent(limit: number = 10, type?: string) {
+    let qb = supabase.from('notifications').select('*');
+    if (type) qb = qb.eq('type', type);
+    const { data } = await qb.order('created_at', { ascending: false }).limit(limit);
     return (data || []).map(transformRow);
   }
-  async getUnreadCount() {
-    const { count } = await supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false);
+  async getUnreadCount(type?: string) {
+    let qb = supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('is_read', false);
+    if (type) qb = qb.eq('type', type);
+    const { count } = await qb;
     return count || 0;
   }
   async markRead(notificationId: string) {

@@ -7,7 +7,13 @@ class NotificationController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
-      const type = req.query.type as string | undefined;
+      let type = req.query.type as string | undefined;
+
+      const userRole = (req as any).user?.role;
+      if (userRole === 'purchase' || userRole === 'purchase_inventory') {
+        type = 'low_stock';
+      }
+
       const result = await notificationService.getAll(page, limit, type);
       sendSuccess(res, result, 'Notifications fetched');
     } catch (error) {
@@ -15,19 +21,31 @@ class NotificationController {
     }
   }
 
-  async getRecent(_req: Request, res: Response, next: NextFunction) {
+  async getRecent(req: Request, res: Response, next: NextFunction) {
     try {
-      const notifications = await notificationService.getRecent(10);
-      const unreadCount = await notificationService.getUnreadCount();
+      const userRole = (req as any).user?.role;
+      let type = undefined;
+      if (userRole === 'purchase' || userRole === 'purchase_inventory') {
+        type = 'low_stock';
+      }
+
+      const notifications = await notificationService.getRecent(10, type);
+      const unreadCount = await notificationService.getUnreadCount(type);
       sendSuccess(res, { notifications, unreadCount }, 'Recent notifications fetched');
     } catch (error) {
       next(error);
     }
   }
 
-  async getUnreadCount(_req: Request, res: Response, next: NextFunction) {
+  async getUnreadCount(req: Request, res: Response, next: NextFunction) {
     try {
-      const count = await notificationService.getUnreadCount();
+      const userRole = (req as any).user?.role;
+      let type = undefined;
+      if (userRole === 'purchase' || userRole === 'purchase_inventory') {
+        type = 'low_stock';
+      }
+
+      const count = await notificationService.getUnreadCount(type);
       sendSuccess(res, { count }, 'Unread count fetched');
     } catch (error) {
       next(error);

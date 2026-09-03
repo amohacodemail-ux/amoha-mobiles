@@ -20,8 +20,8 @@ router.get('/dashboard', canAccessPurchase, controller.getDashboardStats);
 router.get('/audit-log', canAccessAdminOnly, controller.getAuditLog);
 router.get('/', canAccessPurchase, controller.getAll);
 
-// CSV export - Admin only
-router.get('/export/csv', canAccessAdminOnly, controller.exportCsv);
+// CSV export - Purchase and Admin
+router.get('/export/csv', canAccessPurchase, controller.exportCsv);
 
 // Per-product operations
 router.get('/product/:productId', canAccessPurchase, controller.getByProductId);

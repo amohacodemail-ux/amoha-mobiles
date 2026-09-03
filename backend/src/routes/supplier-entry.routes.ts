@@ -24,6 +24,6 @@ router.get('/dashboard', canAccessPurchase, controller.getDashboardStats);
 router.get('/all', canAccessPurchase, controller.getAllEntries);
 router.get('/:id', canAccessPurchase, controller.getEntryById);
 router.post('/:id/convert', canAccessPurchase, validate(convertEntrySchema), controller.convertEntry);
-router.post('/:id/reject', canAccessAdminOnly, validate(rejectEntrySchema), controller.rejectEntry);
+router.post('/:id/reject', canAccessPurchase, validate(rejectEntrySchema), controller.rejectEntry);
 
 export default router;
