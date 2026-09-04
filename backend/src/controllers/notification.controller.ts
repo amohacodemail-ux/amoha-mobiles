@@ -9,9 +9,11 @@ class NotificationController {
       const limit = parseInt(req.query.limit as string) || 20;
       let type = req.query.type as string | undefined;
 
-      const userRole = (req as any).user?.role;
+      const userRole = (req as any).user?.role?.toLowerCase();
       if (userRole === 'purchase' || userRole === 'purchase_inventory') {
         type = 'low_stock';
+      } else if (userRole === 'marketing' || userRole === 'digital_marketing' || userRole === 'logistics') {
+        type = 'review';
       }
 
       const result = await notificationService.getAll(page, limit, type);
@@ -23,10 +25,12 @@ class NotificationController {
 
   async getRecent(req: Request, res: Response, next: NextFunction) {
     try {
-      const userRole = (req as any).user?.role;
+      const userRole = (req as any).user?.role?.toLowerCase();
       let type = undefined;
       if (userRole === 'purchase' || userRole === 'purchase_inventory') {
         type = 'low_stock';
+      } else if (userRole === 'marketing' || userRole === 'digital_marketing' || userRole === 'logistics') {
+        type = 'review';
       }
 
       const notifications = await notificationService.getRecent(10, type);
@@ -39,10 +43,12 @@ class NotificationController {
 
   async getUnreadCount(req: Request, res: Response, next: NextFunction) {
     try {
-      const userRole = (req as any).user?.role;
+      const userRole = (req as any).user?.role?.toLowerCase();
       let type = undefined;
       if (userRole === 'purchase' || userRole === 'purchase_inventory') {
         type = 'low_stock';
+      } else if (userRole === 'marketing' || userRole === 'digital_marketing' || userRole === 'logistics') {
+        type = 'review';
       }
 
       const count = await notificationService.getUnreadCount(type);

@@ -163,9 +163,9 @@ class ProductController {
   // Reviews
   async addReview(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const product = await productService.addReview(req.params.id, req.user!.userId, req.body);
-      notifyReview(product.name, req.body.rating, req.user!.userId);
-      sendCreated(res, product, 'Review added');
+      const review = await productService.addReview(req.params.id, req.user!.userId, req.body);
+      notifyReview('Product', req.body.rating, req.user!.userId, review._id);
+      sendCreated(res, review, 'Review added');
     } catch (error) {
       next(error);
     }

@@ -41,7 +41,7 @@ class ReviewController {
         req.body
       );
       // Optional: notify admin about new service review
-      notifyReview('Service Request', req.body.rating, req.user!.userId);
+      notifyReview('Service Request', req.body.rating, req.user!.userId, review._id);
       sendCreated(res, review, 'Service review submitted successfully');
     } catch (error) {
       next(error);

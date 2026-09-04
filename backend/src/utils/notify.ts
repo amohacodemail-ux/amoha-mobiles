@@ -26,13 +26,13 @@ export const notifyContact = (name: string, subject: string, contactId: string) 
   notify('contact', 'New Contact Message', `${name}: ${subject}`, `/contact-messages`, { contactId });
 
 export const notifyServiceRequest = (name: string, type: string, requestId: string) =>
-  notify('service_request', 'New Service Request', `${name} — ${type}`, `/service-requests`, { requestId });
+  notify('service_request', 'New Service Request', `${name} — ${type}`, `/service-requests?id=${requestId}`, { requestId });
 
 export const notifyKyc = (userName: string, userId: string) =>
   notify('kyc', 'KYC Submitted', `${userName} submitted KYC for verification`, `/users`, { userId });
 
-export const notifyReview = (productName: string, rating: number, userName: string) =>
-  notify('review', 'New Review', `${userName} rated "${productName}" ${rating}/5`, `/reviews`, { productName, rating });
+export const notifyReview = (productName: string, rating: number, userName: string, reviewId: string) =>
+  notify('review', 'New Review', `${userName} rated "${productName}" ${rating}/5`, `/reviews?id=${reviewId}`, { productName, rating, reviewId });
 
 export const notifyLowStock = (productName: string, stock: number, productId: string) =>
   notify('low_stock', 'Low Stock Alert', `"${productName}" has only ${stock} units left`, `/products`, { productId });

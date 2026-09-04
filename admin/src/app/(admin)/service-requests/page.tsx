@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
 import { Trash2, Eye, Clock, CheckCircle, Wrench, XCircle } from 'lucide-react';
@@ -41,6 +42,9 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 };
 
 export default function ServiceRequestsPage() {
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get('id');
+
   const { isAdmin, canDelete } = usePermissions();
   const { canEdit } = useModulePermissions(MODULES.SERVICE_REQUESTS);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
@@ -98,12 +102,22 @@ export default function ServiceRequestsPage() {
     }
   };
 
-  const openDetail = (req: ServiceRequest) => {
+  const openDetail = useCallback((req: ServiceRequest) => {
     setDetailRequest(req);
     setNewStatus(req.status);
     setAdminNotes(req.adminNotes || '');
     setFinalPrice(req.finalPrice ? String(req.finalPrice) : '');
-  };
+  }, []);
+
+  useEffect(() => {
+    if (idParam) {
+      serviceRequestService.getById(idParam).then(req => {
+        openDetail(req);
+      }).catch(() => {
+        toast.error('Failed to load the specific service request details.');
+      });
+    }
+  }, [idParam, openDetail]);
 
   const handleUpdateStatus = async () => {
     if (!detailRequest) return;

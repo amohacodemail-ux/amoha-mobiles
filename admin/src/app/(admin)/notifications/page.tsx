@@ -19,7 +19,7 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { notificationService, type Notification } from '@/services/notification.service';
-import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
+import { useModulePermissions, usePermissions, MODULES } from '@/hooks/usePermissions';
 
 const typeConfig: Record<string, { icon: React.ElementType; color: string; label: string }> = {
   order: { icon: ShoppingCart, color: 'text-blue-500 bg-blue-500/10', label: 'Order' },
@@ -31,7 +31,7 @@ const typeConfig: Record<string, { icon: React.ElementType; color: string; label
   system: { icon: Info, color: 'text-gray-500 bg-gray-500/10', label: 'System' },
 };
 
-const filterTypes = [
+const ALL_FILTER_TYPES = [
   { value: '', label: 'All' },
   { value: 'order', label: 'Orders' },
   { value: 'contact', label: 'Contacts' },
@@ -43,14 +43,22 @@ const filterTypes = [
 
 export default function NotificationsPage() {
   const router = useRouter();
+  
+  const { canEdit, canDelete } = useModulePermissions(MODULES.NOTIFICATIONS);
+  const { hasRole } = usePermissions();
+  const isMarketing = hasRole('marketing', 'digital_marketing');
+  const isLogistics = hasRole('logistics');
+  
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filterType, setFilterType] = useState('');
+  const [filterType, setFilterType] = useState(isMarketing || isLogistics ? 'review' : '');
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  
-  const { canEdit, canDelete } = useModulePermissions(MODULES.NOTIFICATIONS);
+
+  const filterTypes = isMarketing || isLogistics
+    ? ALL_FILTER_TYPES.filter(f => f.value === 'review')
+    : ALL_FILTER_TYPES;
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -137,22 +145,24 @@ export default function NotificationsPage() {
       </PageHeader>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <Filter className="h-4 w-4 text-muted-foreground" />
-        {filterTypes.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => { setFilterType(f.value); setPage(1); }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              filterType === f.value
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      {filterTypes.length > 1 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          {filterTypes.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => { setFilterType(f.value); setPage(1); }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                filterType === f.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* List */}
       <Card>

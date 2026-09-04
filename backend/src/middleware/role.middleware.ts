@@ -100,7 +100,7 @@ export const canAccessSupplier = authorize('admin', 'supplier');
 // ---- SERVICE ENGINEER MODULE ----
 /** Service center operations: view and update service requests */
 export const canAccessServiceEngineer = authorize('admin', 'service_engineer');
-export const canViewServiceRequests = authorize('admin', 'service_engineer', 'sales');
+export const canViewServiceRequests = authorize('admin', 'service_engineer', 'sales', 'marketing', 'digital_marketing');
 
 // ---- ADMIN-ONLY MODULES ----
 /** System settings, user management, activity logs */
@@ -166,7 +166,8 @@ export function getAccessibleModules(role: UserRole): string[] {
       'reports', 'users', 'coupons', 'banners', 'reviews', 'service_requests',
       'contact_messages', 'notifications', 'product_views', 'abandoned_carts',
       'crm', 'barcode_pos', 'returns', 'wallets', 'activity_logs', 'suppliers',
-      'supplier_entries', 'rfq', 'purchase_requests', 'inventory', 'policies', 'settings'
+      'supplier_entries', 'rfq', 'purchase_requests', 'inventory', 'policies', 'settings',
+      'delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment'
     ],
     sales: [
       'dashboard', 'products', 'categories', 'brands', 'orders', 'billing', 'reports', 'barcode_pos',
@@ -179,10 +180,11 @@ export function getAccessibleModules(role: UserRole): string[] {
     ],
     marketing: [
       'dashboard', 'coupons', 'banners', 'reviews', 'contact_messages',
-      'product_views', 'abandoned_carts', 'crm', 'notifications', 'policies'
+      'product_views', 'abandoned_carts', 'crm', 'notifications', 'policies',
+      'service_requests'
     ],
     logistics: [
-      'dashboard', 'orders', 'returns', 'products', 'reports', 'notifications'
+      'dashboard', 'orders', 'returns', 'delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment', 'reports', 'notifications'
     ],
     supplier: [
       'dashboard', 'rfq', 'notifications'

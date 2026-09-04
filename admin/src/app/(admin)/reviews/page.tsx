@@ -1,22 +1,29 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
-import { Trash2, Star, CheckCircle, XCircle } from 'lucide-react';
+import { Trash2, Star, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Pagination } from '@/components/shared/pagination';
 import { ConfirmModal } from '@/components/shared/confirm-modal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { reviewService } from '@/services/review.service';
 import { formatDate, getInitials } from '@/lib/utils';
+import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
 import type { Review } from '@/types';
 
 const LIMIT = 10;
 
 export default function ReviewsPage() {
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get('id');
+  const { canEdit, canDelete } = useModulePermissions(MODULES.REVIEWS);
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -26,6 +33,7 @@ export default function ReviewsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [detailReview, setDetailReview] = useState<Review | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 350);
 
@@ -45,6 +53,20 @@ export default function ReviewsPage() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
+
+  const openDetail = useCallback((r: Review) => {
+    setDetailReview(r);
+  }, []);
+
+  useEffect(() => {
+    if (idParam) {
+      reviewService.getById(idParam).then(r => {
+        openDetail(r);
+      }).catch(() => {
+        toast.error('Failed to load specific review details');
+      });
+    }
+  }, [idParam, openDetail]);
 
   const handleApprove = async (id: string, approve: boolean) => {
     try {
@@ -110,19 +132,24 @@ export default function ReviewsPage() {
       key: 'actions', header: 'Actions',
       render: (r) => (
         <div className="flex gap-1.5">
-          {r.status !== 'approved' && (
+          <Button variant="outline" size="icon-sm" className="hover:text-primary" onClick={() => openDetail(r)} title="View">
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          {canEdit && r.status !== 'approved' && (
             <Button variant="outline" size="icon-sm" className="hover:border-green-500 hover:text-green-600 dark:hover:text-green-400" onClick={() => handleApprove(r._id, true)} title="Approve">
               <CheckCircle className="h-3.5 w-3.5" />
             </Button>
           )}
-          {r.status !== 'rejected' && (
+          {canEdit && r.status !== 'rejected' && (
             <Button variant="outline" size="icon-sm" className="hover:border-yellow-500 hover:text-yellow-600 dark:hover:text-yellow-400" onClick={() => handleApprove(r._id, false)} title="Reject">
               <XCircle className="h-3.5 w-3.5" />
             </Button>
           )}
-          <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => setDeleteId(r._id)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {canDelete && (
+            <Button variant="outline" size="icon-sm" className="hover:border-destructive hover:text-destructive" onClick={() => setDeleteId(r._id)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -156,6 +183,71 @@ export default function ReviewsPage() {
         title="Delete Review?" description="This review will be permanently deleted."
         confirmLabel="Delete"
       />
+
+      {/* Review Details Modal */}
+      <Dialog open={!!detailReview} onOpenChange={(open) => !open && setDetailReview(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Review Details</DialogTitle>
+          </DialogHeader>
+          {detailReview && (
+            <div className="space-y-4 text-sm mt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Customer</p>
+                  <p className="font-medium text-foreground">{detailReview.user?.name || 'Unknown'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Rating</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`h-3.5 w-3.5 ${i < detailReview.rating ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`} />
+                    ))}
+                    <span className="text-xs ml-1 font-medium">{detailReview.rating}/5</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Product / Service</p>
+                  <p className="font-medium text-foreground">{detailReview.product?.name || detailReview.service?.serviceType || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="text-foreground">{formatDate(detailReview.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant={detailReview.status === 'approved' ? 'success' : detailReview.status === 'rejected' ? 'destructive' : 'warning'} className="mt-1">
+                    {detailReview.status}
+                  </Badge>
+                </div>
+              </div>
+              <div className="pt-2">
+                <p className="text-xs text-muted-foreground mb-1">Comment</p>
+                <div className="bg-secondary/20 p-3 rounded-md text-foreground leading-relaxed whitespace-pre-wrap">
+                  {detailReview.comment || <span className="italic text-muted-foreground">No comment provided.</span>}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="mt-4 gap-2 sm:justify-between">
+            <Button variant="outline" onClick={() => setDetailReview(null)}>Close</Button>
+            {canEdit && (
+              <div className="flex gap-2">
+                {detailReview?.status !== 'approved' && (
+                  <Button variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10" onClick={() => { handleApprove(detailReview._id, true); setDetailReview(null); }}>
+                    <CheckCircle className="h-4 w-4 mr-1.5" /> Approve
+                  </Button>
+                )}
+                {detailReview?.status !== 'rejected' && (
+                  <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-500/10" onClick={() => { handleApprove(detailReview._id, false); setDetailReview(null); }}>
+                    <XCircle className="h-4 w-4 mr-1.5" /> Reject
+                  </Button>
+                )}
+              </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

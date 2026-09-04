@@ -9,6 +9,10 @@ export const reviewService = {
     );
     return data.data;
   },
+  getById: async (id: string): Promise<Review> => {
+    const { data } = await apiClient.get<ApiResponse<Review>>(`/admin/reviews/${id}`);
+    return data.data;
+  },
   updateStatus: async (id: string, status: 'approved' | 'rejected'): Promise<Review> => {
     const { data } = await apiClient.patch<ApiResponse<Review>>(`/admin/reviews/${id}/status`, { status });
     return data.data;

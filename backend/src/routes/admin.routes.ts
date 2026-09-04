@@ -564,6 +564,30 @@ router.get('/reviews', canAccessMarketing, async (req: Request, res: Response, n
     next(error);
   }
 });
+router.get('/reviews/:id', canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+    const { data, error } = await supabase.from('reviews')
+      .select('*, products:product_id(name, slug), service_requests:service_request_id(service_type), users:user_id(name, email)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) { const { NotFoundError } = await import('../errors/app-error'); throw new NotFoundError('Review'); }
+    
+    const transformed = transformRow(data);
+    if (data.is_approved === true) transformed.status = 'approved';
+    else if (data.is_approved === false) transformed.status = 'rejected';
+    else transformed.status = 'pending';
+    if (transformed.products) { transformed.product = transformed.products; delete transformed.products; }
+    if (transformed.service_requests) { transformed.service = transformed.service_requests; delete transformed.service_requests; }
+    if (transformed.users) { transformed.user = transformed.users; delete transformed.users; }
+    
+    sendSuccess(res, transformed, 'Review fetched');
+  } catch (error) {
+    next(error);
+  }
+});
 router.patch('/reviews/:id/status', canAccessMarketing, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const supabase = (await import('../config/supabase')).default;
