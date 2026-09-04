@@ -280,6 +280,7 @@ export interface UsersResponse {
 // ==================== Coupon ====================
 export interface Coupon {
   _id: string;
+  id?: string;
   code: string;
   discount: number;
   discountType: 'percentage' | 'fixed';

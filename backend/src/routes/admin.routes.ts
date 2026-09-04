@@ -623,7 +623,7 @@ router.delete('/reviews/:id', canAccessMarketing, async (req: Request, res: Resp
       entityId: req.params.id,
       details: { reviewType: review?.review_type, productId: review?.product_id, serviceRequestId: review?.service_request_id, rating: review?.rating },
       ipAddress: req.ip
-    }).catch(() => {});
+    }).catch(() => { });
     sendMessage(res, 'Review deleted');
   } catch (error) {
     next(error);

@@ -7,7 +7,7 @@ import {
   ChevronRight, Smartphone, LogOut, X, Wrench, Mail, Bell,
   Eye, AlertCircle, Users2, Barcode, FileText, RotateCcw, Wallet, Activity,
   Truck, Warehouse, ClipboardList, BarChart3, FileQuestion, ShoppingBag,
-  Receipt, IndianRupee, Shield, Store,
+  Receipt, IndianRupee, Shield, Store, Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
@@ -33,7 +33,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/reports', label: 'Reports', icon: BarChart3, module: 'reports' },
   { href: '/users', label: 'Users', icon: Users, module: 'users' },
   { href: '/admin-users', label: 'Admin Users', icon: Shield, module: 'users' },
-  { href: '/coupons', label: 'Coupons', icon: Ticket, module: 'coupons' },
+  { href: '/coupons', label: 'Coupons & Campaigns', icon: Ticket, module: 'coupons' },
   { href: '/banners', label: 'Banners', icon: Image, module: 'banners' },
   { href: '/reviews', label: 'Reviews', icon: Star, module: 'reviews' },
   { href: '/service-requests', label: 'Service Requests', icon: Wrench, module: 'service_requests' },
