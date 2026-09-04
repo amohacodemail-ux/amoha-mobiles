@@ -47,8 +47,9 @@ export default function PickupManagementPage() {
             data={dummyData}
             columns={columns}
             loading={false}
+            rowKey={(row) => row.id.toString()}
             emptyMessage="No pickup requests found."
-            emptyIcon={PackageCheck}
+            
           />
         </CardContent>
       </Card>

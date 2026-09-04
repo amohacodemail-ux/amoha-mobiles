@@ -44,8 +44,9 @@ export default function DeliveryAssignmentPage() {
             data={dummyData}
             columns={columns}
             loading={false}
+            rowKey={(row) => row.id.toString()}
             emptyMessage="No orders available for assignment."
-            emptyIcon={UserCheck}
+            
           />
         </CardContent>
       </Card>

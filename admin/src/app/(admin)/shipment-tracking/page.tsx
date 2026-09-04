@@ -50,8 +50,9 @@ export default function ShipmentTrackingPage() {
             data={filteredData}
             columns={columns}
             loading={false}
+            rowKey={(row) => row.id.toString()}
             emptyMessage="No shipments found."
-            emptyIcon={MapPin}
+            
           />
         </CardContent>
       </Card>

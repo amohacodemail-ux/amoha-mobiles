@@ -180,6 +180,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.POLICIES]: [ACTIONS.READ],
     [MODULES.SETTINGS]: [],
     [MODULES.SUPPLIER_PORTAL]: [],
+    [MODULES.DELIVERY_MANAGEMENT]: [],
+    [MODULES.PICKUP_MANAGEMENT]: [],
+    [MODULES.SHIPMENT_TRACKING]: [],
+    [MODULES.DELIVERY_ASSIGNMENT]: [],
   },
 
   purchase: {
@@ -219,6 +223,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.SETTINGS]: [],
     [MODULES.SUPPLIER_PORTAL]: [],
+    [MODULES.DELIVERY_MANAGEMENT]: [],
+    [MODULES.PICKUP_MANAGEMENT]: [],
+    [MODULES.SHIPMENT_TRACKING]: [],
+    [MODULES.DELIVERY_ASSIGNMENT]: [],
   },
 
   marketing: {
@@ -227,7 +235,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.CAMPAIGNS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.COUPONS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.BANNERS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
-    [MODULES.REVIEWS]: [ACTIONS.READ, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.REVIEWS]: [ACTIONS.READ],
     [MODULES.CONTACT_MESSAGES]: [ACTIONS.READ, ACTIONS.EDIT],
     [MODULES.PRODUCT_VIEWS]: [ACTIONS.READ],
     [MODULES.ABANDONED_CARTS]: [ACTIONS.READ],
@@ -258,6 +266,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.SETTINGS]: [],
     [MODULES.SUPPLIER_PORTAL]: [],
+    [MODULES.DELIVERY_MANAGEMENT]: [],
+    [MODULES.PICKUP_MANAGEMENT]: [],
+    [MODULES.SHIPMENT_TRACKING]: [],
+    [MODULES.DELIVERY_ASSIGNMENT]: [],
   },
 
   logistics: {
@@ -339,6 +351,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.POLICIES]: [],
     [MODULES.SETTINGS]: [],
+    [MODULES.DELIVERY_MANAGEMENT]: [],
+    [MODULES.PICKUP_MANAGEMENT]: [],
+    [MODULES.SHIPMENT_TRACKING]: [],
+    [MODULES.DELIVERY_ASSIGNMENT]: [],
   },
 
   user: {
@@ -377,6 +393,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.POLICIES]: [],
     [MODULES.SETTINGS]: [],
     [MODULES.SUPPLIER_PORTAL]: [],
+    [MODULES.DELIVERY_MANAGEMENT]: [],
+    [MODULES.PICKUP_MANAGEMENT]: [],
+    [MODULES.SHIPMENT_TRACKING]: [],
+    [MODULES.DELIVERY_ASSIGNMENT]: [],
   },
 
   service_engineer: {
@@ -415,11 +435,15 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.ACTIVITY_LOGS]: [ACTIONS.READ],
     [MODULES.SETTINGS]: [ACTIONS.READ, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.SUPPLIER_PORTAL]: [],
+    [MODULES.DELIVERY_MANAGEMENT]: [],
+    [MODULES.PICKUP_MANAGEMENT]: [],
+    [MODULES.SHIPMENT_TRACKING]: [],
+    [MODULES.DELIVERY_ASSIGNMENT]: [],
   },
 
   // Legacy roles - mapped to standard roles
-  digital_marketing: {} as Record<Module, Action[]>,
-  purchase_inventory: {} as Record<Module, Action[]>,
+  digital_marketing: {} as unknown as Record<Module, Action[]>,
+  purchase_inventory: {} as unknown as Record<Module, Action[]>,
 };
 
 // Map legacy roles to standard permissions

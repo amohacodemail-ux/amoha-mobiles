@@ -208,7 +208,7 @@ export default function ReviewsPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Product / Service</p>
-                  <p className="font-medium text-foreground">{detailReview.product?.name || detailReview.service?.serviceType || '—'}</p>
+                  <p className="font-medium text-foreground">{detailReview.product?.name || '—'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Date</p>
@@ -234,12 +234,12 @@ export default function ReviewsPage() {
             {canEdit && (
               <div className="flex gap-2">
                 {detailReview?.status !== 'approved' && (
-                  <Button variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10" onClick={() => { handleApprove(detailReview._id, true); setDetailReview(null); }}>
+                  <Button variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10" onClick={() => { if (detailReview) handleApprove(detailReview._id, true); setDetailReview(null); }}>
                     <CheckCircle className="h-4 w-4 mr-1.5" /> Approve
                   </Button>
                 )}
                 {detailReview?.status !== 'rejected' && (
-                  <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-500/10" onClick={() => { handleApprove(detailReview._id, false); setDetailReview(null); }}>
+                  <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-500/10" onClick={() => { if (detailReview) handleApprove(detailReview._id, false); setDetailReview(null); }}>
                     <XCircle className="h-4 w-4 mr-1.5" /> Reject
                   </Button>
                 )}

@@ -52,8 +52,9 @@ export default function DeliveryManagementPage() {
             data={dummyData}
             columns={columns}
             loading={false}
+            rowKey={(row) => row.id.toString()}
             emptyMessage="No delivery tasks found."
-            emptyIcon={Truck}
+            
           />
         </CardContent>
       </Card>
