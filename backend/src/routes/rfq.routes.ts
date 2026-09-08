@@ -5,6 +5,7 @@ import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError } from '../errors/app-error';
 import { authorize, canAccessRFQ, canAccessPurchase, canAccessAdminOnly } from '../middleware/role.middleware';
+import { generateSequentialRfqNumber } from '../utils/rfq.util';
 
 interface AuthenticatedRequest extends Request {
   user?: { userId: string; role: string };
@@ -99,8 +100,7 @@ router.post('/', canAccessPurchase, async (req: Request, res: Response, next: Ne
     }
 
     // Generate RFQ number
-    const { count } = await supabase.from('rfqs').select('id', { count: 'exact', head: true });
-    const rfqNumber = `RFQ-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`;
+    const rfqNumber = await generateSequentialRfqNumber();
 
     const { data, error } = await supabase
       .from('rfqs')
