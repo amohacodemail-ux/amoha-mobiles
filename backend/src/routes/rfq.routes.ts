@@ -163,7 +163,7 @@ router.put('/:id', canAccessRFQ, async (req: Request, res: Response, next: NextF
 });
 
 // ====== DELETE RFQ ======
-router.delete('/:id', canAccessAdminOnly, async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { error } = await supabase.from('rfqs').delete().eq('id', req.params.id);
     if (error) throw error;
