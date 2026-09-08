@@ -15,8 +15,18 @@ export const purchaseService = {
     return response.data.data;
   },
   
+  async updateGRN(id: string, data: any) {
+    const response = await apiClient.put(`/purchase/grn/${id}`, data);
+    return response.data.data;
+  },
+  
   async getGRNs(params?: any) {
     const response = await apiClient.get('/purchase/grn', { params });
+    return response.data.data;
+  },
+
+  async verifyGRN(id: string) {
+    const response = await apiClient.post(`/purchase/grn/${id}/verify`);
     return response.data.data;
   },
 

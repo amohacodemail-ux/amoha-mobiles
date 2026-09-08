@@ -54,7 +54,7 @@ export interface IPurchaseOrder {
   poNumber: string;
   supplierId: string;
   supplier?: any;
-  status: 'draft' | 'sent' | 'confirmed' | 'partially_received' | 'received' | 'cancelled';
+  status: 'draft' | 'sent' | 'confirmed' | 'accepted' | 'rejected' | 'preparing' | 'dispatched' | 'in_transit' | 'delivered' | 'partially_received' | 'received' | 'cancelled';
   orderDate?: Date;
   expectedDelivery?: Date;
   actualDelivery?: Date;
@@ -63,6 +63,10 @@ export interface IPurchaseOrder {
   shippingCost: number;
   totalAmount: number;
   paymentStatus: 'unpaid' | 'partial' | 'paid';
+  trackingNumber?: string;
+  dispatchDate?: Date;
+  supplierResponseDate?: Date;
+  rejectReason?: string;
   notes?: string;
   items?: IPurchaseOrderItem[];
   createdBy?: string;
@@ -163,3 +167,22 @@ export const GRN_ITEM_TABLE = 'goods_receipt_note_items';
 export const PURCHASE_RETURN_TABLE = 'purchase_returns';
 export const PURCHASE_RETURN_ITEM_TABLE = 'purchase_return_items';
 export const PURCHASE_PAYMENT_TABLE = 'purchase_payments';
+
+// ==================== Purchase Invoice ====================
+export interface IPurchaseInvoice {
+  id?: string;
+  invoiceNumber: string;
+  poId: string;
+  supplierId: string;
+  amount: number;
+  dueDate?: Date;
+  status: 'pending' | 'processing' | 'partially_paid' | 'paid';
+  fileUrl?: string;
+  notes?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  purchaseOrder?: IPurchaseOrder;
+  supplier?: ISupplier;
+}
+
+export const PURCHASE_INVOICE_TABLE = 'purchase_invoices';

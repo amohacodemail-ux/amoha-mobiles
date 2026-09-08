@@ -38,8 +38,18 @@ export default function GRNPage() {
     { key: 'grnNumber', header: 'GRN Number', sortable: true, render: (r) => <span className="font-medium">{r.grnNumber}</span> },
     { key: 'poNumber', header: 'Purchase Order', render: (r) => <span>{r.purchaseOrder?.po_number || r.poId}</span> },
     { key: 'supplier', header: 'Supplier', render: (r) => <span>{r.supplier?.name}</span> },
-    { key: 'status', header: 'Status', render: (r) => <Badge variant={r.status === 'received' ? 'success' : 'secondary'}>{r.status}</Badge> },
+    { key: 'status', header: 'Status', render: (r) => <Badge variant={r.status === 'completed' ? 'success' : 'secondary'} className="uppercase">{r.status}</Badge> },
     { key: 'receivedDate', header: 'Received Date', render: (r) => <span className="text-muted-foreground text-sm">{formatDate(r.receivedDate || r.createdAt)}</span> },
+    {
+      key: 'actions', header: '',
+      render: (r) => (
+        <div className="flex justify-end gap-1">
+          <Button size="sm" variant="outline" onClick={() => window.location.href = `/purchase/grn/${r.id}`}>
+            View Details
+          </Button>
+        </div>
+      )
+    }
   ];
 
   if (!canAccess) {

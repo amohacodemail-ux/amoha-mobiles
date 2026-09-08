@@ -28,6 +28,8 @@ interface PurchaseRequest {
 interface Supplier { _id: string; name: string; companyName: string; }
 
 const STATUS_COLORS: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-500',
+  submitted: 'bg-blue-100 text-blue-700',
   pending: 'bg-yellow-100 text-yellow-700',
   approved: 'bg-green-100 text-green-700',
   rejected: 'bg-red-100 text-red-700',
@@ -43,7 +45,10 @@ const URGENCY_COLORS: Record<string, string> = {
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
+import { useAuthStore } from '@/store/auth.store';
+
 export default function PurchaseRequestsPage() {
+  const { user } = useAuthStore();
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -142,6 +147,17 @@ export default function PurchaseRequestsPage() {
     }
   };
 
+  const handleSubmit = async (id: string) => {
+    if (!confirm('Submit this purchase request for approval?')) return;
+    try {
+      await apiClient.patch(`/purchase-requests/${id}/submit`);
+      toast.success('Purchase request submitted');
+      load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to submit request');
+    }
+  };
+
   const handleConvert = async () => {
     if (!convertPR || !convertSupplierId) { toast.error('Select a supplier'); return; }
     setConverting(true);
@@ -185,6 +201,8 @@ export default function PurchaseRequestsPage() {
           className="h-8 rounded-md border border-input bg-background px-3 text-sm"
         >
           <option value="">All Status</option>
+          <option value="draft">Draft</option>
+          <option value="submitted">Submitted</option>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
@@ -239,7 +257,16 @@ export default function PurchaseRequestsPage() {
                     <button onClick={() => setViewPR(pr)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title="View">
                       <Eye className="h-4 w-4" />
                     </button>
-                    {pr.status === 'pending' && (
+                    {pr.status === 'draft' && (
+                      <button
+                        onClick={() => handleSubmit(pr._id)}
+                        className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"
+                        title="Submit for Approval"
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )}
+                    {(pr.status === 'pending' || pr.status === 'submitted') && user?.role === 'admin' && (
                       <>
                         <button
                           onClick={() => { setApprovePR(pr); setIsReject(false); setApproveOpen(true); }}
@@ -401,7 +428,7 @@ export default function PurchaseRequestsPage() {
 
       {/* Convert to PO Modal */}
       <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>Generate Purchase Order</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             <div>
@@ -417,6 +444,44 @@ export default function PurchaseRequestsPage() {
               <label className="text-sm font-medium mb-1 block">Expected Delivery Date</label>
               <Input type="date" value={convertDelivery} onChange={(e) => setConvertDelivery(e.target.value)} className="h-8 text-sm" />
             </div>
+            
+            {convertPR?.items && convertPR.items.length > 0 && (
+              <div className="pt-2">
+                <label className="text-sm font-medium mb-1 block">Products to Order ({convertPR.items.length})</label>
+                <div className="rounded-md border border-border overflow-hidden">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-muted/40">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Product Name</th>
+                        <th className="px-3 py-2 font-medium text-right">Quantity</th>
+                        <th className="px-3 py-2 font-medium text-right">Unit Price</th>
+                        <th className="px-3 py-2 font-medium text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border bg-card">
+                      {convertPR.items.map((item: any, i: number) => {
+                        const qty = item.quantity || 1;
+                        const price = item.unitPrice || 0;
+                        return (
+                          <tr key={i} className="hover:bg-muted/20">
+                            <td className="px-3 py-2">
+                              <p className="font-medium text-foreground">{item.name || item.productName || 'Item'}</p>
+                              {item.sku && <p className="text-muted-foreground text-[10px] mt-0.5">SKU: {item.sku}</p>}
+                            </td>
+                            <td className="px-3 py-2 text-right">{qty}</td>
+                            <td className="px-3 py-2 text-right">₹{price.toLocaleString()}</td>
+                            <td className="px-3 py-2 text-right font-medium">₹{(qty * price).toLocaleString()}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex justify-end mt-2 text-sm font-semibold">
+                  Total Amount: ₹{convertPR.items.reduce((s: number, i: any) => s + ((i.quantity || 1) * (i.unitPrice || 0)), 0).toLocaleString()}
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConvertOpen(false)}>Cancel</Button>

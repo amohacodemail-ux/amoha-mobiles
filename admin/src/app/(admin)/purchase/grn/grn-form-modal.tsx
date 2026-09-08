@@ -33,6 +33,7 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<any[]>([]);
+  const [warehouseLocation, setWarehouseLocation] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -40,6 +41,7 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
       setSelectedPoId('');
       setReceivedDate(new Date().toISOString().split('T')[0]);
       setInvoiceNumber('');
+      setWarehouseLocation('');
       setNotes('');
       setItems([]);
     }
@@ -52,7 +54,7 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
       const pos = await supplierService.getAllPurchaseOrders();
       // Filter out POs that are received or cancelled locally if api doesn't support complex filtering
       const poArray = pos?.purchaseOrders || [];
-      const pendingPos = poArray.filter((po: any) => po.status !== 'received' && po.status !== 'cancelled' && po.status !== 'draft');
+      const pendingPos = poArray.filter((po: any) => po.status !== 'completed' && po.status !== 'cancelled' && po.status !== 'draft');
       setPurchaseOrders(pendingPos);
     } catch (err) {
       toast.error('Failed to load purchase orders');
@@ -74,18 +76,20 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
       if (po && po.items) {
         // Initialize GRN items
         const initialItems = po.items.map((item: any) => {
-          // Calculate how many were already received in previous GRNs if applicable (assuming item.receivedQty exists)
           const alreadyReceived = item.receivedQty || 0;
           const pending = item.quantity - alreadyReceived;
 
           return {
             poItemId: item.id || item._id,
             productId: item.productId,
-            productName: item.product?.name || 'Unknown Product',
+            productName: item.products?.name || item.product?.name || item.productName || 'Unknown Product',
             orderedQty: item.quantity,
             alreadyReceived,
+            pendingQty: pending > 0 ? pending : 0,
             receivedQty: pending > 0 ? pending : 0, // default to receiving the rest
-            damagedQty: 0,
+            rejectedQty: 0,
+            rejectionReason: '',
+            unitPrice: item.unitPrice || 0,
           };
         });
         setItems(initialItems);
@@ -98,9 +102,13 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
   };
 
   const handleItemChange = (index: number, field: string, value: string) => {
-    const numValue = parseInt(value) || 0;
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: Math.max(0, numValue) };
+    if (field === 'rejectionReason') {
+      newItems[index][field] = value;
+    } else {
+      const numValue = parseInt(value) || 0;
+      newItems[index] = { ...newItems[index], [field]: Math.max(0, numValue) };
+    }
     setItems(newItems);
   };
 
@@ -112,9 +120,21 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
       return;
     }
 
-    const hasInvalidQty = items.some(item => (item.receivedQty + item.damagedQty) > (item.orderedQty - item.alreadyReceived));
+    const hasInvalidQty = items.some(item => (item.receivedQty) > (item.pendingQty));
     if (hasInvalidQty) {
-      toast.error('Total received and damaged quantity cannot exceed the ordered quantity');
+      toast.error('Received quantity cannot exceed the pending quantity');
+      return;
+    }
+
+    const hasInvalidRejection = items.some(item => item.rejectedQty > item.receivedQty);
+    if (hasInvalidRejection) {
+      toast.error('Rejected quantity cannot exceed received quantity');
+      return;
+    }
+
+    const missingRejectionReason = items.some(item => item.rejectedQty > 0 && !item.rejectionReason);
+    if (missingRejectionReason) {
+      toast.error('Rejection reason is required if rejected quantity is greater than 0');
       return;
     }
 
@@ -124,18 +144,23 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
         poId: selectedPoId,
         supplierId: selectedPo?.supplierId,
         receivedDate,
-        notes: invoiceNumber ? `Invoice: ${invoiceNumber} | ${notes}` : notes,
+        invoiceChallanNumber: invoiceNumber,
+        warehouseLocation,
+        notes,
         items: items.map(item => ({
           poItemId: item.poItemId,
           productId: item.productId,
           orderedQty: item.orderedQty,
           receivedQty: item.receivedQty,
-          damagedQty: item.damagedQty
-        })).filter(item => item.receivedQty > 0 || item.damagedQty > 0) // Only send items being acted upon
+          rejectedQty: item.rejectedQty,
+          acceptedQty: item.receivedQty - item.rejectedQty,
+          rejectionReason: item.rejectionReason,
+          unitPrice: item.unitPrice,
+        })).filter(item => item.receivedQty > 0) // Only send items being received
       };
 
       if (payload.items.length === 0) {
-        toast.error('Please enter at least one received or damaged item');
+        toast.error('Please enter at least one received item');
         setSubmitting(false);
         return;
       }
@@ -222,12 +247,13 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
                         <th className="px-4 py-2 text-right font-medium">Previously Received</th>
                         <th className="px-4 py-2 text-right font-medium">Pending</th>
                         <th className="px-4 py-2 text-right font-medium">Received Now</th>
-                        <th className="px-4 py-2 text-right font-medium">Damaged</th>
+                        <th className="px-4 py-2 text-right font-medium">Rejected</th>
+                        <th className="px-4 py-2 text-left font-medium">Rejection Reason</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {items.map((item, idx) => {
-                        const pending = item.orderedQty - item.alreadyReceived;
+                        const pending = item.pendingQty;
                         return (
                           <tr key={idx}>
                             <td className="px-4 py-3">{item.productName}</td>
@@ -249,10 +275,18 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
                               <Input
                                 type="number"
                                 min="0"
-                                max={pending}
-                                value={item.damagedQty}
-                                onChange={(e) => handleItemChange(idx, 'damagedQty', e.target.value)}
+                                max={item.receivedQty}
+                                value={item.rejectedQty}
+                                onChange={(e) => handleItemChange(idx, 'rejectedQty', e.target.value)}
                                 className="w-24 ml-auto text-right"
+                                disabled={pending <= 0}
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <Input
+                                placeholder="Required if rejected > 0"
+                                value={item.rejectionReason}
+                                onChange={(e) => handleItemChange(idx, 'rejectionReason', e.target.value)}
                                 disabled={pending <= 0}
                               />
                             </td>
@@ -263,13 +297,21 @@ export function GRNFormModal({ open, onOpenChange, onSuccess }: GRNFormModalProp
                   </table>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-4">
+                <div className="grid grid-cols-3 gap-4 pt-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium leading-none">Supplier Invoice / Delivery Note Number</label>
                     <Input
                       placeholder="Optional reference number"
                       value={invoiceNumber}
                       onChange={(e) => setInvoiceNumber(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium leading-none">Warehouse / Location</label>
+                    <Input
+                      placeholder="Optional location"
+                      value={warehouseLocation}
+                      onChange={(e) => setWarehouseLocation(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">

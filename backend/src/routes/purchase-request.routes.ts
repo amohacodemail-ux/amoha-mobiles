@@ -1,11 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { canAccessPurchase, canAccessAdminOnly } from '../middleware/role.middleware';
+import { authorize, canAccessPurchase, canAccessAdminOnly } from '../middleware/role.middleware';
 import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
 import { NotFoundError } from '../errors/app-error';
 import { AuthenticatedRequest } from '../types';
+import activityLog from '../services/activity-log.service';
+import { generateSequentialPoNumber } from '../utils/po.util';
 import { sendEmail } from '../utils/email.util';
 const router = Router();
 router.use(authenticate, canAccessPurchase);
@@ -20,7 +22,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     let qb = supabase
       .from('purchase_requests')
-      .select('*, requestor:requested_by(id, name, email)', { count: 'exact' });
+      .select('*, requestor:requested_by(id, name, email), approver:approved_by(id, name, email)', { count: 'exact' });
 
     if (status) qb = qb.eq('status', status);
 
@@ -32,6 +34,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const requests = (data || []).map((r: any) => {
       const t = transformRow(r);
       if (t.requestor) { t.requestedBy = t.requestor; delete t.requestor; }
+      if (t.approver) { t.approvedBy = t.approver; delete t.approver; }
       return t;
     });
 
@@ -81,8 +84,8 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
         items,
         reason,
         urgency: urgency || 'normal',
-        supplier_id: supplierId || null,
         notes: notes || null,
+        supplier_id: supplierId || null,
         status: 'pending',
       })
       .select('*, requestor:requested_by(id, name, email)')
@@ -97,8 +100,8 @@ router.post('/', async (req: AuthenticatedRequest, res: Response, next: NextFunc
   }
 });
 
-// ====== APPROVE purchase request ======
-router.patch('/:id/approve', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// ====== APPROVE Purchase Request ======
+router.patch('/:id/approve', authorize('admin'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { notes } = req.body;
     const { data, error } = await supabase
@@ -125,8 +128,8 @@ router.patch('/:id/approve', async (req: AuthenticatedRequest, res: Response, ne
   }
 });
 
-// ====== REJECT purchase request ======
-router.patch('/:id/reject', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+// ====== REJECT Purchase Request ======
+router.patch('/:id/reject', authorize('admin'), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { notes } = req.body;
     const { data, error } = await supabase
@@ -147,6 +150,31 @@ router.patch('/:id/reject', async (req: AuthenticatedRequest, res: Response, nex
     const t = transformRow(data);
     if (t.requestor) { t.requestedBy = t.requestor; delete t.requestor; }
     sendSuccess(res, t, 'Purchase request rejected');
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ====== SUBMIT Purchase Request ======
+router.patch('/:id/submit', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { data, error } = await supabase
+      .from('purchase_requests')
+      .update({
+        status: 'submitted',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.params.id)
+      .eq('status', 'draft')
+      .select('*, requestor:requested_by(id, name, email)')
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new NotFoundError('Draft Purchase Request not found');
+    
+    const t = transformRow(data);
+    if (t.requestor) { t.requestedBy = t.requestor; delete t.requestor; }
+    sendSuccess(res, t, 'Purchase request submitted');
   } catch (error) {
     next(error);
   }
@@ -177,9 +205,8 @@ router.post('/:id/convert-to-po', async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    // Generate PO via supplier routes (reuse existing PO creation)
-    const { count } = await supabase.from('purchase_orders').select('id', { count: 'exact', head: true });
-    const poNumber = `PO-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(4, '0')}`;
+    // Generate PO via unified utility
+    const poNumber = await generateSequentialPoNumber();
 
     const poItems = (pr.items || []).map((item: any) => ({
       product_id: item.productId || null,
@@ -208,14 +235,35 @@ router.post('/:id/convert-to-po', async (req: AuthenticatedRequest, res: Respons
 
     if (poError) throw poError;
 
-    // Insert items into purchase_order_items
+    // Ensure all items have a valid product_id. If missing, create a hidden draft product.
+    // This avoids needing a product_name column on purchase_order_items.
+    for (const item of poItems) {
+      if (!item.product_id) {
+        const { data: newProd } = await supabase.from('products').insert({
+          name: item.product_name || 'Custom Product',
+          slug: `custom-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+          description: 'Custom product generated from purchase request',
+          sku: item.sku || `CUSTOM-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          price: item.unit_price || 0,
+          original_price: item.unit_price || 0,
+          selling_price: item.unit_price || 0,
+          stock: 0,
+          is_active: false,
+          thumbnail: 'placeholder.jpg'
+        }).select('id').single();
+        if (newProd) item.product_id = newProd.id;
+      }
+    }
+
+    // Insert items into purchase_order_items (without product_name since it's on products table now)
     const poItemsToInsert = poItems.map((item: any) => ({
       purchase_order_id: po.id,
       product_id: item.product_id || null,
       quantity: item.quantity,
       unit_cost: item.unit_price,
       total_cost: item.total_price,
-    })).filter((item: any) => item.product_id); // product_id is REQUIRED by schema
+      pending_qty: item.quantity,
+    })).filter((item: any) => item.product_id); // Only insert if we got a valid product ID
 
     if (poItemsToInsert.length > 0) {
       const { error: itemsError } = await supabase

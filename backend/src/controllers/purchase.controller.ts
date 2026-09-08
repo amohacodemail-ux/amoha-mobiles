@@ -13,10 +13,28 @@ class PurchaseController {
     } catch (err) { next(err); }
   }
 
+  async updateGRN(req: Request, res: Response, next: NextFunction) {
+    try {
+      // @ts-ignore
+      const userId = req.user?.id;
+      const data = await purchaseService.updateGRN(req.params.id, req.body, userId);
+      sendSuccess(res, data, 'GRN updated successfully');
+    } catch (err) { next(err); }
+  }
+
   async getGRNs(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await purchaseService.getGRNs(req.query);
       sendSuccess(res, data);
+    } catch (err) { next(err); }
+  }
+
+  async verifyGRN(req: Request, res: Response, next: NextFunction) {
+    try {
+      // @ts-ignore
+      const userId = req.user?.id;
+      const data = await purchaseService.verifyGRN(req.params.id, userId);
+      sendSuccess(res, data, 'GRN verified and inventory updated');
     } catch (err) { next(err); }
   }
 

@@ -82,6 +82,8 @@ export const canAccessPurchase = (req: AuthenticatedRequest, res: Response, next
   return authorize('admin', 'purchase', 'purchase_inventory')(req, res, next);
 };
 
+export const canAccessRFQ = authorize('admin', 'purchase', 'purchase_inventory', 'supplier');
+
 // ---- MARKETING MODULE ----
 /** Marketing operations: coupons, banners, reviews, CRM, campaigns */
 export const canAccessMarketing = authorize('admin', 'marketing', 'digital_marketing');
@@ -96,6 +98,10 @@ export const canAccessLogistics = authorize('admin', 'logistics');
 // ---- SUPPLIER MODULE ----
 /** Supplier portal access */
 export const canAccessSupplier = authorize('admin', 'supplier');
+
+// ---- UPLOAD MODULE ----
+/** Upload operations: access for teams that need to upload images */
+export const canUpload = authorize('admin', 'purchase', 'purchase_inventory', 'supplier', 'marketing', 'digital_marketing');
 
 // ---- SERVICE ENGINEER MODULE ----
 /** Service center operations: view and update service requests */

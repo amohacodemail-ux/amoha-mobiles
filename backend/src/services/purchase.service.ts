@@ -28,15 +28,27 @@ function generateReturnNumber(): string {
 class PurchaseService {
   // ==================== GRN ====================
   async createGRN(data: any, userId?: string) {
-    const { poId, supplierId, receivedDate, items, notes } = data;
+    const { poId, supplierId, items, invoiceChallanNumber, warehouseLocation, notes, receivedDate } = data;
 
     if (!poId || !supplierId || !items || !items.length) {
-      throw new BadRequestError('PO ID, Supplier ID and items are required');
+      throw new BadRequestError('PO ID, Supplier ID, and items are required');
     }
 
+    // Generate GRN Number
     const grnNumber = generateGRNNumber();
+
+    // Verify PO exists and matches supplier
+    const { data: poData, error: poError } = await supabase
+      .from(PURCHASE_ORDER_TABLE)
+      .select('id, supplier_id, status')
+      .eq('id', poId)
+      .single();
     
-    // Create GRN
+    if (poError || !poData) throw new NotFoundError('Purchase Order');
+    if (poData.supplier_id !== supplierId) throw new BadRequestError('Supplier does not match Purchase Order');
+    if (poData.status === 'completed') throw new BadRequestError('Purchase Order is already fully received');
+
+    // Create GRN record
     const { data: grnData, error: grnError } = await supabase
       .from(GRN_TABLE)
       .insert(
@@ -44,85 +56,167 @@ class PurchaseService {
           grnNumber,
           poId,
           supplierId,
-          status: 'received',
+          status: 'pending',
+          invoiceChallanNumber: invoiceChallanNumber || null,
+          warehouseLocation: warehouseLocation || null,
+          receivedBy: userId || null,
           receivedDate: receivedDate || new Date().toISOString(),
-          notes,
+          notes: notes || '',
         })
       )
       .select('*')
       .single();
 
     if (grnError) throw new BadRequestError(`Failed to create GRN: ${grnError.message}`);
+
     const grnId = grnData.id;
 
-    // Create GRN Items and update inventory
-    const grnItemsData = items.map((item: any) => ({
-      grn_id: grnId,
-      product_id: item.productId,
-      ordered_qty: item.orderedQty,
-      received_qty: item.receivedQty,
-      damaged_qty: item.damagedQty,
-      pending_qty: item.orderedQty - (item.receivedQty + item.damagedQty),
-      po_item_id: item.poItemId // Make sure we have the PO item ID
-    }));
+    // Create GRN Items
+    const grnItemsData = items.map((item: any) => {
+      const received = item.receivedQty || 0;
+      const rejected = item.rejectedQty || 0;
+      const accepted = received - rejected;
+      return {
+        grn_id: grnId,
+        product_id: item.productId,
+        ordered_qty: item.orderedQty || 0,
+        received_qty: received,
+        accepted_qty: accepted,
+        rejected_qty: rejected,
+        rejection_reason: item.rejectionReason || null,
+        unit_price: item.unitPrice || 0,
+        total_amount: accepted * (item.unitPrice || 0),
+      };
+    });
 
-    const { error: itemsError } = await supabase
-      .from(GRN_ITEM_TABLE)
-      .insert(grnItemsData);
+    const { error: itemsError } = await supabase.from(GRN_ITEM_TABLE).insert(grnItemsData);
+    if (itemsError) throw new BadRequestError(`Failed to insert GRN items: ${itemsError.message}`);
 
-    if (itemsError) throw new BadRequestError(`Failed to create GRN items: ${itemsError.message}`);
+    return this.getGRNById(grnId);
+  }
 
-    // Update PO Items received_qty
-    for (const item of items) {
-      if (item.poItemId && (item.receivedQty > 0 || item.damagedQty > 0)) {
-        // Fetch current received_qty
-        const { data: poItem } = await supabase
-          .from(PURCHASE_ORDER_ITEM_TABLE)
-          .select('received_qty')
-          .eq('id', item.poItemId)
-          .single();
-        
-        const currentReceived = poItem?.received_qty || 0;
-        const newReceived = currentReceived + item.receivedQty + item.damagedQty; // Consider damaged as received for pending calc
-        
-        await supabase
-          .from(PURCHASE_ORDER_ITEM_TABLE)
-          .update({ received_qty: newReceived })
-          .eq('id', item.poItemId);
-      }
+  async updateGRN(grnId: string, data: any, userId?: string) {
+    const grn = await this.getGRNById(grnId);
+    if (grn.status !== 'pending') {
+      throw new BadRequestError('Only pending GRNs can be edited');
     }
 
-    // Update PO Status
-    // A PO is fully received if all its items have received_qty >= quantity
-    const { data: poItems } = await supabase
-      .from(PURCHASE_ORDER_ITEM_TABLE)
-      .select('quantity, received_qty')
-      .eq('purchase_order_id', poId);
-      
-    let anyPending = false;
-    if (poItems) {
-      anyPending = poItems.some((i: any) => (i.quantity || 0) > (i.received_qty || 0));
+    // Update GRN fields
+    const updateData: any = {};
+    if (data.invoiceChallanNumber !== undefined) updateData.invoice_challan_number = data.invoiceChallanNumber;
+    if (data.warehouseLocation !== undefined) updateData.warehouse_location = data.warehouseLocation;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    
+    if (Object.keys(updateData).length > 0) {
+      updateData.updated_at = new Date().toISOString();
+      await supabase.from(GRN_TABLE).update(updateData).eq('id', grnId);
     }
 
-    const poStatus = anyPending ? 'partially_received' : 'received';
+    // Update Items
+    if (data.items && data.items.length > 0) {
+      // First delete existing items
+      await supabase.from(GRN_ITEM_TABLE).delete().eq('grn_id', grnId);
 
-    await supabase
-      .from(PURCHASE_ORDER_TABLE)
-      .update({ status: poStatus, updated_at: new Date().toISOString() })
-      .eq('id', poId);
+      // Insert new items
+      const grnItemsData = data.items.map((item: any) => ({
+        grn_id: grnId,
+        product_id: item.productId,
+        ordered_qty: item.orderedQty || 0,
+        received_qty: item.receivedQty || 0,
+        accepted_qty: item.acceptedQty || 0,
+        rejected_qty: item.rejectedQty || 0,
+        rejection_reason: item.rejectionReason || null,
+        unit_price: item.unitPrice || 0,
+        total_amount: item.totalAmount || 0,
+      }));
+      await supabase.from(GRN_ITEM_TABLE).insert(grnItemsData);
+    }
 
-    // Update Inventory for each received item (damaged items are NOT added to available stock)
-    for (const item of items) {
-      if (item.receivedQty > 0 && item.productId) {
+    return this.getGRNById(grnId);
+  }
+
+  async getGRNById(grnId: string) {
+    const { data, error } = await supabase
+      .from(GRN_TABLE)
+      .select('*, items:goods_receipt_note_items(*)')
+      .eq('id', grnId)
+      .single();
+    if (error || !data) throw new NotFoundError('GRN not found');
+    return transformRow(data);
+  }
+
+  async verifyGRN(grnId: string, userId?: string) {
+    const grn = await this.getGRNById(grnId);
+    if (grn.status === 'completed') {
+      throw new BadRequestError('GRN is already completed');
+    }
+
+    // Update inventory for accepted quantity
+    for (const item of (grn.items || [])) {
+      if (item.acceptedQty > 0 && item.productId) {
         try {
-          await inventoryLedger.addStock(item.productId, item.receivedQty, `GRN: ${grnNumber}`, userId || 'system');
+          await inventoryLedger.addStock(
+            item.productId,
+            item.acceptedQty,
+            `GRN verification for ${grn.grnNumber}`,
+            userId || 'system'
+          );
         } catch (err: any) {
           logger.error(`Failed to update inventory for product ${item.productId}: ${err.message}`);
+          throw new BadRequestError(`Inventory update failed: ${err.message}`);
         }
+      }
+
+      // Update PO item received quantity and pending quantity
+      // First, get the current PO item
+      const { data: poItem } = await supabase
+        .from(PURCHASE_ORDER_ITEM_TABLE)
+        .select('id, quantity, received_qty, pending_qty')
+        .eq('purchase_order_id', grn.poId)
+        .eq('product_id', item.productId)
+        .single();
+      
+      if (poItem) {
+        const newReceivedQty = (poItem.received_qty || 0) + item.acceptedQty;
+        const newPendingQty = Math.max(0, poItem.quantity - newReceivedQty);
+
+        await supabase
+          .from(PURCHASE_ORDER_ITEM_TABLE)
+          .update({
+            received_qty: newReceivedQty,
+            pending_qty: newPendingQty
+          })
+          .eq('id', poItem.id);
       }
     }
 
-    return transformRow(grnData);
+    // Check if PO is fully received
+    const { data: allPoItems } = await supabase
+      .from(PURCHASE_ORDER_ITEM_TABLE)
+      .select('quantity, received_qty')
+      .eq('purchase_order_id', grn.poId);
+
+    if (allPoItems && allPoItems.length > 0) {
+      const isFullyReceived = allPoItems.every(i => (i.received_qty || 0) >= i.quantity);
+      if (isFullyReceived) {
+        await supabase
+          .from(PURCHASE_ORDER_TABLE)
+          .update({ status: 'completed' })
+          .eq('id', grn.poId);
+      }
+    }
+
+    // Update GRN status directly to completed
+    const { data, error } = await supabase
+      .from(GRN_TABLE)
+      .update({ status: 'completed', updated_at: new Date().toISOString() })
+      .eq('id', grnId)
+      .select('*')
+      .single();
+
+    if (error) throw new BadRequestError(`Failed to complete GRN: ${error.message}`);
+
+    return transformRow(data);
   }
 
   async getGRNs(query: any = {}) {
@@ -132,7 +226,7 @@ class PurchaseService {
         *,
         supplier:supplier_id (id, name, code),
         purchaseOrder:po_id (id, po_number),
-        items:goods_receipt_note_items (*)
+        items:goods_receipt_note_items (*, products(id, name, sku))
       `)
       .order('created_at', { ascending: false });
 

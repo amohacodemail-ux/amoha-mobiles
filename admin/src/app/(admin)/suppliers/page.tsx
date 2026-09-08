@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { supplierService } from '@/services/supplier.service';
+import apiClient from '@/lib/api-client';
 import { formatDate } from '@/lib/utils';
 import type { Supplier, SupplierDashboardStats, PurchaseOrder, SupplierFormData } from '@/types';
 
@@ -67,6 +68,7 @@ export default function SuppliersPage() {
   const [poLoading, setPoLoading] = useState(false);
   const [poPage, setPoPage] = useState(1);
   const [poTotalPages, setPoTotalPages] = useState(1);
+  const [viewPO, setViewPO] = useState<any>(null);
 
   const loadStats = async () => {
     try {
@@ -115,6 +117,38 @@ export default function SuppliersPage() {
       country: s.country || '', gstNumber: s.gstNumber || '', paymentTerms: s.paymentTerms || 'Net 30', status: s.status, notes: s.notes || '',
     });
     setFormOpen(true);
+  };
+  const [paymentPO, setPaymentPO] = useState<any | null>(null);
+  const [paymentForm, setPaymentForm] = useState({ amount: '', paymentMethod: 'bank_transfer', referenceNumber: '', notes: '' });
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+
+  const openPaymentModal = (po: any) => {
+    setPaymentPO(po);
+    setPaymentForm({ amount: po.totalAmount?.toString() || '', paymentMethod: 'bank_transfer', referenceNumber: '', notes: '' });
+  };
+
+  const submitPayment = async () => {
+    if (!paymentForm.amount || isNaN(Number(paymentForm.amount))) {
+      return toast.error('Enter a valid amount');
+    }
+    setPaymentSubmitting(true);
+    try {
+      await apiClient.post(`/purchase/payments`, {
+        poId: paymentPO._id || paymentPO.id,
+        supplierId: paymentPO.supplierId || paymentPO.supplier_id || paymentPO.supplier?.id || paymentPO.suppliers?.id,
+        amount: Number(paymentForm.amount),
+        paymentMethod: paymentForm.paymentMethod,
+        referenceNumber: paymentForm.referenceNumber,
+        notes: paymentForm.notes
+      });
+      toast.success('Payment recorded successfully');
+      setPaymentPO(null);
+      loadPurchaseOrders();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to record payment');
+    } finally {
+      setPaymentSubmitting(false);
+    }
   };
 
   const handleSubmitForm = async () => {
@@ -230,8 +264,14 @@ export default function SuppliersPage() {
   ];
 
   const poColumns: Column<PurchaseOrder>[] = [
-    { key: 'poNumber', header: 'PO Number', render: (po) => <span className="font-medium">{po.poNumber}</span> },
+    { key: 'poNumber', header: 'PO Number', render: (po) => (
+        <button className="font-semibold text-primary hover:underline" onClick={() => setViewPO(po)}>
+          {po.poNumber}
+        </button>
+      )
+    },
     { key: 'supplier', header: 'Supplier', render: (po) => <span className="text-sm">{po.suppliers?.name || '-'}</span> },
+    { key: 'items', header: 'Items', render: (po) => <span className="text-sm text-muted-foreground">{po.items?.length ? `${po.items.length} Items` : '-'}</span> },
     {
       key: 'status', header: 'Status',
       render: (po) => <Badge variant="outline" className={poStatusColor(po.status)}>{po.status.replace(/_/g, ' ')}</Badge>,
@@ -242,6 +282,29 @@ export default function SuppliersPage() {
       render: (po) => <Badge variant="outline" className={po.paymentStatus === 'paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}>{po.paymentStatus}</Badge>,
     },
     { key: 'orderDate', header: 'Date', render: (po) => <span className="text-sm text-muted-foreground">{formatDate(po.orderDate)}</span> },
+    {
+      key: 'actions', header: '',
+      render: (po) => (
+        <div className="flex justify-end gap-1">
+          <Button size="sm" variant="outline" onClick={() => setViewPO(po)}>View Details</Button>
+          {['accepted', 'confirmed', 'preparing', 'dispatched'].includes(po.status) && po.paymentStatus !== 'paid' && (
+            <Button size="sm" variant="default" onClick={() => openPaymentModal(po)}>Make Payment</Button>
+          )}
+          {po.status === 'draft' && (
+            <Button size="sm" variant="outline" className="text-cyan-600 border-cyan-200" onClick={async () => {
+              if(!confirm('Send this Purchase Order to the supplier?')) return;
+              try {
+                await apiClient.put(`/suppliers/purchase-orders/${po._id}`, { status: 'sent' });
+                toast.success('PO sent to supplier');
+                loadPurchaseOrders();
+              } catch {
+                toast.error('Failed to send PO');
+              }
+            }}>Send PO</Button>
+          )}
+        </div>
+      )
+    }
   ];
 
   return (
@@ -530,6 +593,135 @@ export default function SuppliersPage() {
         title="Delete Supplier"
         description="This will permanently delete this supplier and all related data."
       />
+      {/* PO View Modal */}
+      <Dialog open={!!viewPO} onOpenChange={(open) => !open && setViewPO(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Purchase Order Details</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">Review the items requested in {viewPO?.poNumber}.</p>
+          </DialogHeader>
+          {viewPO && (
+            <div className="space-y-6 py-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-muted/30 p-4 rounded-xl border border-border">
+                <div>
+                  <p className="text-xs text-muted-foreground">PO Number</p>
+                  <p className="font-semibold text-sm mt-1">{viewPO.poNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-semibold text-sm mt-1">{formatDate(viewPO.orderDate)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <Badge variant="outline" className={`mt-1 ${poStatusColor(viewPO.status)}`}>{viewPO.status.replace(/_/g, ' ')}</Badge>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Amount</p>
+                  <p className="font-semibold text-sm mt-1">₹{Number(viewPO.totalAmount).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">Product / SKU</th>
+                      <th className="px-4 py-2 font-medium text-right">Quantity</th>
+                      <th className="px-4 py-2 font-medium text-right">Unit Price</th>
+                      <th className="px-4 py-2 font-medium text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {viewPO.items?.length > 0 ? (
+                      viewPO.items.map((item: any) => (
+                        <tr key={item.id || item._id} className="hover:bg-muted/30">
+                          <td className="px-4 py-3">
+                            <p className="font-medium">{item.products?.name || item.product?.name || item.productName || 'Custom Product'}</p>
+                            {(item.products?.sku || item.product?.sku) && <p className="text-xs text-muted-foreground">SKU: {item.products?.sku || item.product?.sku}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-right">{item.quantity}</td>
+                          <td className="px-4 py-3 text-right">₹{Number(item.unitCost).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-right font-medium">₹{Number(item.totalCost).toLocaleString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">No items in this PO</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              
+              {viewPO.notes && (
+                <div className="bg-muted/30 p-4 rounded-xl border border-border">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Notes / Instructions</p>
+                  <p className="text-sm">{viewPO.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewPO(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Modal */}
+      <Dialog open={!!paymentPO} onOpenChange={(open) => !open && setPaymentPO(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Make Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium">Payment Amount (₹) *</label>
+              <Input
+                type="number"
+                min={1}
+                step="0.01"
+                value={paymentForm.amount}
+                onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                placeholder="Amount to pay"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Payment Method *</label>
+              <select
+                value={paymentForm.paymentMethod}
+                onChange={e => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background mt-1"
+              >
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="upi">UPI</option>
+                <option value="credit_card">Credit Card</option>
+                <option value="cash">Cash</option>
+                <option value="cheque">Cheque</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Reference Number (Optional)</label>
+              <Input
+                value={paymentForm.referenceNumber}
+                onChange={e => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })}
+                placeholder="Transaction ID / UTR"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Notes (Optional)</label>
+              <Textarea
+                value={paymentForm.notes}
+                onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                placeholder="Any payment notes..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentPO(null)}>Cancel</Button>
+            <Button onClick={submitPayment} disabled={paymentSubmitting}>
+              {paymentSubmitting ? 'Processing...' : 'Confirm Payment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -22,6 +22,42 @@ export const supplierService = {
     return data.data;
   },
 
+  uploadInvoice: async (payload: any) => {
+    const { data } = await apiClient.post('/suppliers/invoices', payload);
+    return data.data;
+  },
+
+  // ==================== Supplier Catalogue (Supplier View) ====================
+  getMyCatalogue: async () => {
+    const { data } = await apiClient.get('/suppliers/me/catalogue');
+    return data.data;
+  },
+
+  createCatalogueItem: async (payload: any) => {
+    const { data } = await apiClient.post('/suppliers/me/catalogue', payload);
+    return data.data;
+  },
+
+  updateCatalogueItem: async (id: string, payload: any) => {
+    const { data } = await apiClient.put(`/suppliers/me/catalogue/${id}`, payload);
+    return data.data;
+  },
+
+  deleteCatalogueItem: async (id: string) => {
+    await apiClient.delete(`/suppliers/me/catalogue/${id}`);
+  },
+
+  // ==================== Supplier Catalogue (Purchase View) ====================
+  getAllCatalogues: async (filters: Record<string, any> = {}) => {
+    const { data } = await apiClient.get(`/suppliers/catalogues/all?${buildQuery(filters)}`);
+    return data.data;
+  },
+
+  mapCatalogueToMaster: async (catalogueId: string, masterProductId: string) => {
+    const { data } = await apiClient.post(`/suppliers/catalogues/${catalogueId}/map`, { masterProductId });
+    return data.data;
+  },
+
   create: async (payload: any) => {
     const { data } = await apiClient.post('/suppliers', payload);
     return data.data;
@@ -59,6 +95,12 @@ export const supplierService = {
 
   getPurchaseOrderById: async (id: string) => {
     const { data } = await apiClient.get(`/suppliers/purchase-orders/${id}`);
+    return data.data;
+  },
+
+  getGRNs: async (params?: Record<string, any>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    const { data } = await apiClient.get(`/suppliers/grns${query}`);
     return data.data;
   },
 

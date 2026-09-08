@@ -8,11 +8,7 @@ import crypto from 'crypto';
 import { hashPassword } from '../utils/password.util';
 import { sendEmail } from '../utils/email.util';
 
-function generatePoNumber(): string {
-  const ts = Date.now().toString(36).toUpperCase();
-  const rand = crypto.randomBytes(2).toString('hex').toUpperCase();
-  return `PO-${ts}-${rand}`;
-}
+import { generateSequentialPoNumber } from '../utils/po.util';
 
 function generateSupplierCode(): string {
   const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -380,7 +376,7 @@ class SupplierService {
     const limit = parseInt(query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    let qb = supabase.from('purchase_orders').select('*, suppliers(id, name, code)', { count: 'exact' });
+    let qb = supabase.from('purchase_orders').select('*, suppliers(id, name, code), items:purchase_order_items(*, products(id, name))', { count: 'exact' });
 
     if (query.search) {
       qb = qb.or(`po_number.ilike.%${query.search}%`);
@@ -395,7 +391,14 @@ class SupplierService {
     if (error) throw error;
 
     return {
-      purchaseOrders: (data || []).map(transformRow),
+      purchaseOrders: (data || []).map((row) => {
+        const t = transformRow(row);
+        if (t.suppliers) {
+          t.supplier = t.suppliers;
+          delete t.suppliers;
+        }
+        return t;
+      }),
       total: count || 0,
       totalPages: Math.ceil((count || 0) / limit),
       currentPage: page,
@@ -422,7 +425,7 @@ class SupplierService {
   }
 
   async createPurchaseOrder(data: any, createdBy: string) {
-    const poNumber = data.poNumber || generatePoNumber();
+    const poNumber = data.poNumber || await generateSequentialPoNumber();
     const items = data.items || [];
 
     // Calculate totals
@@ -495,6 +498,88 @@ class SupplierService {
     }
 
     return this.getPurchaseOrderById(id);
+  }
+
+  async acceptPurchaseOrder(id: string, supplierId: string) {
+    const po = await this.getPurchaseOrderById(id);
+    if (po.supplierId !== supplierId) throw new BadRequestError('Unauthorized to accept this order');
+    if (po.status !== 'sent') throw new BadRequestError('Can only accept sent orders');
+
+    const { error } = await supabase.from('purchase_orders').update({
+      status: 'accepted',
+      supplier_response_date: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }).eq('id', id);
+    if (error) throw error;
+    return this.getPurchaseOrderById(id);
+  }
+
+  async rejectPurchaseOrder(id: string, supplierId: string, rejectReason: string) {
+    const po = await this.getPurchaseOrderById(id);
+    if (po.supplierId !== supplierId) throw new BadRequestError('Unauthorized to reject this order');
+    if (po.status !== 'sent') throw new BadRequestError('Can only reject sent orders');
+
+    const { error } = await supabase.from('purchase_orders').update({
+      status: 'rejected',
+      supplier_response_date: new Date().toISOString(),
+      reject_reason: rejectReason,
+      updated_at: new Date().toISOString()
+    }).eq('id', id);
+    if (error) throw error;
+    return this.getPurchaseOrderById(id);
+  }
+
+  async updateDeliveryStatus(id: string, supplierId: string, status: string, trackingNumber?: string, dispatchDate?: Date) {
+    const po = await this.getPurchaseOrderById(id);
+    if (po.supplierId !== supplierId) throw new BadRequestError('Unauthorized to update this order');
+    
+    if (po.paymentStatus !== 'paid') {
+      throw new BadRequestError('Cannot update delivery status. Awaiting advance payment from buyer.');
+    }
+
+    const validStatuses = ['preparing', 'dispatched', 'in_transit', 'delivered'];
+    if (!validStatuses.includes(status)) throw new BadRequestError('Invalid delivery status');
+
+    const updates: any = {
+      status,
+      updated_at: new Date().toISOString()
+    };
+    if (trackingNumber) updates.tracking_number = trackingNumber;
+    if (dispatchDate) updates.dispatch_date = new Date(dispatchDate).toISOString();
+
+    const { error } = await supabase.from('purchase_orders').update(updates).eq('id', id);
+    if (error) throw error;
+    return this.getPurchaseOrderById(id);
+  }
+
+  // ==================== Invoices ====================
+  async uploadInvoice(supplierId: string, data: any) {
+    const dbData = toDbRow({
+      invoiceNumber: data.invoiceNumber,
+      poId: data.poId,
+      supplierId,
+      amount: data.amount,
+      dueDate: data.dueDate,
+      status: 'pending',
+      fileUrl: data.fileUrl,
+      notes: data.notes
+    });
+
+    const { data: invoice, error } = await supabase.from('purchase_invoices').insert(dbData).select('*').single();
+    if (error) {
+      if (error.code === '23505') throw new BadRequestError('Invoice number already exists for this PO');
+      throw error;
+    }
+    return transformRow(invoice);
+  }
+
+  async getSupplierInvoices(supplierId: string) {
+    const { data, error } = await supabase.from('purchase_invoices')
+      .select('*, purchase_orders(po_number)')
+      .eq('supplier_id', supplierId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(transformRow);
   }
 
   async receivePurchaseOrder(id: string, receivedItems: any[], receivedBy?: string) {
@@ -713,6 +798,155 @@ class SupplierService {
       totalPurchaseValue,
       topSuppliers: (topSuppliers || []).map(transformRow),
     };
+  }
+
+  // ==================== Supplier Catalogue ====================
+
+  async createCatalogueItem(supplierId: string, itemData: any, userId: string) {
+    const dataToInsert = toDbRow({ ...itemData, supplierId });
+    const { data, error } = await supabase
+      .from('supplier_catalogues')
+      .insert(dataToInsert)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestError(error.message);
+    
+    await activityLog.log({
+      userId,
+      action: 'created_supplier_catalogue_item',
+      entity: 'supplier_catalogue',
+      entityId: data.id,
+      details: { itemName: data.product_name },
+    });
+
+    return transformRow(data);
+  }
+
+  async updateCatalogueItem(supplierId: string, itemId: string, updateData: any, userId: string) {
+    // Verify ownership
+    const { data: existing, error: findError } = await supabase
+      .from('supplier_catalogues')
+      .select('id')
+      .eq('id', itemId)
+      .eq('supplier_id', supplierId)
+      .single();
+
+    if (findError || !existing) {
+      throw new NotFoundError('Catalogue item not found or access denied');
+    }
+
+    const dbRow = toDbRow(updateData);
+    delete dbRow.id;
+    delete dbRow.supplier_id;
+    delete dbRow.created_at;
+    delete dbRow.updated_at;
+    delete dbRow.products;
+    delete dbRow.mapped_product_id;
+
+    const { data, error } = await supabase
+      .from('supplier_catalogues')
+      .update({ ...dbRow, updated_at: new Date().toISOString() })
+      .eq('id', itemId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestError(error.message);
+
+    await activityLog.log({
+      userId,
+      action: 'updated_supplier_catalogue_item',
+      entity: 'supplier_catalogue',
+      entityId: itemId,
+    });
+
+    return transformRow(data);
+  }
+
+  async deleteCatalogueItem(supplierId: string, itemId: string, userId: string) {
+    const { data: existing, error: findError } = await supabase
+      .from('supplier_catalogues')
+      .select('id')
+      .eq('id', itemId)
+      .eq('supplier_id', supplierId)
+      .single();
+
+    if (findError || !existing) {
+      throw new NotFoundError('Catalogue item not found or access denied');
+    }
+
+    const { error } = await supabase.from('supplier_catalogues').delete().eq('id', itemId);
+    if (error) throw new BadRequestError(error.message);
+
+    await activityLog.log({
+      userId,
+      action: 'deleted_supplier_catalogue_item',
+      entity: 'supplier_catalogue',
+      entityId: itemId,
+    });
+  }
+
+  async getSupplierCatalogue(supplierId: string) {
+    const { data, error } = await supabase
+      .from('supplier_catalogues')
+      .select('*, products(name, sku)')
+      .eq('supplier_id', supplierId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new BadRequestError(error.message);
+    return (data || []).map(transformRow);
+  }
+
+  async getAllCatalogues(filters: { search?: string; category?: string; supplierId?: string }) {
+    let query = supabase
+      .from('supplier_catalogues')
+      .select('*, suppliers!inner(id, name, company_name), products(name, sku)')
+      .eq('status', 'active');
+
+    if (filters.supplierId) {
+      query = query.eq('supplier_id', filters.supplierId);
+    }
+    if (filters.category) {
+      query = query.ilike('category', `%${filters.category}%`);
+    }
+    if (filters.search) {
+      query = query.ilike('product_name', `%${filters.search}%`);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) throw new BadRequestError(error.message);
+
+    return (data || []).map((row: any) => {
+      const transformed = transformRow(row);
+      if (row.suppliers) transformed.supplier = transformRow(row.suppliers);
+      if (row.products) transformed.mappedProduct = transformRow(row.products);
+      return transformed;
+    });
+  }
+
+  async mapCatalogueToMaster(itemId: string, masterProductId: string, userId: string) {
+    // Verify both exist
+    const { data: product } = await supabase.from('products').select('id').eq('id', masterProductId).single();
+    if (!product) throw new NotFoundError('Master product not found');
+
+    const { data, error } = await supabase
+      .from('supplier_catalogues')
+      .update({ mapped_product_id: masterProductId, updated_at: new Date().toISOString() })
+      .eq('id', itemId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestError(error.message);
+
+    await activityLog.log({
+      userId,
+      action: 'mapped_supplier_catalogue_to_master',
+      entity: 'supplier_catalogue',
+      entityId: itemId,
+      details: { masterProductId },
+    });
+
+    return transformRow(data);
   }
 
   // ==================== Internal Helpers ====================

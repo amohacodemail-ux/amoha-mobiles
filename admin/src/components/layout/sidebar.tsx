@@ -47,14 +47,13 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/wallets', label: 'Wallets', icon: Wallet, module: 'wallets' },
   { href: '/activity-logs', label: 'Activity Logs', icon: Activity, module: 'activity_logs' },
   { href: '/suppliers', label: 'Suppliers', icon: Truck, module: 'suppliers' },
+  { href: '/purchase/supplier-products', label: 'Supplier Catalogues', icon: Store, module: 'suppliers' },
   { href: '/supplier-entries', label: 'Supplier Entries', icon: ClipboardList, module: 'supplier_entries' },
   { href: '/supplier-portal', label: 'My Portal', icon: Store, module: 'supplier_portal' },
+  { href: '/supplier-portal/my-products', label: 'My Products', icon: Package, module: 'supplier_portal' },
   { href: '/rfq', label: 'RFQ', icon: FileQuestion, module: 'rfq' },
   { href: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingBag, module: 'purchase_requests' },
-  { href: '/purchase/grn', label: 'Goods Received (GRN)', icon: Package, module: 'grn' },
-  { href: '/purchase/returns', label: 'Purchase Returns', icon: RotateCcw, module: 'purchase_returns' },
-  { href: '/purchase/payments', label: 'Payments', icon: IndianRupee, module: 'purchase_payments' },
-  { href: '/purchase/reports', label: 'Purchase Reports', icon: BarChart3, module: 'purchase_reports' },
+  { href: '/purchase/grn', label: 'GRN', icon: Package, module: 'grn' },
   { href: '/inventory', label: 'Inventory', icon: Warehouse, module: 'inventory' },
   { href: '/policies', label: 'Policies', icon: FileText, module: 'policies' },
   { href: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
@@ -88,7 +87,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
     return ALL_NAV_ITEMS.filter(item => {
       if (!canAccess(item.module)) return false;
       // Hide certain modules from sidebar for purchase role
-      if (user?.role === 'purchase' && ['grn', 'purchase_returns', 'purchase_payments'].includes(item.module)) {
+      if (user?.role === 'purchase' && ['purchase_returns', 'purchase_payments', 'purchase_reports'].includes(item.module)) {
         return false;
       }
       return true;
@@ -108,7 +107,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {
         title: collapsed ? undefined : 'Purchase',
         items: filteredNavItems.filter(i =>
-          ['products', 'categories', 'brands', 'inventory', 'suppliers', 'supplier_entries', 'supplier_portal', 'rfq', 'purchase_requests', 'grn', 'purchase_returns', 'purchase_payments', 'purchase_reports'].includes(i.module)
+          ['products', 'categories', 'brands', 'inventory', 'suppliers', 'supplier_entries', 'supplier_portal', 'rfq', 'purchase_requests', 'purchase_orders', 'grn', 'purchase_returns', 'purchase_payments', 'purchase_reports'].includes(i.module)
         ),
       },
       {
@@ -203,7 +202,14 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
             )}
             <div className="space-y-0.5">
               {group.items.map(({ href, label, icon: Icon }) => {
-                const active = pathname === href || pathname.startsWith(href + '/');
+                const isExactMatch = pathname === href;
+                const isSubRoute = pathname.startsWith(href + '/');
+                const hasMoreSpecificMatch = isSubRoute && ALL_NAV_ITEMS.some(item => 
+                  item.href !== href && 
+                  item.href.startsWith(href + '/') && 
+                  (pathname === item.href || pathname.startsWith(item.href + '/'))
+                );
+                const active = isExactMatch || (isSubRoute && !hasMoreSpecificMatch);
                 return (
                   <button
                     key={href}

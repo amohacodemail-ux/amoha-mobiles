@@ -6,9 +6,9 @@ import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 class SupplierEntryController {
   // ==================== Supplier actions ====================
 
-  async createEntry(req: Request, res: Response, next: NextFunction) {
+  async createEntry(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const userId = (req as AuthenticatedRequest).user!.userId;
+      const userId = req.user!.userId;
       const entry = await supplierEntryService.createEntry(userId, req.body);
       sendCreated(res, entry, 'Supplier entry submitted');
     } catch (error) {
@@ -16,9 +16,9 @@ class SupplierEntryController {
     }
   }
 
-  async getMyEntries(req: Request, res: Response, next: NextFunction) {
+  async getMyEntries(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const userId = (req as AuthenticatedRequest).user!.userId;
+      const userId = req.user!.userId;
       const result = await supplierEntryService.getMyEntries(userId, req.query);
       sendSuccess(res, result, 'Entries fetched');
     } catch (error) {

@@ -13,6 +13,8 @@ router.use(authorize('admin', 'purchase', 'purchase_inventory'));
 // GRN
 router.post('/grn', purchaseController.createGRN);
 router.get('/grn', purchaseController.getGRNs);
+router.put('/grn/:id', purchaseController.updateGRN);
+router.post('/grn/:id/verify', purchaseController.verifyGRN);
 
 // Returns
 router.post('/returns', purchaseController.createReturn);

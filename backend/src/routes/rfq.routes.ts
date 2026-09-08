@@ -1,16 +1,22 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
-import { canAccessPurchase, canAccessAdminOnly } from '../middleware/role.middleware';
 import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError } from '../errors/app-error';
+import { authorize, canAccessRFQ, canAccessPurchase, canAccessAdminOnly } from '../middleware/role.middleware';
+
+interface AuthenticatedRequest extends Request {
+  user?: { userId: string; role: string };
+}
 
 const router = Router();
-router.use(authenticate, canAccessPurchase);
+router.use(authenticate);
+
+// Removed local declaration of canAccessRFQ
 
 // ====== GET all RFQs ======
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', canAccessRFQ, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
@@ -21,6 +27,28 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     let qb = supabase
       .from('rfqs')
       .select('*, suppliers:supplier_id(id, name, email)', { count: 'exact' });
+
+    // If user is supplier, restrict to their own RFQs
+    const userRole = req.user?.role as string;
+    if (userRole === 'supplier') {
+      const { data: userRecord } = await supabase
+        .from('users')
+        .select('email')
+        .eq('id', req.user?.userId || '')
+        .maybeSingle();
+
+      const userEmail = userRecord?.email || '';
+
+      // Find the supplier ID for this user email
+      const { data: userSupplier } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('email', userEmail)
+        .maybeSingle();
+      
+      // If we couldn't find their supplier record by email, fall back to their user ID
+      qb = qb.eq('supplier_id', userSupplier?.id || req.user?.userId);
+    }
 
     if (status) qb = qb.eq('status', status);
     if (search) qb = qb.ilike('rfq_number', `%${search}%`);
@@ -43,7 +71,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // ====== GET single RFQ ======
-router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id', canAccessRFQ, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { data, error } = await supabase
       .from('rfqs')
@@ -61,7 +89,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // ====== CREATE RFQ ======
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { supplierId, items, notes, expectedDeliveryDate, deliveryAddress } = req.body;
 
@@ -99,11 +127,19 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // ====== UPDATE RFQ (status / supplier response) ======
-router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', canAccessRFQ, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { status, supplierQuote, supplierNotes, quotedAt } = req.body;
     const updates: any = {};
-    if (status) updates.status = status;
+    const userRole = (req as any).user?.role;
+    
+    if (status) {
+      if (userRole === 'supplier' && !['quoted', 'sent'].includes(status)) {
+        return res.status(403).json({ success: false, message: 'Suppliers can only quote on RFQs' });
+      }
+      updates.status = status;
+    }
+    
     if (supplierQuote !== undefined) updates.supplier_quote = supplierQuote;
     if (supplierNotes !== undefined) updates.supplier_notes = supplierNotes;
     if (quotedAt !== undefined) updates.quoted_at = quotedAt;

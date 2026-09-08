@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import apiClient from '@/lib/api-client';
 import type { ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
-import { Plus, RefreshCw, Eye, Trash2, Send } from 'lucide-react';
+import { Plus, RefreshCw, Eye, Trash2, Send, CheckCircle, XCircle } from 'lucide-react';
+import { useAuthStore } from '@/store/auth.store';
 
 interface Supplier { _id: string; name: string; companyName: string; email: string; }
 interface RFQItem { name: string; sku?: string; quantity: number; unitPrice?: number; notes?: string; }
@@ -38,6 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export default function RFQPage() {
+  const { user } = useAuthStore();
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -57,14 +59,15 @@ export default function RFQPage() {
   const [expectedDelivery, setExpectedDelivery] = useState('');
   const [creating, setCreating] = useState(false);
 
-  // View modal
+  // View / Update modals
   const [viewRFQ, setViewRFQ] = useState<RFQ | null>(null);
-
-  // Update status modal
   const [updateOpen, setUpdateOpen] = useState(false);
   const [updateRFQ, setUpdateRFQ] = useState<RFQ | null>(null);
   const [newStatus, setNewStatus] = useState('');
   const [supplierNotes, setSupplierNotes] = useState('');
+  const [quotedPrice, setQuotedPrice] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [paymentTerms, setPaymentTerms] = useState('');
   const [updating, setUpdating] = useState(false);
 
   const load = useCallback(async () => {
@@ -121,14 +124,32 @@ export default function RFQPage() {
     if (!updateRFQ || !newStatus) return;
     setUpdating(true);
     try {
-      await apiClient.put(`/rfq/${updateRFQ._id}`, { status: newStatus, supplierNotes });
-      toast.success('RFQ status updated');
+      let payload: any = { status: newStatus, supplierNotes };
+      if (user?.role === 'supplier') {
+        payload.supplierQuote = JSON.stringify({
+          quotedPrice,
+          deliveryDate,
+          paymentTerms
+        });
+      }
+      await apiClient.put(`/rfq/${updateRFQ._id}`, payload);
+      toast.success(user?.role === 'supplier' ? 'Quotation submitted' : 'RFQ status updated');
       setUpdateOpen(false); setUpdateRFQ(null);
       load();
     } catch {
       toast.error('Failed to update RFQ');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handlePurchaseAction = async (rfqId: string, action: 'accepted' | 'rejected') => {
+    try {
+      await apiClient.put(`/rfq/${rfqId}`, { status: action });
+      toast.success(`Quotation ${action}`);
+      load();
+    } catch {
+      toast.error(`Failed to ${action} quotation`);
     }
   };
 
@@ -155,9 +176,11 @@ export default function RFQPage() {
         title="Request for Quote (RFQ)"
         description="Create and manage supplier quotation requests"
         action={
-          <Button onClick={() => setCreateOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" /> New RFQ
-          </Button>
+          user?.role !== 'supplier' ? (
+            <Button onClick={() => setCreateOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" /> New RFQ
+            </Button>
+          ) : undefined
         }
       />
 
@@ -222,19 +245,33 @@ export default function RFQPage() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => setViewRFQ(rfq)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground">
+                    <button onClick={() => setViewRFQ(rfq)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title="View">
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => { setUpdateRFQ(rfq); setNewStatus(rfq.status); setSupplierNotes(rfq.supplierNotes || ''); setUpdateOpen(true); }}
-                      className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                      title="Update Status"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => handleDelete(rfq._id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {user?.role === 'supplier' && rfq.status === 'sent' && (
+                      <button
+                        onClick={() => { setUpdateRFQ(rfq); setNewStatus('quoted'); setSupplierNotes(rfq.supplierNotes || ''); setQuotedPrice(''); setDeliveryDate(''); setPaymentTerms(''); setUpdateOpen(true); }}
+                        className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                        title="Submit Quotation"
+                      >
+                        <Send className="h-4 w-4" />
+                      </button>
+                    )}
+                    {user?.role !== 'supplier' && rfq.status === 'quoted' && (
+                      <>
+                        <button onClick={() => handlePurchaseAction(rfq._id, 'accepted')} className="p-1.5 rounded hover:bg-green-50 text-muted-foreground hover:text-green-600" title="Accept Quotation">
+                          <CheckCircle className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => handlePurchaseAction(rfq._id, 'rejected')} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Reject Quotation">
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                    {user?.role !== 'supplier' && (
+                      <button onClick={() => handleDelete(rfq._id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive" title="Delete">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -351,31 +388,51 @@ export default function RFQPage() {
         </Dialog>
       )}
 
-      {/* Update Status Modal */}
+      {/* Update Status / Quotation Modal */}
       <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Update RFQ Status</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{user?.role === 'supplier' ? 'Submit Quotation' : 'Update RFQ Status'}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
+            {user?.role !== 'supplier' && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">New Status</label>
+                <select
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  {['draft','sent','quoted','accepted','rejected','closed'].map(s => (
+                    <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            {user?.role === 'supplier' && (
+              <>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Total Quoted Price</label>
+                  <Input type="number" value={quotedPrice} onChange={(e) => setQuotedPrice(e.target.value)} className="h-8 text-sm" placeholder="₹ Total Amount" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Expected Delivery Date</label>
+                  <Input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="h-8 text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Payment Terms</label>
+                  <Input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} className="h-8 text-sm" placeholder="e.g., Net 30, Advance..." />
+                </div>
+              </>
+            )}
+
             <div>
-              <label className="text-sm font-medium mb-1 block">New Status</label>
-              <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-              >
-                {['draft','sent','quoted','accepted','rejected','closed'].map(s => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Supplier Notes</label>
-              <Textarea value={supplierNotes} onChange={(e) => setSupplierNotes(e.target.value)} rows={3} placeholder="Supplier response or notes..." />
+              <label className="text-sm font-medium mb-1 block">Notes / Remarks</label>
+              <Textarea value={supplierNotes} onChange={(e) => setSupplierNotes(e.target.value)} rows={3} placeholder={user?.role === 'supplier' ? "Any conditions or remarks..." : "Notes..."} />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUpdateOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpdateStatus} disabled={updating}>{updating ? 'Saving...' : 'Update'}</Button>
+            <Button onClick={handleUpdateStatus} disabled={updating}>{updating ? 'Processing...' : (user?.role === 'supplier' ? 'Submit Quotation' : 'Update')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { supplierEntryService } from '@/services/supplier-entry.service';
 import { brandService } from '@/services/brand.service';
 import { categoryService } from '@/services/category.service';
+import { useAuthStore } from '@/store/auth.store';
 import { formatDate } from '@/lib/utils';
 
 const LIMIT = 15;
@@ -43,6 +44,7 @@ const statusColors: Record<string, string> = {
 type Tab = 'all' | 'pending' | 'converted' | 'rejected';
 
 export default function SupplierEntriesPage() {
+  const { user } = useAuthStore();
   const [tab, setTab] = useState<Tab>('all');
   const [stats, setStats] = useState<any>(null);
   const [entries, setEntries] = useState<any[]>([]);
@@ -92,9 +94,16 @@ export default function SupplierEntriesPage() {
     setLoading(true);
     try {
       const statusFilter = tab === 'all' ? undefined : tab;
-      const result = await supplierEntryService.getAllEntries({
-        page, limit: LIMIT, search, status: statusFilter,
-      });
+      let result;
+      if (user?.role === 'supplier') {
+        result = await supplierEntryService.getMyEntries({
+          page, limit: LIMIT, search, status: statusFilter,
+        });
+      } else {
+        result = await supplierEntryService.getAllEntries({
+          page, limit: LIMIT, search, status: statusFilter,
+        });
+      }
       setEntries(result.entries || []);
       setTotalPages(result.totalPages || 1);
     } catch { toast.error('Failed to load entries'); }
@@ -102,7 +111,7 @@ export default function SupplierEntriesPage() {
   }, [page, search, tab]);
 
   useEffect(() => { loadStats(); loadDropdowns(); }, []);
-  useEffect(() => { loadEntries(); }, [loadEntries]);
+  useEffect(() => { loadEntries(); }, [loadEntries, user?.role]);
 
   // Convert
   const openConvert = (entry: any) => {
@@ -201,7 +210,7 @@ export default function SupplierEntriesPage() {
           <Button variant="ghost" size="sm" onClick={() => setViewEntry(e)}>
             <Eye className="h-3.5 w-3.5" />
           </Button>
-          {e.status === 'pending' && (
+          {e.status === 'pending' && user?.role !== 'supplier' && (
             <>
               <Button variant="outline" size="sm" className="text-green-700" onClick={() => openConvert(e)}>
                 <CheckCircle className="h-3.5 w-3.5 mr-1" /> Convert
@@ -221,7 +230,7 @@ export default function SupplierEntriesPage() {
       <PageHeader title="Supplier Entries" description="Review supplier submissions, convert to products, or reject" />
 
       {/* Stats */}
-      {stats && (
+      {stats && user?.role !== 'supplier' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard title="Total Entries" value={stats.total} icon={ClipboardList} color="bg-slate-600" />
           <StatCard title="Pending" value={stats.pending} icon={Clock} color="bg-yellow-500" />
