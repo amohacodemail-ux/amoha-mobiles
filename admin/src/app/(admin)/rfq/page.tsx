@@ -380,6 +380,36 @@ export default function RFQPage() {
               </div>
               {viewRFQ.notes && <div><span className="text-muted-foreground">Notes:</span> <span className="ml-1">{viewRFQ.notes}</span></div>}
               {viewRFQ.supplierNotes && <div><span className="text-muted-foreground">Supplier Response:</span> <span className="ml-1">{viewRFQ.supplierNotes}</span></div>}
+              {(() => {
+                if (!viewRFQ.supplierQuote) return null;
+                let parsedQuote: any = {};
+                try {
+                  parsedQuote = typeof viewRFQ.supplierQuote === 'string' ? JSON.parse(viewRFQ.supplierQuote) : viewRFQ.supplierQuote;
+                } catch (e) {
+                  parsedQuote = { quotedPrice: viewRFQ.supplierQuote };
+                }
+                return (
+                  <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-100 mt-3">
+                    <p className="font-medium mb-2 text-emerald-800">Supplier Quotation</p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground block text-xs">Total Quoted Price</span>
+                        <span className="font-semibold text-emerald-700">₹{parsedQuote.quotedPrice || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-xs">Expected Delivery</span>
+                        <span className="font-medium text-foreground">{parsedQuote.deliveryDate || '-'}</span>
+                      </div>
+                      {parsedQuote.paymentTerms && (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground block text-xs">Payment Terms</span>
+                          <span className="font-medium text-foreground">{parsedQuote.paymentTerms}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setViewRFQ(null)}>Close</Button>
