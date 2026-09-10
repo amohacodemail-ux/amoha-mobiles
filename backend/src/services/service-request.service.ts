@@ -131,7 +131,12 @@ class ServiceRequestService {
     if (assignedTo) completedQuery = (completedQuery as any).eq('assigned_to', assignedTo);
     const { count: completed } = await completedQuery;
 
-    return { total: total || 0, pending: pending || 0, inProgress: inProgress || 0, completed: completed || 0 };
+    let revenueQuery = supabase.from('service_requests').select('total_amount').eq('status', 'completed');
+    if (assignedTo) revenueQuery = (revenueQuery as any).eq('assigned_to', assignedTo);
+    const { data: revenueData } = await revenueQuery;
+    const totalRevenue = revenueData?.reduce((acc, curr) => acc + (Number(curr.total_amount) || 0), 0) || 0;
+
+    return { total: total || 0, pending: pending || 0, inProgress: inProgress || 0, completed: completed || 0, totalRevenue };
   }
 }
 

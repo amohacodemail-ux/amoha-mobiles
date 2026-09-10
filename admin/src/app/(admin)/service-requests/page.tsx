@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
-import { Trash2, Eye, Clock, CheckCircle, Wrench, XCircle, Download } from 'lucide-react';
+import { Trash2, Eye, Clock, CheckCircle, Wrench, XCircle, Download, IndianRupee } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Pagination } from '@/components/shared/pagination';
@@ -347,12 +347,13 @@ export default function ServiceRequestsPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
           {[
             { label: 'Total', value: stats.total, icon: Wrench, color: 'text-primary' },
             { label: 'Pending', value: stats.pending, icon: Clock, color: 'text-yellow-500' },
             { label: 'In Progress', value: stats.inProgress, icon: CheckCircle, color: 'text-cyan-500' },
             { label: 'Completed', value: stats.completed, icon: CheckCircle, color: 'text-green-500' },
+            { label: 'Revenue', value: `₹${stats.totalRevenue?.toLocaleString('en-IN') || 0}`, icon: IndianRupee, color: 'text-emerald-600' },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-border p-4 flex items-center gap-3">
               <s.icon className={`h-8 w-8 ${s.color}`} />

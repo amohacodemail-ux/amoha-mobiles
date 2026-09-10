@@ -46,6 +46,7 @@ export interface ServiceStats {
   pending: number;
   inProgress: number;
   completed: number;
+  totalRevenue: number;
 }
 
 export const serviceRequestService = {
