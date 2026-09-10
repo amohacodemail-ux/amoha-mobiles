@@ -229,7 +229,8 @@ class ServiceRequestController {
       
       const authReq = req as AuthenticatedRequest;
       const isStaff = ['admin', 'service_engineer'].includes(authReq.user?.role || '');
-      if (!isStaff && request.user?.toString() !== authReq.user!.userId) {
+      const requestUserId = request.user?.id || request.user?._id || request.user?.toString();
+      if (!isStaff && requestUserId !== authReq.user!.userId) {
         throw new AppError('Not authorized to access this invoice', 403);
       }
       
