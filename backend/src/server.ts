@@ -10,6 +10,8 @@ import { runV10Migration as runV10MigrationReviews } from './migrations/v10-add-
 import { runV10Migration as runV10MigrationPurchase } from './migrations/v10-purchase-module';
 import { runV11Migration as runV11MigrationSupplierWorkflow } from './migrations/v11-supplier-workflow';
 import { runV12Migration as runV12MigrationSupplierCatalogue } from './migrations/v12-supplier-catalogue';
+import { runV11Migration as runV11MigrationWalkInService } from './migrations/v11-add-walkin-service-fields';
+import { runV13Migration } from './migrations/v13-service-assignment';
 
 // Keep-alive cron for Render free tier (pings health endpoint every 14 minutes)
 const startKeepAlive = (port: number | string): void => {
@@ -63,6 +65,12 @@ const startServer = async (): Promise<void> => {
     );
     runV12MigrationSupplierCatalogue().catch((err: any) =>
       logger.warn('[migration-v12-supplier-catalogue] unexpected error:', err),
+    );
+    runV11MigrationWalkInService().catch((err: any) =>
+      logger.warn('[migration-v11-walkin-service] unexpected error:', err),
+    );
+    runV13Migration().catch((err: any) =>
+      logger.warn('[migration-v13] unexpected error:', err),
     );
 
     // Render provides PORT dynamically

@@ -16,32 +16,37 @@ import { getRateLimitKey } from '../utils/rate-limit.util';
 
 const router = Router();
 
-// Rate limiters for auth endpoints
+const isDev = process.env.NODE_ENV !== 'production';
+
+// Rate limiters for auth endpoints (disabled in development)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  max: isDev ? 0 : 10,       // 0 = unlimited in dev
   message: { success: false, message: 'Too many login attempts. Please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getRateLimitKey,
+  skip: () => isDev,
 });
 
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  max: isDev ? 0 : 5,
   message: { success: false, message: 'Too many registration attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getRateLimitKey,
+  skip: () => isDev,
 });
 
 const passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: isDev ? 0 : 5,
   message: { success: false, message: 'Too many password reset requests. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getRateLimitKey,
+  skip: () => isDev,
 });
 
 // Public routes

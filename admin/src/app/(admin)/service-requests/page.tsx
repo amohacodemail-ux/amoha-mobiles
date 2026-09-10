@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useDebouncedValue } from '@/lib/hooks';
 import toast from 'react-hot-toast';
-import { Trash2, Eye, Clock, CheckCircle, Wrench, XCircle } from 'lucide-react';
+import { Trash2, Eye, Clock, CheckCircle, Wrench, XCircle, Download } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Pagination } from '@/components/shared/pagination';
@@ -21,12 +21,14 @@ import {
 } from '@/services/service-request.service';
 import { formatDate } from '@/lib/utils';
 import { usePermissions, useModulePermissions, MODULES } from '@/hooks/usePermissions';
+import { WalkInRegistrationModal } from './WalkInRegistrationModal';
+import { ServiceBillingSection } from './ServiceBillingSection';
 
 const LIMIT = 10;
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All Statuses' },
-  { value: 'pending', label: 'Pending' },
+  { value: 'new_request', label: 'New Request' },
   { value: 'accepted', label: 'Accepted' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
@@ -34,7 +36,7 @@ const STATUS_OPTIONS = [
 ];
 
 const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  pending: 'secondary',
+  new_request: 'secondary',
   accepted: 'default',
   in_progress: 'default',
   completed: 'default',
@@ -45,8 +47,8 @@ export default function ServiceRequestsPage() {
   const searchParams = useSearchParams();
   const idParam = searchParams.get('id');
 
-  const { isAdmin, canDelete } = usePermissions();
-  const { canEdit } = useModulePermissions(MODULES.SERVICE_REQUESTS);
+  const { isAdmin, canDelete, role, user } = usePermissions();
+  const { canEdit: baseCanEdit, canCreate } = useModulePermissions(MODULES.SERVICE_REQUESTS);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [stats, setStats] = useState<ServiceStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,18 +60,42 @@ export default function ServiceRequestsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [detailRequest, setDetailRequest] = useState<ServiceRequest | null>(null);
+  const [billingRequest, setBillingRequest] = useState<ServiceRequest | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
   const [finalPrice, setFinalPrice] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [engineers, setEngineers] = useState<any[]>([]);
+  const [isWalkInModalOpen, setIsWalkInModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'requests' | 'assigned' | 'billing'>('requests');
+  const canEdit = baseCanEdit && (role !== 'service_engineer' || activeTab === 'assigned');
 
   const debouncedSearch = useDebouncedValue(search, 350);
+
+  useEffect(() => {
+    if (isAdmin()) {
+      import('@/lib/api-client').then(apiClient => {
+        apiClient.default.get('/admin/admin-users?role=service_engineer&limit=100').then(res => {
+          setEngineers(res.data.data.users || []);
+        }).catch(() => {});
+      });
+    }
+  }, [isAdmin]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      // Service engineers always see only their assigned requests
+      const isServiceEngineer = role === 'service_engineer';
       const [res, statsRes] = await Promise.all([
-        serviceRequestService.getAll({ page, limit: LIMIT, search: debouncedSearch, status: (statusFilter && statusFilter !== 'all') ? statusFilter : undefined }),
+        serviceRequestService.getAll({ 
+          page, 
+          limit: LIMIT, 
+          search: debouncedSearch, 
+          status: (statusFilter && statusFilter !== 'all') ? statusFilter : undefined,
+          assignedTo: (isServiceEngineer || activeTab === 'assigned') ? user?._id : undefined
+        }),
         serviceRequestService.getStats(),
       ]);
       setRequests(Array.isArray(res.requests) ? res.requests : []);
@@ -82,10 +108,10 @@ export default function ServiceRequestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, statusFilter]);
+  }, [page, debouncedSearch, statusFilter, role, user?._id, activeTab]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, activeTab]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -107,6 +133,7 @@ export default function ServiceRequestsPage() {
     setNewStatus(req.status);
     setAdminNotes(req.adminNotes || '');
     setFinalPrice(req.finalPrice ? String(req.finalPrice) : '');
+    setAssignedTo(req.assignedTo || '');
   }, []);
 
   useEffect(() => {
@@ -128,6 +155,8 @@ export default function ServiceRequestsPage() {
         newStatus,
         adminNotes,
         finalPrice ? Number(finalPrice) : undefined,
+        undefined,
+        assignedTo || undefined
       );
       toast.success('Status updated');
       setDetailRequest(null);
@@ -207,17 +236,113 @@ export default function ServiceRequestsPage() {
     },
   ];
 
+  const billingColumns: Column<ServiceRequest>[] = [
+    {
+      key: 'requestNumber',
+      header: 'Request ID',
+      render: (r) => <span className="font-medium text-sm">{r.requestNumber}</span>,
+    },
+    {
+      key: 'customer',
+      header: 'Customer',
+      render: (r) => (
+        <div>
+          <p className="text-sm font-medium">{r.customerName}</p>
+          {r.customerEmail && <p className="text-xs text-muted-foreground">{r.customerEmail}</p>}
+        </div>
+      ),
+    },
+    {
+      key: 'source',
+      header: 'Source',
+      render: (r) => (
+        <Badge variant={r.isWalkIn ? 'secondary' : 'outline'} className="capitalize">
+          {r.isWalkIn ? 'Walk-in' : 'Online'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'amount',
+      header: 'Amount',
+      render: (r) => <span className="text-sm font-semibold">₹{r.totalAmount || 0}</span>,
+    },
+    {
+      key: 'orderStatus',
+      header: 'Order Status',
+      render: (r) => (
+        <Badge variant={STATUS_COLORS[r.status] || 'secondary'}>
+          {r.status.replace('_', ' ')}
+        </Badge>
+      ),
+    },
+    {
+      key: 'paymentStatus',
+      header: 'Payment Status',
+      render: (r) => (
+        <Badge variant={r.paymentStatus === 'paid' ? 'default' : 'secondary'} className="capitalize">
+          {r.paymentStatus || 'Pending'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'paymentMethod',
+      header: 'Payment Method',
+      render: (r) => <span className="text-sm capitalize">{r.paymentMethod || '—'}</span>,
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      render: (r) => <span className="text-sm text-muted-foreground">{formatDate(r.createdAt)}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      className: 'w-24',
+      render: (r) => (
+        <div className="flex items-center gap-1">
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            onClick={() => setBillingRequest(r)}
+            title="Update Billing"
+          >
+            <Wrench className="h-4 w-4" />
+          </Button>
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            onClick={async () => {
+              try {
+                await serviceRequestService.downloadInvoice(r._id, r.invoiceNumber || r.requestNumber);
+              } catch (err) {
+                toast.error('Failed to download invoice');
+              }
+            }}
+            title="Download Invoice"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
       <PageHeader title="Service Requests" description="Manage mobile repair and service requests">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="All Statuses" /></SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((o) => (
-              <SelectItem key={o.value || 'all'} value={o.value || 'all'}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value || 'all'} value={o.value || 'all'}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {canCreate && (
+            <Button onClick={() => setIsWalkInModalOpen(true)}>Register Walk-in</Button>
+          )}
+        </div>
       </PageHeader>
 
       {/* Stats */}
@@ -240,14 +365,52 @@ export default function ServiceRequestsPage() {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex gap-6 border-b border-border mb-6">
+        <button
+          className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'requests'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+          onClick={() => setActiveTab('requests')}
+        >
+          Service Requests
+        </button>
+        {role === 'service_engineer' && (
+          <button
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'assigned'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setActiveTab('assigned')}
+          >
+            Assigned to Me
+          </button>
+        )}
+        {isAdmin() && (
+          <button
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'billing'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setActiveTab('billing')}
+          >
+            Billing & Invoices
+          </button>
+        )}
+      </div>
+
       <DataTable
-        columns={columns}
+        columns={activeTab === 'billing' ? billingColumns : columns}
         data={requests}
         loading={loading}
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search by name, email, or request number..."
-        emptyMessage="No service requests found."
+        searchPlaceholder={activeTab === 'billing' ? "Search invoices..." : "Search by name, email, or request number..."}
+        emptyMessage={activeTab === 'billing' ? "No billing records found." : activeTab === 'assigned' ? "No requests assigned to you." : "No service requests found."}
         rowKey={(r) => r._id}
       />
       <Pagination currentPage={page} totalPages={totalPages} totalItems={totalItems} onPageChange={setPage} />
@@ -266,7 +429,7 @@ export default function ServiceRequestsPage() {
 
       {/* Detail / Status Update Modal */}
       <Dialog open={!!detailRequest} onOpenChange={(open) => { if (!open) setDetailRequest(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{detailRequest?.requestNumber}</DialogTitle>
           </DialogHeader>
@@ -302,6 +465,9 @@ export default function ServiceRequestsPage() {
                 <div>
                   <p className="text-xs text-muted-foreground">Device</p>
                   <p className="text-foreground">{detailRequest.deviceBrand} {detailRequest.deviceModel}</p>
+                  {detailRequest.imeiOrSerialNumber && (
+                    <p className="text-xs text-muted-foreground mt-0.5">IMEI/SN: {detailRequest.imeiOrSerialNumber}</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Service</p>
@@ -318,6 +484,25 @@ export default function ServiceRequestsPage() {
                   <p className="text-foreground mt-0.5">{detailRequest.description}</p>
                 </div>
               )}
+              
+              {/* Display photos if available */}
+              {(detailRequest.customerPhotoUrl || detailRequest.devicePhotoUrl) && (
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  {detailRequest.customerPhotoUrl && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Customer Photo</p>
+                      <img src={detailRequest.customerPhotoUrl} alt="Customer" className="w-full h-32 object-cover rounded-md border border-border" />
+                    </div>
+                  )}
+                  {detailRequest.devicePhotoUrl && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Device Photo</p>
+                      <img src={detailRequest.devicePhotoUrl} alt="Device" className="w-full h-32 object-cover rounded-md border border-border" />
+                    </div>
+                  )}
+                </div>
+              )}
+
               <hr className="border-border" />
               {canEdit ? (
                 <>
@@ -326,14 +511,41 @@ export default function ServiceRequestsPage() {
                     <Select value={newStatus} onValueChange={setNewStatus}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {STATUS_OPTIONS.filter((o) => o.value && o.value !== 'all').map((o) => (
+                        {STATUS_OPTIONS.filter((o) => {
+                          if (!o.value || o.value === 'all') return false;
+                          if (role === 'service_engineer') {
+                            // Mirror backend ENGINEER_ALLOWED_TRANSITIONS exactly
+                            const allowedTransitions: Record<string, string[]> = {
+                              accepted:    ['in_progress'],
+                              in_progress: ['completed'],
+                            };
+                            const allowed = allowedTransitions[detailRequest?.status ?? ''] || [];
+                            return allowed.includes(o.value);
+                          }
+                          return true;
+                        }).map((o) => (
                           <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <Input label="Final Price" type="number" placeholder="Optional" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value)} />
-                  <Textarea label="Admin Notes" placeholder="Internal notes..." rows={3} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} />
+                  {isAdmin() && (
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">Assign To Engineer</label>
+                      <Select value={assignedTo} onValueChange={setAssignedTo}>
+                        <SelectTrigger><SelectValue placeholder="Select an engineer" /></SelectTrigger>
+                        <SelectContent>
+                          {engineers.map((e) => (
+                            <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {isAdmin() && (
+                    <Input label="Final Price" type="number" placeholder="Optional" value={finalPrice} onChange={(e) => setFinalPrice(e.target.value)} />
+                  )}
+                  <Textarea label="Admin/Service Notes" placeholder="Internal notes..." rows={3} value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} />
                 </>
               ) : (
                 <>
@@ -356,6 +568,34 @@ export default function ServiceRequestsPage() {
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDetailRequest(null)}>{canEdit ? 'Cancel' : 'Close'}</Button>
             {canEdit && <Button onClick={handleUpdateStatus} loading={updatingStatus}>Update</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Walk-in Registration */}
+      <WalkInRegistrationModal 
+        open={isWalkInModalOpen} 
+        onClose={() => setIsWalkInModalOpen(false)} 
+        onSuccess={load} 
+      />
+
+      {/* Billing Update Modal */}
+      <Dialog open={!!billingRequest} onOpenChange={(open) => { if (!open) setBillingRequest(null); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Billing & Invoice - {billingRequest?.requestNumber}</DialogTitle>
+          </DialogHeader>
+          {billingRequest && (
+            <ServiceBillingSection 
+              request={billingRequest} 
+              canEdit={canEdit} 
+              onUpdate={() => {
+                load();
+                serviceRequestService.getById(billingRequest._id).then(setBillingRequest);
+              }} 
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBillingRequest(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

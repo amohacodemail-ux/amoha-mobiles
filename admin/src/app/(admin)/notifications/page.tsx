@@ -48,16 +48,22 @@ export default function NotificationsPage() {
   const { hasRole } = usePermissions();
   const isMarketing = hasRole('marketing', 'digital_marketing');
   const isLogistics = hasRole('logistics');
+  const isServiceEngineer = hasRole('service_engineer');
   
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [filterType, setFilterType] = useState(isMarketing || isLogistics ? 'review' : '');
+  const [filterType, setFilterType] = useState(
+    isMarketing || isLogistics ? 'review' :
+    isServiceEngineer ? 'service_request' : ''
+  );
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   const filterTypes = isMarketing || isLogistics
     ? ALL_FILTER_TYPES.filter(f => f.value === 'review')
+    : isServiceEngineer
+    ? ALL_FILTER_TYPES.filter(f => f.value === 'service_request')
     : ALL_FILTER_TYPES;
 
   const fetchNotifications = useCallback(async () => {

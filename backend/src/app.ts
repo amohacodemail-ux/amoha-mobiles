@@ -16,7 +16,7 @@ const app = express();
 // Render and similar platforms run behind a reverse proxy.
 app.set('trust proxy', 1);
 
-// Global rate limiter - prevent DDoS
+// Global rate limiter - prevent DDoS (disabled in development)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1500, // generous limit for 1000+ concurrent users
@@ -24,6 +24,7 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getRateLimitKey,
+  skip: () => process.env.NODE_ENV !== 'production',
 });
 
 // Security middleware
@@ -64,6 +65,10 @@ app.use(compression({
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
+
+import path from 'path';
+// Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Global rate limiter
 app.use('/api', globalLimiter);

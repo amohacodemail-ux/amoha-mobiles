@@ -1,4 +1,4 @@
-﻿export interface IServiceRequest {
+export interface IServiceRequest {
   _id?: string;
   id?: string;
   requestNumber: string;
@@ -13,8 +13,21 @@
   description: string;
   estimatedPrice?: number;
   finalPrice?: number;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'new_request' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
   adminNotes?: string;
+  isWalkIn?: boolean;
+  assignedTo?: string;
+  assignedUser?: any;
+  imeiOrSerialNumber?: string;
+  customerPhotoUrl?: string;
+  devicePhotoUrl?: string;
+  serviceCharges?: number;
+  partsCharges?: number;
+  totalAmount?: number;
+  paymentMethod?: string;
+  paymentStatus?: 'pending' | 'paid';
+  invoiceNumber?: string;
+  invoiceDate?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
