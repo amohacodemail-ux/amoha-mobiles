@@ -4,6 +4,7 @@ import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import { AuthenticatedRequest } from '../types';
 import { notifyServiceRequest } from '../utils/notify';
 import { sendServiceRequestStatusEmail, sendServiceRequestCreatedEmail } from '../utils/email.util';
+import { AppError } from '../errors/app-error';
 
 class ServiceRequestController {
   // Public: submit a service request

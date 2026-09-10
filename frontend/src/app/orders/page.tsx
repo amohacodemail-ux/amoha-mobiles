@@ -490,7 +490,7 @@ export default function OrdersPage() {
 
 
                       {/* Delivery Person Info */}
-                      {(order.orderStatus === 'out_for_delivery' || order.orderStatus === 'delivered') && order.orderStatus !== 'cancelled' && order.orderStatus !== 'returned' && (
+                      {(order.orderStatus === 'out_for_delivery' || order.orderStatus === 'delivered') && (
                         <div className="mt-4 relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 p-4 shadow-sm border border-gray-100 dark:border-gray-700 group/ticket">
                           <div className="absolute top-0 right-0 p-4 opacity-5 dark:opacity-10 transition-transform duration-500 group-hover/ticket:scale-110 group-hover/ticket:-rotate-6">
                             <HiOutlineUser className="h-16 w-16" />
