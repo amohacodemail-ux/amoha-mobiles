@@ -12,7 +12,8 @@ import {
   HiOutlineDocumentText,
   HiOutlineUser,
   HiOutlineDeviceMobile,
-  HiOutlineCurrencyRupee
+  HiOutlineCurrencyRupee,
+  HiOutlineDownload
 } from 'react-icons/hi';
 import { serviceRequestService, ServiceRequest } from '@/services/service.service';
 import { reviewService } from '@/services/review.service';
@@ -146,6 +147,16 @@ export default function RequestDetailsPage() {
     }
   };
 
+  const handleDownloadInvoice = async () => {
+    try {
+      if (!request) return;
+      await serviceRequestService.downloadInvoice(request._id, request.invoiceNumber || request.requestNumber);
+      toast.success('Invoice downloaded');
+    } catch (error: any) {
+      toast.error('Failed to download invoice');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -183,9 +194,19 @@ export default function RequestDetailsPage() {
           <button
             onClick={() => loadRequest(request._id)}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-white"
+            title="Refresh"
           >
             <HiOutlineRefresh className="h-4 w-4" />
           </button>
+          {request.status === 'completed' && (
+            <button
+              onClick={handleDownloadInvoice}
+              className="flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-white text-sm font-medium"
+              title="Download Invoice"
+            >
+              <HiOutlineDownload className="h-4 w-4" /> Invoice
+            </button>
+          )}
         </div>
       </div>
 
@@ -241,9 +262,20 @@ export default function RequestDetailsPage() {
 
       {(request.adminNotes || request.finalPrice) && (
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-surface-100">
-          <div className="mb-4 flex items-center gap-2">
-            <HiOutlineDocumentText className="h-5 w-5 text-primary-500" />
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Service Updates</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <HiOutlineDocumentText className="h-5 w-5 text-primary-500" />
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Service Updates</h2>
+            </div>
+            {request.status === 'completed' && (
+              <button
+                onClick={handleDownloadInvoice}
+                className="flex items-center gap-2 h-9 px-3 rounded-lg bg-primary-600 text-white transition-all hover:bg-primary-700 text-sm font-medium shadow-sm"
+                title="Download Invoice"
+              >
+                <HiOutlineDownload className="h-4 w-4" /> Download Invoice
+              </button>
+            )}
           </div>
           <div className="space-y-4">
             {request.finalPrice && (

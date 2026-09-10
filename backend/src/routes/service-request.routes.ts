@@ -61,7 +61,7 @@ router.post(
   serviceRequestController.uploadPhotos
 );
 
-// Admin: generate invoice
-router.get('/:id/invoice', authenticate, canAccessServiceEngineer, serviceRequestController.generateInvoice);
+// Admin & User: generate invoice
+router.get('/:id/invoice', authenticate, serviceRequestController.generateInvoice);
 
 export default router;

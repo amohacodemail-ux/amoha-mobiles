@@ -30,7 +30,7 @@ import { useCartStore } from '@/store/cart.store';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useCompareStore } from '@/store/compare.store';
-import { formatPrice, getStockStatus, getRatingColor, formatDate } from '@/lib/utils';
+import { formatPrice, getStockStatus, getRatingColor, formatDate, safeImageSrc } from '@/lib/utils';
 import ProductCard from '@/components/ui/ProductCard';
 import { ProductDetailSkeleton } from '@/components/ui/Skeletons';
 
@@ -270,9 +270,13 @@ export default function ProductDetailClient() {
   const reviewCount = Number((product as any).numReviews ?? (product as any).reviewCount ?? 0);
   const inStock = typeof (product as any).inStock === 'boolean' ? (product as any).inStock : product.stock > 0;
   const addPending = isProductPending(product._id);
-  const productImages = Array.isArray(product.images) && product.images.length > 0
-    ? product.images
-    : [product.thumbnail || PLACEHOLDER_IMG];
+  const productImages = (
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : [product.thumbnail]
+  )
+    .map((img) => safeImageSrc(img, PLACEHOLDER_IMG))
+    .filter((img, idx, arr) => img !== PLACEHOLDER_IMG || idx === 0 || arr.slice(0, idx).every((i) => i === PLACEHOLDER_IMG));
   const stockStatus = getStockStatus(product.stock);
   const savings = product.originalPrice > product.price ? product.originalPrice - product.price : 0;
   const specEntries = product.specifications
@@ -323,7 +327,7 @@ export default function ProductDetailClient() {
                 style={imageZoomed ? { overflow: 'hidden' } : undefined}
               >
                 <Image
-                  src={productImages[selectedImage] || product.thumbnail || PLACEHOLDER_IMG}
+                  src={safeImageSrc(productImages[selectedImage], PLACEHOLDER_IMG)}
                   alt={`${product.name} – image ${selectedImage + 1}`}
                   fill
                   priority
@@ -395,7 +399,7 @@ export default function ProductDetailClient() {
                     aria-label={`Select image ${idx + 1}`}
                   >
                     <Image
-                      src={img || PLACEHOLDER_IMG}
+                      src={safeImageSrc(img, PLACEHOLDER_IMG)}
                       alt={`${product.name} thumbnail ${idx + 1}`}
                       fill
                       priority={idx < 6}

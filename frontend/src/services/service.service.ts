@@ -23,6 +23,7 @@ export interface ServiceRequest {
   estimatedPrice?: number;
   finalPrice?: number;
   status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  invoiceNumber?: string;
   adminNotes?: string;
   createdAt: string;
   updatedAt: string;
@@ -48,6 +49,19 @@ export const serviceRequestService = {
   async getRequestById(id: string): Promise<ServiceRequest> {
     const res = await apiClient.get(`/service-requests/my-requests/${id}`);
     return res.data.data;
+  },
+  async downloadInvoice(id: string, invoiceNumber: string = 'invoice'): Promise<void> {
+    const response = await apiClient.get(`/service-requests/${id}/invoice`, {
+      responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `SR-${invoiceNumber}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
   },
 };
 
