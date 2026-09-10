@@ -6,7 +6,7 @@ import {
   Users, Ticket, Image, Star, Settings, ChevronLeft,
   ChevronRight, Smartphone, LogOut, X, Wrench, Mail, Bell,
   Eye, AlertCircle, Users2, Barcode, FileText, RotateCcw, Wallet, Activity,
-  Truck, Warehouse, ClipboardList, BarChart3, FileQuestion, ShoppingBag,
+  Truck, Warehouse, ClipboardList, FileQuestion, ShoppingBag,
   Receipt, IndianRupee, Shield, Store, Megaphone, Navigation, MapPin, UserCheck, PackageCheck, Banknote
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/brands', label: 'Brands', icon: Award, module: 'brands' },
   { href: '/orders', label: 'Orders', icon: ShoppingCart, module: 'orders' },
   { href: '/billing', label: 'Billing & Invoices', icon: IndianRupee, module: 'billing' },
-  { href: '/reports', label: 'Reports', icon: BarChart3, module: 'reports' },
+
   { href: '/users', label: 'Users', icon: Users, module: 'users' },
   { href: '/admin-users', label: 'Admin Users', icon: Shield, module: 'users' },
   { href: '/coupons', label: 'Coupons & Campaigns', icon: Ticket, module: 'coupons' },
@@ -138,7 +138,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {
         title: collapsed ? undefined : 'General',
         items: filteredNavItems.filter(i =>
-          ['reports', 'notifications', 'policies'].includes(i.module)
+          ['notifications', 'policies'].includes(i.module)
         ),
       },
     ].filter(g => g.items.length > 0);
