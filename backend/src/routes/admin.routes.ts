@@ -8,6 +8,7 @@ import orderController from '../controllers/order.controller';
 import userController from '../controllers/user.controller';
 import bannerController from '../controllers/banner.controller';
 import serviceRequestController from '../controllers/service-request.controller';
+import orderService from '../services/order.service';
 import contactController from '../controllers/contact.controller';
 import settingsController from '../controllers/settings.controller';
 import notificationController from '../controllers/notification.controller';
@@ -26,7 +27,8 @@ import {
   canModifyNotifications,
   canAccessSettings,
   canViewCatalog,
-  isAdmin
+  isAdmin,
+  authorize
 } from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
 import { createProductSchema, updateProductSchema } from '../validators/product.validator';
@@ -233,7 +235,7 @@ router.delete('/brands/:id', canAccessPurchase, brandController.delete);
 router.get('/orders', canAccessSales, orderController.getAllOrders);
 router.get('/orders/:id', canAccessSales, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const order = await (await import('../services/order.service')).default.getById(req.params.id);
+    const order = await orderService.getById(req.params.id);
     sendSuccess(res, order, 'Order fetched');
   } catch (error) {
     next(error);
@@ -243,7 +245,7 @@ router.get('/orders/:id/invoice', canAccessSales, async (req: Request, res: Resp
   try {
     const supabase = (await import('../config/supabase')).default;
     const { generateInvoicePDF, inferHsnCode } = await import('../utils/invoice.util');
-    const order: any = await (await import('../services/order.service')).default.getById(req.params.id);
+    const order: any = await orderService.getById(req.params.id);
 
     // Fetch billing settings from site_settings (JSONB — cast to any for safe field access)
     const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
@@ -349,7 +351,7 @@ router.get('/orders/:id/invoice', canAccessSales, async (req: Request, res: Resp
     next(error);
   }
 });
-router.patch('/orders/:id/status', isAdmin, validate(updateOrderStatusSchema), orderController.updateOrderStatus);
+router.patch('/orders/:id/status', authorize('admin', 'sales', 'logistics'), validate(updateOrderStatusSchema), orderController.updateOrderStatus);
 router.delete('/orders/:id', isAdmin, orderController.deleteOrder);
 router.post('/orders/:id/refund', isAdmin, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -378,7 +380,7 @@ router.post('/orders/:id/refund', isAdmin, async (req: Request, res: Response, n
       }
     }
 
-    const updated = await (await import('../services/order.service')).default.getById(order.id);
+    const updated = await orderService.getById(order.id);
     sendSuccess(res, updated, 'Refund processed');
   } catch (error) {
     next(error);
@@ -574,7 +576,7 @@ router.get('/reviews/:id', canAccessMarketing, async (req: Request, res: Respons
       .maybeSingle();
     if (error) throw error;
     if (!data) { const { NotFoundError } = await import('../errors/app-error'); throw new NotFoundError('Review'); }
-    
+
     const transformed = transformRow(data);
     if (data.is_approved === true) transformed.status = 'approved';
     else if (data.is_approved === false) transformed.status = 'rejected';
@@ -582,7 +584,7 @@ router.get('/reviews/:id', canAccessMarketing, async (req: Request, res: Respons
     if (transformed.products) { transformed.product = transformed.products; delete transformed.products; }
     if (transformed.service_requests) { transformed.service = transformed.service_requests; delete transformed.service_requests; }
     if (transformed.users) { transformed.user = transformed.users; delete transformed.users; }
-    
+
     sendSuccess(res, transformed, 'Review fetched');
   } catch (error) {
     next(error);
@@ -688,7 +690,382 @@ router.patch('/orders/:id/tracking', canAccessLogistics, async (req: Request, re
   }
 });
 
-// ====== Site Settings ======
+// Logistics Deliveries (Orders with Logistics Data)
+router.get('/logistics/deliveries', canAccessLogistics, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, order_number, status, tracking_number, tracking_url, estimated_delivery, shipping_address, created_at, users:user_id(name, email, phone)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Eligible orders for logistics: exclude placed/cancelled natively if you only want actionable ones
+    // For now, return all and handle it on frontend or just filter out cancelled/returned here
+
+    const deliveries = (data || []).map((o: any) => {
+      const t = transformRow(o);
+      const user = o.users || {};
+      const addr = (o.shipping_address as any) || {};
+      t.customerName = user.name || addr.fullName || addr.name || 'Customer';
+      t.address = [addr.addressLine1, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+
+      // Parse Logistics State from tracking_url
+      let logisticsData: any = {};
+      try {
+        if (o.tracking_url && o.tracking_url.includes('?data=')) {
+          const encodedData = o.tracking_url.split('?data=')[1];
+          logisticsData = JSON.parse(decodeURIComponent(encodedData));
+        } else if (o.tracking_url && o.tracking_url.startsWith('{')) {
+          logisticsData = JSON.parse(o.tracking_url);
+        }
+      } catch (e) { }
+
+      t.logisticsStatus = logisticsData.logisticsStatus || 'Pending';
+      t.assignedPerson = logisticsData.assignedPerson || null;
+      t.contact = logisticsData.contact || null;
+      t.shipmentHistory = logisticsData.shipmentHistory || [];
+      t.orderStatus = o.status;
+
+      return t;
+    });
+
+    sendSuccess(res, deliveries, 'Deliveries fetched');
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Logistics Delivery Assignment
+router.patch('/logistics/deliveries/:id/assign', canAccessLogistics, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+    const { assignedPerson, contact } = req.body;
+
+    // Fetch current tracking_url to preserve other JSON fields
+    const { data: currentOrder, error: fetchErr } = await supabase.from('orders').select('tracking_url').eq('id', req.params.id).single();
+    if (fetchErr) throw fetchErr;
+
+    let logisticsData: any = {};
+    try {
+      if (currentOrder.tracking_url && currentOrder.tracking_url.includes('?data=')) {
+        const encodedData = currentOrder.tracking_url.split('?data=')[1];
+        logisticsData = JSON.parse(decodeURIComponent(encodedData));
+      } else if (currentOrder.tracking_url && currentOrder.tracking_url.startsWith('{')) {
+        logisticsData = JSON.parse(currentOrder.tracking_url);
+      }
+    } catch (e) { }
+
+    logisticsData.assignedPerson = assignedPerson;
+    logisticsData.contact = contact;
+    logisticsData.logisticsStatus = 'Assigned';
+
+    // Save JSON back to tracking_url using a valid URL format
+    const validUrl = 'https://amoha.com/logistics?data=' + encodeURIComponent(JSON.stringify(logisticsData));
+
+    const { data, error } = await supabase.from('orders')
+      .update({ tracking_url: validUrl })
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    if (!data) { const { NotFoundError } = await import('../errors/app-error'); throw new NotFoundError('Order'); }
+
+    sendSuccess(res, transformRow(data), 'Delivery assigned successfully');
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Logistics Shipment Status Update
+router.patch('/logistics/shipments/:id/status', canAccessLogistics, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+    const { logisticsStatus, estimatedDelivery } = req.body;
+
+    const { data: currentOrder, error: fetchErr } = await supabase.from('orders').select('status, tracking_url, tracking_number').eq('id', req.params.id).single();
+    if (fetchErr) throw fetchErr;
+
+    let logisticsData: any = {};
+    try {
+      if (currentOrder.tracking_url && currentOrder.tracking_url.includes('?data=')) {
+        const encodedData = currentOrder.tracking_url.split('?data=')[1];
+        logisticsData = JSON.parse(decodeURIComponent(encodedData));
+      } else if (currentOrder.tracking_url && currentOrder.tracking_url.startsWith('{')) {
+        logisticsData = JSON.parse(currentOrder.tracking_url);
+      }
+    } catch (e) { }
+
+    logisticsData.logisticsStatus = logisticsStatus;
+
+    // Generate Tracking Number if it doesn't exist
+    let trackingNumber = currentOrder.tracking_number;
+    if (!trackingNumber) {
+      trackingNumber = `TRK-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    }
+
+    const validUrl = 'https://amoha.com/logistics?data=' + encodeURIComponent(JSON.stringify(logisticsData));
+
+    const updates: any = {
+      tracking_url: validUrl,
+      tracking_number: trackingNumber
+    };
+
+    if (estimatedDelivery) updates.estimated_delivery = estimatedDelivery;
+
+    // Map Logistics Status to Core Order Status
+    let coreStatus = currentOrder.status;
+    if (['Assigned', 'Picked Up', 'In Transit'].includes(logisticsStatus)) coreStatus = 'shipped';
+    else if (logisticsStatus === 'Out for Delivery') coreStatus = 'out_for_delivery';
+    else if (logisticsStatus === 'Delivered') coreStatus = 'delivered';
+    else if (logisticsStatus === 'Cancelled') coreStatus = 'cancelled';
+
+    // If core status needs to be updated, use orderService.updateOrderStatus
+    if (coreStatus !== currentOrder.status) {
+      console.log('--- START DEBUG PATCH SHIPMENT ---');
+      console.log('req.params.id:', req.params.id);
+      console.log('logisticsStatus:', logisticsStatus);
+      console.log('coreStatus mapped:', coreStatus);
+      console.log('currentOrder.status:', currentOrder.status);
+      try {
+        console.log('Calling updateOrderStatus...');
+        const resObj = await orderService.updateOrderStatus(req.params.id, coreStatus, `Status automatically updated from Logistics: ${logisticsStatus}`);
+        console.log('Call succeeded!', resObj?.status);
+      } catch (e) {
+        console.log('updateOrderStatus failed!', e);
+        throw e;
+      }
+      console.log('--- END DEBUG PATCH SHIPMENT ---');
+    }
+
+    // Still perform supabase updates for tracking data
+    if (logisticsStatus === 'Delivered') {
+      updates.delivered_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase.from('orders')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    sendSuccess(res, transformRow(data), 'Shipment status updated');
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Logistics Pickup Requests
+router.get('/logistics/pickup-requests', canAccessLogistics, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+
+    // Using return_requests table which already has pickup fields
+    const { data, error } = await supabase
+      .from('return_requests')
+      .select('id, return_number, status, pickup_address, pickup_date, order_id, created_at, users:user_id(name)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Map to pickup requests structure
+    const pickups = (data || []).map((r: any) => {
+      const t = transformRow(r);
+      const user = r.users || {};
+      const addr = (r.pickup_address as any) || {};
+      t.requestId = r.return_number;
+      t.customerName = user.name || addr.fullName || 'Customer';
+      t.address = [addr.addressLine1, addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
+      t.date = r.pickup_date || r.created_at;
+
+      // Map return status to pickup status
+      let pickupStatus = 'Pending';
+      if (r.status === 'pickup_scheduled') pickupStatus = 'Confirmed';
+      else if (r.status === 'picked_up') pickupStatus = 'Picked Up';
+      else if (r.status === 'closed' || r.status === 'rejected') pickupStatus = 'Cancelled';
+
+      t.pickupStatus = pickupStatus;
+      return t;
+    });
+
+    sendSuccess(res, pickups, 'Pickup requests fetched');
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch('/logistics/pickup-requests/:id/status', canAccessLogistics, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+    const { status } = req.body;
+
+    // Map from pickup status to return_request status
+    let returnStatus = 'requested';
+    if (status === 'Confirmed') returnStatus = 'pickup_scheduled';
+    else if (status === 'Picked Up') returnStatus = 'picked_up';
+    else if (status === 'Cancelled') returnStatus = 'closed';
+
+    const { data, error } = await supabase.from('return_requests')
+      .update({ status: returnStatus })
+      .eq('id', req.params.id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    sendSuccess(res, transformRow(data), 'Pickup status updated');
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ====== COD Collection ======
+// GET: All delivered COD orders (pending or already paid)
+router.get('/logistics/cod-collection', canAccessLogistics, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, order_number, status, payment_method, payment_status, total, tracking_url, shipping_address, walk_in_customer_name, created_at, users:user_id(name, email, phone)')
+      .eq('payment_method', 'cod')
+      .eq('status', 'delivered')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const orders = (data || []).map((o: any) => {
+      const t = transformRow(o);
+      const user = o.users || {};
+      const addr = (o.shipping_address as any) || {};
+      t.customerName = user.name || o.walk_in_customer_name || addr.fullName || addr.name || 'Customer';
+      t.orderAmount = o.total;
+
+      // Parse delivery person from tracking_url JSON
+      let logisticsData: any = {};
+      try {
+        if (o.tracking_url && o.tracking_url.includes('?data=')) {
+          const encodedData = o.tracking_url.split('?data=')[1];
+          logisticsData = JSON.parse(decodeURIComponent(encodedData));
+        } else if (o.tracking_url && o.tracking_url.startsWith('{')) {
+          logisticsData = JSON.parse(o.tracking_url);
+        }
+      } catch (e) {}
+
+      t.deliveryPerson = logisticsData.assignedPerson || null;
+      t.deliveryPersonContact = logisticsData.contact || null;
+      t.codCollected = logisticsData.codCollected || false;
+      t.codCollectedAt = logisticsData.codCollectedAt || null;
+      t.codCollectedAmount = logisticsData.codCollectedAmount || null;
+
+      // Derive collection status
+      t.collectionStatus = (o.payment_status === 'paid') ? 'Received' : 'Pending Collection';
+
+      return t;
+    });
+
+    sendSuccess(res, orders, 'COD collection orders fetched');
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH: Confirm COD cash collection
+router.patch('/logistics/cod-collection/:id/confirm', canAccessLogistics, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const supabase = (await import('../config/supabase')).default;
+    const { transformRow } = await import('../utils/transform.util');
+    const { BadRequestError, NotFoundError } = await import('../errors/app-error');
+    const { collectedAmount, collectionDate } = req.body;
+
+    if (collectedAmount === undefined || collectedAmount === null) {
+      throw new BadRequestError('Collected amount is required');
+    }
+
+    // Fetch the order
+    const { data: order, error: fetchErr } = await supabase
+      .from('orders')
+      .select('id, status, payment_method, payment_status, total, tracking_url')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr) throw fetchErr;
+    if (!order) throw new NotFoundError('Order');
+
+    // Guards: only delivered COD orders with pending payment
+    if (order.payment_method !== 'cod') {
+      throw new BadRequestError('This order is not a Cash on Delivery order');
+    }
+    if (order.status !== 'delivered') {
+      throw new BadRequestError('COD collection can only be confirmed for Delivered orders');
+    }
+    if (order.payment_status === 'paid') {
+      throw new BadRequestError('Payment has already been marked as received for this order');
+    }
+
+    // Validate collected amount matches order total exactly
+    const orderTotal = Number(order.total);
+    const collected = Number(collectedAmount);
+    if (isNaN(collected) || collected !== orderTotal) {
+      throw new BadRequestError(
+        `Collected amount (₹${collected}) does not match order amount (₹${orderTotal}). Please enter the exact order amount.`
+      );
+    }
+
+    // Parse existing logistics data from tracking_url to preserve delivery person info
+    let logisticsData: any = {};
+    try {
+      if (order.tracking_url && order.tracking_url.includes('?data=')) {
+        const encodedData = order.tracking_url.split('?data=')[1];
+        logisticsData = JSON.parse(decodeURIComponent(encodedData));
+      } else if (order.tracking_url && order.tracking_url.startsWith('{')) {
+        logisticsData = JSON.parse(order.tracking_url);
+      }
+    } catch (e) {}
+
+    // Persist COD collection metadata
+    logisticsData.codCollected = true;
+    logisticsData.codCollectedAt = collectionDate || new Date().toISOString();
+    logisticsData.codCollectedAmount = collected;
+
+    const validUrl = 'https://amoha.com/logistics?data=' + encodeURIComponent(JSON.stringify(logisticsData));
+
+    // Update tracking_url with COD metadata
+    const { error: urlErr } = await supabase
+      .from('orders')
+      .update({ tracking_url: validUrl })
+      .eq('id', req.params.id);
+    if (urlErr) throw urlErr;
+
+    // Update payment_status to paid using the existing service method
+    const updatedOrder = await orderService.updatePaymentStatus(req.params.id, { paymentStatus: 'paid' });
+
+    activityLogService.log({
+      adminId: (req as AuthenticatedRequest).user?.userId,
+      action: 'cod_collection_confirmed',
+      entity: 'order',
+      entityId: req.params.id,
+      details: `COD collection confirmed for order. Amount collected: ₹${collected}`,
+      ipAddress: req.ip,
+    }).catch(() => {});
+
+    sendSuccess(res, updatedOrder, 'COD collection confirmed and payment status updated to Paid');
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 router.get('/settings', canAccessSettings, settingsController.get);
 router.put('/settings', canAccessAdminOnly, settingsController.update);
 

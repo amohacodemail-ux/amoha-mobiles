@@ -31,23 +31,24 @@ export const authorize = (...roles: UserRole[]) => {
     const normalizedRoles = roles.map(normalizeRole);
 
     if (!normalizedRoles.includes(userRole)) {
-      console.log(`[AUTH FAILED] User role: ${userRole}, Allowed: ${normalizedRoles.join(', ')}`);
-      return next(new ForbiddenError('You do not have permission to access this resource'));
+      console.error(`[AUTH FAILED] Detailed info: User ID: ${req.user.userId}, Raw Role: ${req.user.role}, Normalized User Role: ${userRole}, Allowed Roles: ${normalizedRoles.join(', ')}, Path: ${req.originalUrl}, Method: ${req.method}`);
+      return next(new ForbiddenError(`You do not have permission to access this resource (Role: ${userRole})`));
     }
 
     next();
   };
 };
 
-// Role normalization for legacy compatibility
-export function normalizeRole(role: UserRole): UserRole {
-  switch (role) {
+export function normalizeRole(role: string): UserRole {
+  if (!role || typeof role !== 'string') return role as any;
+  const lowerRole = role.toLowerCase().trim();
+  switch (lowerRole) {
     case 'digital_marketing':
       return 'marketing';
     case 'purchase_inventory':
       return 'purchase';
     default:
-      return role;
+      return lowerRole as UserRole;
   }
 }
 
@@ -173,7 +174,7 @@ export function getAccessibleModules(role: UserRole): string[] {
       'contact_messages', 'notifications', 'product_views', 'abandoned_carts',
       'crm', 'barcode_pos', 'returns', 'wallets', 'activity_logs', 'suppliers',
       'supplier_entries', 'rfq', 'purchase_requests', 'inventory', 'policies', 'settings',
-      'delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment'
+      'delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment', 'cod_collection'
     ],
     sales: [
       'dashboard', 'products', 'categories', 'brands', 'orders', 'billing', 'reports', 'barcode_pos',
@@ -190,7 +191,7 @@ export function getAccessibleModules(role: UserRole): string[] {
       'service_requests'
     ],
     logistics: [
-      'dashboard', 'orders', 'returns', 'delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment', 'reports', 'notifications'
+      'dashboard', 'orders', 'returns', 'delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment', 'cod_collection', 'reports', 'notifications'
     ],
     supplier: [
       'dashboard', 'rfq', 'notifications'

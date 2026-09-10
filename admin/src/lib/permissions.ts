@@ -79,6 +79,7 @@ export const MODULES = {
   PICKUP_MANAGEMENT: 'pickup_management',
   SHIPMENT_TRACKING: 'shipment_tracking',
   DELIVERY_ASSIGNMENT: 'delivery_assignment',
+  COD_COLLECTION: 'cod_collection',
 
   // Supplier portal
   SUPPLIER_PORTAL: 'supplier_portal',
@@ -143,6 +144,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.PICKUP_MANAGEMENT]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.SHIPMENT_TRACKING]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.DELIVERY_ASSIGNMENT]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.COD_COLLECTION]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
   },
 
   sales: {
@@ -187,10 +189,12 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.PICKUP_MANAGEMENT]: [],
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
+    [MODULES.COD_COLLECTION]: [],
   },
 
   purchase: {
     // Purchase modules - full access including delete
+
     [MODULES.DASHBOARD]: [ACTIONS.READ],
     [MODULES.PRODUCTS]: [ACTIONS.READ],
     [MODULES.CATEGORIES]: [ACTIONS.READ],
@@ -231,6 +235,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.PICKUP_MANAGEMENT]: [],
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
+    [MODULES.COD_COLLECTION]: [],
   },
 
   marketing: {
@@ -275,6 +280,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.PICKUP_MANAGEMENT]: [],
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
+    [MODULES.COD_COLLECTION]: [],
   },
 
   logistics: {
@@ -318,6 +324,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.BILLING]: [],
     [MODULES.BARCODE_POS]: [],
     [MODULES.WALLETS]: [],
+    [MODULES.COD_COLLECTION]: [ACTIONS.READ, ACTIONS.EDIT],
   },
 
   supplier: {
@@ -362,6 +369,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.PICKUP_MANAGEMENT]: [],
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
+    [MODULES.COD_COLLECTION]: [],
   },
 
   user: {
@@ -405,6 +413,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.PICKUP_MANAGEMENT]: [],
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
+    [MODULES.COD_COLLECTION]: [],
   },
 
   service_engineer: {
@@ -448,6 +457,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.PICKUP_MANAGEMENT]: [],
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
+    [MODULES.COD_COLLECTION]: [],
   },
 
   // Legacy roles - mapped to standard roles

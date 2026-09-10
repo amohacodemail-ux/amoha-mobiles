@@ -209,6 +209,8 @@ export interface Order {
   trackingUrl?: string;
   logisticsPartner?: string;
   courierAwbNumber?: string;
+  deliveryPartnerName?: string;
+  deliveryPartnerContact?: string;
   isWalkIn?: boolean;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;

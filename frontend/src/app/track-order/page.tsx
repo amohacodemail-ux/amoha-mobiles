@@ -143,6 +143,24 @@ export default function TrackOrderPage() {
               )}
             </div>
 
+            {/* Delivery Partner Info */}
+            {(tracking.orderStatus === 'out_for_delivery' || tracking.orderStatus === 'delivered') && tracking.deliveryPartnerName && (
+              <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02] p-6">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Delivery Person</h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">{tracking.deliveryPartnerName}</p>
+                    {tracking.deliveryPartnerContact && (
+                      <p className="text-sm text-gray-500 mt-1">📞 {tracking.deliveryPartnerContact}</p>
+                    )}
+                  </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-500/10">
+                    <HiOutlineTruck className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Status Timeline */}
             {tracking.orderStatus !== 'cancelled' && tracking.orderStatus !== 'returned' && (
               <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.02] p-6">

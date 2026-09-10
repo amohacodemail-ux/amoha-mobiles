@@ -272,12 +272,12 @@ export default function ContactPage() {
           {/* ────────────────────────
               CONTACT FORM (Right Column)
               ──────────────────────── */}
-          <div className="lg:col-span-7">
-            <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-[0_8px_40px_rgb(0,0,0,0.03)] dark:border-white/5 dark:bg-zinc-900/50 sm:p-10">
+          <div className="lg:col-span-7 overflow-visible">
+            <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-[0_8px_40px_rgb(0,0,0,0.03)] dark:border-white/5 dark:bg-zinc-900/50 sm:p-10 overflow-visible">
               <h2 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white">Send us a Message</h2>
               <p className="mb-8 text-sm text-slate-500 dark:text-slate-400">Fill out the form below and our team will get back to you immediately.</p>
               
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5 overflow-visible relative pb-12 sm:pb-16">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Name *</label>
@@ -307,7 +307,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-sm font-bold text-white shadow-[0_10px_30px_rgb(59,130,246,0.3)] transition-all hover:-translate-y-1 hover:shadow-[0_15px_40px_rgb(59,130,246,0.4)] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+                  className="w-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-sm font-bold text-white shadow-[0_10px_30px_rgb(59,130,246,0.3)] transition-all hover:-translate-y-1 hover:shadow-[0_15px_40px_rgb(59,130,246,0.4)] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 relative z-10"
                 >
                   {isSubmitting ? 'Sending Message...' : 'Send Message'}
                 </button>
@@ -316,6 +316,8 @@ export default function ContactPage() {
                   <HiOutlineCheckCircle className="h-4 w-4 text-emerald-500" />
                   We usually respond within 24 hours.
                 </div>
+                {/* Extra padding container for any dynamically injected CAPTCHA iframes */}
+                <div className="w-full min-h-[80px]" aria-hidden="true" />
               </form>
             </div>
           </div>

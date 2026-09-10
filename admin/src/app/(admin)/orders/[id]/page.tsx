@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { orderService } from '@/services/order.service';
 import { formatCurrency, formatDateTime, getOrderStatusColor, getPaymentStatusColor } from '@/lib/utils';
-import { useModulePermissions, MODULES } from '@/hooks/usePermissions';
+import { useModulePermissions, usePermissions, MODULES } from '@/hooks/usePermissions';
 import type { Order, OrderStatus } from '@/types';
 
 const STATUS_STEPS: OrderStatus[] = ['placed', 'confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered'];
@@ -38,6 +38,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
 
   const { canEdit } = useModulePermissions(MODULES.ORDERS);
+  const { normalizedRole } = usePermissions();
 
   const handleDownloadInvoice = async () => {
     if (!order) return;
@@ -215,7 +216,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           )}
 
           {/* Tracking Info - only for online orders */}
-          {canEdit && !isWalkIn && (
+          {canEdit && !isWalkIn && normalizedRole !== 'logistics' && (
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><Truck className="h-4 w-4" />Tracking Info</CardTitle></CardHeader>
             <CardContent className="space-y-3">

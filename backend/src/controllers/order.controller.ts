@@ -208,10 +208,30 @@ class OrderController {
       }
 
       const { data: history } = await supabase.from('order_status_history').select('*').eq('order_id', order.id).order('created_at');
+
+      let deliveryPartnerName = null;
+      let deliveryPartnerContact = null;
+
+      if (order.status === 'out_for_delivery') {
+        try {
+          if (order.tracking_url && order.tracking_url.includes('?data=')) {
+            const encodedData = order.tracking_url.split('?data=')[1];
+            const logisticsData = JSON.parse(decodeURIComponent(encodedData));
+            deliveryPartnerName = logisticsData.assignedPerson || null;
+            deliveryPartnerContact = logisticsData.contact || null;
+          } else if (order.tracking_url && order.tracking_url.startsWith('{')) {
+            const logisticsData = JSON.parse(order.tracking_url);
+            deliveryPartnerName = logisticsData.assignedPerson || null;
+            deliveryPartnerContact = logisticsData.contact || null;
+          }
+        } catch (e) {}
+      }
+
       sendSuccess(res, {
         orderNumber: order.order_number, orderStatus: order.status, statusHistory: (history || []).map(transformRow),
         trackingNumber: order.tracking_number, trackingUrl: order.tracking_url, logisticsPartner: order.logistics_partner,
         totalAmount: order.total, createdAt: order.created_at,
+        deliveryPartnerName, deliveryPartnerContact
       }, 'Order tracking info');
     } catch (error) { next(error); }
   }

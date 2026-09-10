@@ -28,6 +28,23 @@ function normalizeOrder(o: any): any {
       return item;
     });
   }
+
+  // Extract delivery partner details from trackingUrl if available
+  if (o.trackingUrl) {
+    try {
+      if (o.trackingUrl.includes('?data=')) {
+        const encodedData = o.trackingUrl.split('?data=')[1];
+        const logisticsData = JSON.parse(decodeURIComponent(encodedData));
+        o.deliveryPartnerName = logisticsData.assignedPerson || null;
+        o.deliveryPartnerContact = logisticsData.contact || null;
+      } else if (o.trackingUrl.startsWith('{')) {
+        const logisticsData = JSON.parse(o.trackingUrl);
+        o.deliveryPartnerName = logisticsData.assignedPerson || null;
+        o.deliveryPartnerContact = logisticsData.contact || null;
+      }
+    } catch (e) {}
+  }
+
   return o;
 }
 

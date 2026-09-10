@@ -7,7 +7,7 @@ import {
   ChevronRight, Smartphone, LogOut, X, Wrench, Mail, Bell,
   Eye, AlertCircle, Users2, Barcode, FileText, RotateCcw, Wallet, Activity,
   Truck, Warehouse, ClipboardList, BarChart3, FileQuestion, ShoppingBag,
-  Receipt, IndianRupee, Shield, Store, Megaphone, Navigation, MapPin, UserCheck, PackageCheck
+  Receipt, IndianRupee, Shield, Store, Megaphone, Navigation, MapPin, UserCheck, PackageCheck, Banknote
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
@@ -58,9 +58,10 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/policies', label: 'Policies', icon: FileText, module: 'policies' },
   { href: '/settings', label: 'Settings', icon: Settings, module: 'settings' },
   { href: '/delivery-management', label: 'Delivery Management', icon: Truck, module: 'delivery_management' },
-  { href: '/pickup-management', label: 'Pickup Management', icon: PackageCheck, module: 'pickup_management' },
-  { href: '/shipment-tracking', label: 'Shipment Tracking', icon: MapPin, module: 'shipment_tracking' },
   { href: '/delivery-assignment', label: 'Delivery Assignment', icon: UserCheck, module: 'delivery_assignment' },
+  { href: '/shipment-tracking', label: 'Shipment Tracking', icon: MapPin, module: 'shipment_tracking' },
+  { href: '/pickup-management', label: 'Pickup Management', icon: PackageCheck, module: 'pickup_management' },
+  { href: '/cod-collection', label: 'COD Collection', icon: Banknote, module: 'cod_collection' },
 ];
 
 interface SidebarProps {
@@ -119,7 +120,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {
         title: collapsed ? undefined : 'Logistics',
         items: filteredNavItems.filter(i =>
-          ['delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment'].includes(i.module)
+          ['delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment', 'cod_collection'].includes(i.module)
         ),
       },
       {

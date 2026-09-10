@@ -1,31 +1,52 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Truck } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { DataTable, Column } from '@/components/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { logisticsService } from '@/services/logistics.service';
+import toast from 'react-hot-toast';
 
 export default function DeliveryManagementPage() {
   const [statusFilter, setStatusFilter] = useState('all');
 
   const columns: Column<any>[] = [
-    { key: 'orderId', header: 'Order ID', render: (r) => <span className="font-medium">{r.orderId}</span> },
+    { key: 'orderId', header: 'Order ID', render: (r) => <span className="font-medium">{r.orderNumber}</span> },
     { key: 'customer', header: 'Customer', render: (r) => r.customerName },
     { key: 'address', header: 'Address', render: (r) => <span className="text-muted-foreground line-clamp-1">{r.address}</span> },
     { key: 'status', header: 'Status', render: (r) => (
       <Badge variant="outline" className="capitalize">
-        {r.status}
+        {r.logisticsStatus?.replace(/_/g, ' ') || 'Pending'}
       </Badge>
     )},
-    { key: 'assignedTo', header: 'Assigned To', render: (r) => r.assignedTo || '—' },
+    { key: 'assignedTo', header: 'Assigned To', render: (r) => r.assignedPerson || '—' },
   ];
 
-  const dummyData = [
-    { id: 1, orderId: 'ORD-1001', customerName: 'John Doe', address: '123 Main St, City', status: 'Pending', assignedTo: '' },
-    { id: 2, orderId: 'ORD-1002', customerName: 'Jane Smith', address: '456 Oak Ave, Town', status: 'In Transit', assignedTo: 'Driver A' },
-  ];
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await logisticsService.getDeliveries();
+      setDeliveries(data);
+    } catch {
+      toast.error('Failed to load deliveries');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const filteredData = deliveries.filter(d => {
+    const s = d.logisticsStatus || 'Pending';
+    return statusFilter === 'all' ? true : s.toLowerCase().replace(/_/g, ' ') === statusFilter.toLowerCase().replace(/_/g, ' ');
+  });
 
   return (
     <div>
@@ -49,10 +70,10 @@ export default function DeliveryManagementPage() {
       <Card>
         <CardContent className="p-0">
           <DataTable
-            data={dummyData}
+            data={filteredData}
             columns={columns}
-            loading={false}
-            rowKey={(row) => row.id.toString()}
+            loading={loading}
+            rowKey={(row) => row.id}
             emptyMessage="No delivery tasks found."
             
           />
