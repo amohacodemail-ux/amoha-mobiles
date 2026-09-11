@@ -30,6 +30,9 @@ export interface ServiceRequest {
   paymentStatus?: 'pending' | 'paid';
   invoiceNumber?: string;
   invoiceDate?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
   createdAt: string;
   updatedAt: string;
 }
