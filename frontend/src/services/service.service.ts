@@ -22,7 +22,10 @@ export interface ServiceRequest {
   description: string;
   estimatedPrice?: number;
   finalPrice?: number;
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  totalAmount?: number;
+  paymentMethod?: string;
+  paymentStatus?: 'pending' | 'paid';
+  status: 'new_request' | 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled' | 'rejected';
   invoiceNumber?: string;
   adminNotes?: string;
   createdAt: string;
@@ -62,6 +65,18 @@ export const serviceRequestService = {
     link.click();
     link.parentNode?.removeChild(link);
     window.URL.revokeObjectURL(url);
+  },
+  async createPaymentOrder(id: string) {
+    const res = await apiClient.post(`/service-requests/my-requests/${id}/create-payment-order`);
+    return res.data.data;
+  },
+  async verifyPayment(id: string, paymentData: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }) {
+    const res = await apiClient.post(`/service-requests/my-requests/${id}/verify-payment`, paymentData);
+    return res.data.data;
+  },
+  async setCashPayment(id: string) {
+    const res = await apiClient.post(`/service-requests/my-requests/${id}/cash-payment`);
+    return res.data.data;
   },
 };
 

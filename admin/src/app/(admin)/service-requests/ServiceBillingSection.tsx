@@ -12,6 +12,7 @@ interface Props {
 }
 
 export function ServiceBillingSection({ request, onUpdate, canEdit }: Props) {
+  const isOnlinePaid = request.paymentMethod === 'razorpay' && request.paymentStatus === 'paid';
   const [loading, setLoading] = useState(false);
   const [billing, setBilling] = useState({
     serviceCharges: request.serviceCharges || '',
@@ -92,18 +93,19 @@ export function ServiceBillingSection({ request, onUpdate, canEdit }: Props) {
             />
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Payment Method</label>
-              <Select value={billing.paymentMethod} onValueChange={(v) => handleSelectChange('paymentMethod', v)}>
+              <Select value={billing.paymentMethod} onValueChange={(v) => handleSelectChange('paymentMethod', v)} disabled={isOnlinePaid}>
                 <SelectTrigger><SelectValue placeholder="Select Method" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="card">Card</SelectItem>
                   <SelectItem value="upi">UPI</SelectItem>
+                  <SelectItem value="razorpay">Razorpay</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Payment Status</label>
-              <Select value={billing.paymentStatus} onValueChange={(v) => handleSelectChange('paymentStatus', v)}>
+              <Select value={billing.paymentStatus} onValueChange={(v) => handleSelectChange('paymentStatus', v)} disabled={isOnlinePaid}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
@@ -133,6 +135,22 @@ export function ServiceBillingSection({ request, onUpdate, canEdit }: Props) {
           </>
         )}
       </div>
+
+      {isOnlinePaid && (
+        <div className="mt-4 p-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 rounded-lg">
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-1">Online Payment Details</p>
+          <div className="grid grid-cols-2 gap-2 text-xs text-emerald-700 dark:text-emerald-500">
+            <div>
+              <span className="font-medium opacity-80">Order ID:</span>
+              <p className="break-all">{request.razorpayOrderId}</p>
+            </div>
+            <div>
+              <span className="font-medium opacity-80">Payment ID:</span>
+              <p className="break-all">{request.razorpayPaymentId}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg mt-2 border border-border">
         <div>

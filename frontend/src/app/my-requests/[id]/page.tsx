@@ -20,6 +20,8 @@ import { reviewService } from '@/services/review.service';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { HiOutlineStar } from 'react-icons/hi';
+import Script from 'next/script';
+import { formatPrice } from '@/lib/utils';
 
 const STATUS_META: Record<string, { color: string; bg: string; label: string }> = {
   pending: { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-500/10', label: 'Pending' },
@@ -99,6 +101,18 @@ export default function RequestDetailsPage() {
   const [reviewForm, setReviewForm] = useState({ rating: 0, title: '', comment: '' });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
+  const [selectedPayment, setSelectedPayment] = useState('razorpay');
+  const [isPaying, setIsPaying] = useState(false);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(
+    typeof window !== 'undefined' && typeof (window as any).Razorpay !== 'undefined',
+  );
+
+  useEffect(() => {
+    if (typeof (window as any).Razorpay !== 'undefined') {
+      setRazorpayLoaded(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (params.id) {
       loadRequest(params.id as string);
@@ -147,6 +161,134 @@ export default function RequestDetailsPage() {
     }
   };
 
+  const ensureRazorpayLoaded = (): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
+      if (typeof (window as any).Razorpay !== 'undefined') {
+        resolve();
+        return;
+      }
+      const TIMEOUT_MS = 12_000;
+      const timer = setTimeout(
+        () => reject(new Error('Payment gateway timed out. Check your internet connection and try again.')),
+        TIMEOUT_MS,
+      );
+      const onLoad = () => { clearTimeout(timer); setRazorpayLoaded(true); resolve(); };
+      const onError = () => { clearTimeout(timer); reject(new Error('Payment gateway failed to load. Please refresh the page.')); };
+      const existing = document.querySelector<HTMLScriptElement>('script[src*="razorpay"]');
+      if (existing) {
+        existing.addEventListener('load', onLoad, { once: true });
+        existing.addEventListener('error', onError, { once: true });
+      } else {
+        const s = document.createElement('script');
+        s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        s.async = true;
+        s.addEventListener('load', onLoad, { once: true });
+        s.addEventListener('error', onError, { once: true });
+        document.head.appendChild(s);
+      }
+    });
+
+  const handleRazorpayPayment = async () => {
+    if (!request) return;
+    setIsPaying(true);
+
+    if (typeof (window as any).Razorpay === 'undefined') {
+      const loadingToast = toast.loading('Loading payment gateway…');
+      try {
+        await ensureRazorpayLoaded();
+        toast.dismiss(loadingToast);
+      } catch (loadErr: any) {
+        toast.dismiss(loadingToast);
+        toast.error(loadErr?.message || 'Payment gateway failed to load. Please refresh.');
+        setIsPaying(false);
+        return;
+      }
+    }
+
+    try {
+      const rzpOrder = await serviceRequestService.createPaymentOrder(request._id);
+
+      const options: any = {
+        key: rzpOrder.keyId,
+        amount: rzpOrder.amount,
+        currency: rzpOrder.currency,
+        name: 'AMOHA Mobiles',
+        description: `Service Request ${request.requestNumber}`,
+        order_id: rzpOrder.razorpayOrderId,
+        prefill: {
+          name: request.customerName,
+          contact: request.customerPhone,
+          email: request.customerEmail || '',
+        },
+        theme: { color: '#6d28d9' },
+        modal: {
+          ondismiss: () => {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            setIsPaying(false);
+            toast.error('Payment cancelled');
+          },
+        },
+        handler: async (response: any) => {
+          document.body.style.overflow = '';
+          document.body.style.paddingRight = '';
+          try {
+            await serviceRequestService.verifyPayment(request._id, {
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            toast.success('Payment successful!');
+            await loadRequest(request._id);
+          } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Payment verification failed. Please contact support.');
+          } finally {
+            setIsPaying(false);
+          }
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', (response: any) => {
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        const msg =
+          response?.error?.description ||
+          response?.error?.reason ||
+          'Payment failed. Please try again.';
+        toast.error(msg);
+        setIsPaying(false);
+      });
+      rzp.open();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to initiate payment. Please try again.';
+      toast.error(msg);
+      setIsPaying(false);
+    }
+  };
+
+  const handleCashPayment = async () => {
+    if (!request) return;
+    setIsPaying(true);
+    try {
+      await serviceRequestService.setCashPayment(request._id);
+      toast.success('Payment method set to Cash.');
+      await loadRequest(request._id);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update payment method.');
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    if (selectedPayment === 'razorpay') {
+      await handleRazorpayPayment();
+    } else {
+      await handleCashPayment();
+    }
+  };
+
   const handleDownloadInvoice = async () => {
     try {
       if (!request) return;
@@ -170,7 +312,14 @@ export default function RequestDetailsPage() {
   const meta = STATUS_META[request.status] || STATUS_META.pending;
 
   return (
-    <div className="page-container py-6 sm:py-10">
+    <>
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="afterInteractive"
+        onLoad={() => setRazorpayLoaded(true)}
+        onError={() => toast.error('Payment gateway script failed to load. Please refresh.')}
+      />
+      <div className="page-container py-6 sm:py-10">
       <Link
         href="/my-requests"
         className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
@@ -299,6 +448,100 @@ export default function RequestDetailsPage() {
         </div>
       )}
 
+      {/* Payment Section */}
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-surface-100">
+        <div className="mb-4 flex items-center gap-2">
+          <HiOutlineCurrencyRupee className="h-5 w-5 text-primary-500" />
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Service Payment</h2>
+        </div>
+
+        {(!request.totalAmount && !request.finalPrice) ? (
+          <div className="rounded-xl bg-slate-50 p-4 text-center dark:bg-white/5">
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+              Final service amount will be updated after inspection.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-white/10">
+              <span className="text-base font-medium text-slate-700 dark:text-slate-300">Total Amount</span>
+              <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                {formatPrice(request.totalAmount || request.finalPrice || 0)}
+              </span>
+            </div>
+
+            {request.paymentStatus === 'paid' ? (
+              <div className="flex items-center gap-3 rounded-xl bg-emerald-50 p-4 dark:bg-emerald-500/10">
+                <HiOutlineCheckCircle className="h-6 w-6 text-emerald-500" />
+                <div>
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-400">Payment Successful</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500">
+                    Paid via {request.paymentMethod === 'razorpay' ? 'Online (Razorpay)' : 'Cash'}
+                  </p>
+                </div>
+              </div>
+            ) : request.paymentMethod === 'cash' && request.paymentStatus === 'pending' ? (
+              <div className="flex items-center gap-3 rounded-xl bg-amber-50 p-4 dark:bg-amber-500/10">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-500/20">
+                  <span className="text-xl">💵</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-amber-700 dark:text-amber-400">Payment Method: Cash</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500">Payment Status: Pending at service center.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Choose Payment Method:</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    onClick={() => setSelectedPayment('razorpay')}
+                    className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+                      selectedPayment === 'razorpay'
+                        ? 'border-primary-500 bg-primary-500/5 shadow-sm'
+                        : 'border-slate-200 bg-transparent hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-2xl">💳</span>
+                    <div>
+                      <p className={`text-sm font-bold ${selectedPayment === 'razorpay' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>Pay Online (Razorpay)</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">UPI · Cards · Net Banking · Wallets</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedPayment('cash')}
+                    className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+                      selectedPayment === 'cash'
+                        ? 'border-primary-500 bg-primary-500/5 shadow-sm'
+                        : 'border-slate-200 bg-transparent hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-2xl">💵</span>
+                    <div>
+                      <p className={`text-sm font-bold ${selectedPayment === 'cash' ? 'text-primary-600 dark:text-primary-400' : 'text-gray-900 dark:text-white'}`}>Pay at Service Center</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Cash on Delivery / Cash at Store</p>
+                    </div>
+                  </button>
+                </div>
+
+                <button
+                  onClick={handlePayment}
+                  disabled={isPaying}
+                  className="w-full flex justify-center items-center gap-2 rounded-xl bg-primary-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPaying ? (
+                    <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Processing...</>
+                  ) : (
+                    selectedPayment === 'razorpay' ? `Pay Now · ${formatPrice(request.totalAmount || request.finalPrice || 0)}` : 'Confirm Cash Payment'
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Review Section */}
       {request.status === 'completed' && (
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-surface-100">
@@ -365,5 +608,6 @@ export default function RequestDetailsPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

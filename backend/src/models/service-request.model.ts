@@ -28,6 +28,9 @@ export interface IServiceRequest {
   paymentStatus?: 'pending' | 'paid';
   invoiceNumber?: string;
   invoiceDate?: Date;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

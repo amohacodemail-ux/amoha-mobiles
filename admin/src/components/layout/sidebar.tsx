@@ -49,8 +49,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/suppliers', label: 'Suppliers', icon: Truck, module: 'suppliers' },
   { href: '/purchase/supplier-products', label: 'Supplier Catalogues', icon: Store, module: 'suppliers' },
   { href: '/supplier-entries', label: 'Supplier Entries', icon: ClipboardList, module: 'supplier_entries' },
-  { href: '/supplier-portal', label: 'My Portal', icon: Store, module: 'supplier_portal' },
-  { href: '/supplier-portal/my-products', label: 'My Products', icon: Package, module: 'supplier_portal' },
   { href: '/rfq', label: 'RFQ', icon: FileQuestion, module: 'rfq' },
   { href: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingBag, module: 'purchase_requests' },
   { href: '/purchase/grn', label: 'GRN', icon: Package, module: 'grn' },

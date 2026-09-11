@@ -4,7 +4,9 @@ import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import { AuthenticatedRequest } from '../types';
 import { notifyServiceRequest } from '../utils/notify';
 import { sendServiceRequestStatusEmail, sendServiceRequestCreatedEmail } from '../utils/email.util';
-import { AppError } from '../errors/app-error';
+import { AppError, BadRequestError } from '../errors/app-error';
+import paymentService from '../services/payment.service';
+import env from '../config/env';
 
 class ServiceRequestController {
   // Public: submit a service request
@@ -285,6 +287,105 @@ class ServiceRequestController {
         businessPhone: '+91 6380123183',
         businessEmail: 'amohamimpex@gmail.com',
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Payment: create Razorpay order for service request
+  async createPaymentOrder(req: Request, res: Response, next: NextFunction) {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const request = await serviceRequestService.getById(req.params.id);
+
+      const requestUserId = request.user?.id || request.user?._id || request.user?.toString() || request.userId;
+      if (requestUserId !== authReq.user!.userId) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+
+      const totalAmount = request.totalAmount || request.finalPrice;
+      if (!totalAmount || totalAmount <= 0) {
+        throw new BadRequestError('Service request total amount is not set or invalid');
+      }
+
+      if (request.paymentStatus === 'paid') {
+        throw new BadRequestError('Payment is already completed for this service request');
+      }
+
+      const razorpayOrder = await paymentService.createRazorpayOrder(totalAmount, 'INR');
+      const result = {
+        razorpayOrderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        keyId: env.RAZORPAY_KEY_ID,
+        totalAmount,
+      };
+
+      sendSuccess(res, result, 'Razorpay order created for service request');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Payment: verify Razorpay payment for service request
+  async verifyPayment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+
+      const request = await serviceRequestService.getById(req.params.id);
+
+      const requestUserId = request.user?.id || request.user?._id || request.user?.toString() || request.userId;
+      if (requestUserId !== authReq.user!.userId) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+
+      const paymentData = {
+        razorpay_order_id: razorpayOrderId,
+        razorpay_payment_id: razorpayPaymentId,
+        razorpay_signature: razorpaySignature,
+      };
+
+      const verification = await paymentService.verifyPayment(paymentData);
+      if (!verification.verified) {
+        throw new BadRequestError('Payment verification failed');
+      }
+
+      const updatedRequest = await serviceRequestService.updateStatus(request._id.toString(), {
+        paymentMethod: 'razorpay',
+        paymentStatus: 'paid',
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature,
+      });
+
+      sendSuccess(res, updatedRequest, 'Payment verified and service request updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Payment: set cash payment
+  async cashPayment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const request = await serviceRequestService.getById(req.params.id);
+
+      const requestUserId = request.user?.id || request.user?._id || request.user?.toString() || request.userId;
+      if (requestUserId !== authReq.user!.userId) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+
+      if (request.paymentStatus === 'paid') {
+        throw new BadRequestError('Payment is already completed for this service request');
+      }
+
+      const updatedRequest = await serviceRequestService.updateStatus(request._id.toString(), {
+        paymentMethod: 'cash',
+        paymentStatus: 'pending',
+      });
+
+      sendSuccess(res, updatedRequest, 'Payment method set to cash');
     } catch (error) {
       next(error);
     }

@@ -39,6 +39,9 @@ router.post('/', (req, res, next) => {
 // Authenticated: get my requests
 router.get('/my-requests', authenticate, serviceRequestController.getMyRequests);
 router.get('/my-requests/:id', authenticate, serviceRequestController.getMyRequestById);
+router.post('/my-requests/:id/create-payment-order', authenticate, serviceRequestController.createPaymentOrder);
+router.post('/my-requests/:id/verify-payment', authenticate, serviceRequestController.verifyPayment);
+router.post('/my-requests/:id/cash-payment', authenticate, serviceRequestController.cashPayment);
 
 // Admin & Service Engineer routes (view and update)
 router.get('/', authenticate, canAccessServiceEngineer, serviceRequestController.getAll);
