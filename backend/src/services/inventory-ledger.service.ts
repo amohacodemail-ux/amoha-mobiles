@@ -2,6 +2,7 @@ import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import logger from '../utils/logger.util';
+import stockNotificationService from './stock-notification.service';
 
 /**
  * InventoryLedgerService — the SINGLE source of truth for stock.
@@ -223,9 +224,33 @@ class InventoryLedgerService {
     await supabase.from('products').update({ stock: newAvailable }).eq('id', productId);
 
     const after = { ...before, totalStock: newTotal, availableStock: newAvailable };
-    await this.audit(inv._id, productId, 'stock_added', quantity, before, after, 'manual', null, notes || `Added ${quantity} units`, performedBy);
+    const auditId = await this.audit(inv._id, productId, 'stock_added', quantity, before, after, 'manual', null, notes || `Added ${quantity} units`, performedBy);
+
+    // TRIGGER WHATSAPP STOCK NOTIFICATIONS
+    // We do this in the background (fire-and-forget) to not block the request 
+    // or fail the inventory update if WhatsApp API fails.
+    if (before.availableStock === 0 && newAvailable > 0 && auditId) {
+      this.triggerStockNotifications(productId, auditId).catch(err => {
+         logger.error(`[InventoryLedgerService] Failed to process background stock notifications for product ${productId}:`, err);
+      });
+    }
 
     return { before, after, quantityChanged: quantity };
+  }
+
+  /**
+   * Helper to fetch product details and trigger stock notifications safely in the background
+   */
+  private async triggerStockNotifications(productId: string, stockEventReference: string) {
+    try {
+      const { data: product } = await supabase.from('products').select('name, slug').eq('id', productId).single();
+      if (!product) return;
+      
+      const productUrl = `${process.env.FRONTEND_URL || 'https://amohamobiles.com'}/products/${product.slug}`;
+      await stockNotificationService.processRestockNotifications(productId, product.name, productUrl, stockEventReference);
+    } catch (err) {
+      logger.error(`[InventoryLedgerService] Error in triggerStockNotifications for ${productId}:`, err);
+    }
   }
 
   async removeStock(productId: string, quantity: number, notes: string, performedBy: string) {
@@ -454,9 +479,9 @@ class InventoryLedgerService {
     referenceId: string | null,
     notes: string,
     performedBy: string | null,
-  ) {
+  ): Promise<string | undefined> {
     try {
-      await supabase.from('inventory_audit_log').insert({
+      const { data, error } = await supabase.from('inventory_audit_log').insert({
         inventory_id: inventoryId,
         product_id: productId,
         action,
@@ -467,9 +492,13 @@ class InventoryLedgerService {
         reference_id: referenceId,
         notes,
         performed_by: performedBy,
-      });
+      }).select('id').single();
+      
+      if (error) throw error;
+      return data?.id;
     } catch (err) {
       logger.error('Failed to write inventory audit log:', err);
+      return undefined;
     }
   }
 }

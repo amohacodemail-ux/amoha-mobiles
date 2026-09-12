@@ -17,6 +17,9 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
   RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required for payment processing'),
   RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required for payment processing'),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_API_VERSION: z.string().default('v20.0'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -42,6 +45,9 @@ const env = {
   IS_PRODUCTION: parsed.data.NODE_ENV === 'production',
   RAZORPAY_KEY_ID: parsed.data.RAZORPAY_KEY_ID,
   RAZORPAY_KEY_SECRET: parsed.data.RAZORPAY_KEY_SECRET,
+  WHATSAPP_ACCESS_TOKEN: parsed.data.WHATSAPP_ACCESS_TOKEN,
+  WHATSAPP_PHONE_NUMBER_ID: parsed.data.WHATSAPP_PHONE_NUMBER_ID,
+  WHATSAPP_API_VERSION: parsed.data.WHATSAPP_API_VERSION,
 } as const;
 
 export default env;
