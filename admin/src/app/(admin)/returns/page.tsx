@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useDebouncedValue } from '@/lib/hooks';
 import { useAuthStore } from '@/store/auth.store';
+import { withRoleGuard } from '@/components/shared/role-guard';
 import toast from 'react-hot-toast';
 import { Eye, RotateCcw, Package, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -62,7 +63,7 @@ function getReturnStatusColor(status: ReturnStatus): string {
   return map[status] ?? 'bg-muted text-muted-foreground';
 }
 
-export default function ReturnsPage() {
+function ReturnsPage() {
   const { user } = useAuthStore();
   const [returns, setReturns] = useState<ReturnRequest[]>([]);
   const [stats, setStats] = useState<ReturnStats | null>(null);
@@ -273,3 +274,5 @@ export default function ReturnsPage() {
     </div>
   );
 }
+// Returns: admin + logistics only (NOT sales)
+export default withRoleGuard(ReturnsPage, ['admin', 'logistics']);

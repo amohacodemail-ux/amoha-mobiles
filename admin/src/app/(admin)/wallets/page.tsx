@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useDebouncedValue } from '@/lib/hooks';
+import { withRoleGuard } from '@/components/shared/role-guard';
 import toast from 'react-hot-toast';
 import { Wallet, Plus } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -16,7 +17,7 @@ import type { AdminWallet } from '@/types';
 
 const LIMIT = 20;
 
-export default function WalletsPage() {
+function WalletsPage() {
   const [wallets, setWallets] = useState<AdminWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -172,3 +173,5 @@ export default function WalletsPage() {
     </div>
   );
 }
+// Wallets: admin only (NOT sales, logistics, or marketing)
+export default withRoleGuard(WalletsPage, ['admin']);

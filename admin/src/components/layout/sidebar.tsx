@@ -7,7 +7,9 @@ import {
   ChevronRight, Smartphone, LogOut, X, Wrench, Mail, Bell,
   Eye, AlertCircle, Users2, Barcode, FileText, RotateCcw, Wallet, Activity,
   Truck, Warehouse, ClipboardList, FileQuestion, ShoppingBag,
-  Receipt, IndianRupee, Shield, Store, Megaphone, Navigation, MapPin, UserCheck, PackageCheck, Banknote
+  Receipt, IndianRupee, Shield, Store, Megaphone, Navigation, MapPin, UserCheck, PackageCheck, Banknote,
+  CalendarDays, Route, Target, DollarSign, Clock, CalendarOff,
+  Ruler, BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
@@ -60,6 +62,17 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/shipment-tracking', label: 'Shipment Tracking', icon: MapPin, module: 'shipment_tracking' },
   { href: '/pickup-management', label: 'Pickup Management', icon: PackageCheck, module: 'pickup_management' },
   { href: '/cod-collection', label: 'COD Collection', icon: Banknote, module: 'cod_collection' },
+  // ---- Sales-specific activity modules ----
+  { href: '/sales-activities', label: 'Daily Activity', icon: CalendarDays, module: 'daily_activity' },
+  { href: '/tour-plan', label: 'Tour Plan / My Day', icon: Route, module: 'tour_plan' },
+  { href: '/targets', label: 'Targets', icon: Target, module: 'targets' },
+  { href: '/expenses', label: 'Expense Management', icon: DollarSign, module: 'expenses' },
+  { href: '/attendance', label: 'Attendance', icon: Clock, module: 'attendance' },
+  { href: '/leave', label: 'Leave Management', icon: CalendarOff, module: 'leave' },
+  // ---- Sales SalesJump modules ----
+  { href: '/geo-tag', label: 'Geo-Tag / Geo-Fence', icon: MapPin, module: 'geo_tag' },
+  { href: '/product-detailing', label: 'Product Detailing', icon: BookOpen, module: 'product_detailing' },
+  { href: '/distance-calculation', label: 'Distance Calculation', icon: Ruler, module: 'distance_calculation' },
 ];
 
 interface SidebarProps {
@@ -101,6 +114,13 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
         title: collapsed ? undefined : 'Sales',
         items: filteredNavItems.filter(i =>
           ['orders', 'billing', 'barcode_pos', 'returns', 'wallets'].includes(i.module)
+        ),
+      },
+      {
+        title: collapsed ? undefined : 'Sales Tools',
+        items: filteredNavItems.filter(i =>
+          ['daily_activity', 'tour_plan', 'targets', 'expenses', 'attendance', 'leave',
+            'geo_tag', 'product_detailing', 'distance_calculation'].includes(i.module)
         ),
       },
       {
@@ -203,9 +223,9 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
               {group.items.map(({ href, label, icon: Icon }) => {
                 const isExactMatch = pathname === href;
                 const isSubRoute = pathname.startsWith(href + '/');
-                const hasMoreSpecificMatch = isSubRoute && ALL_NAV_ITEMS.some(item => 
-                  item.href !== href && 
-                  item.href.startsWith(href + '/') && 
+                const hasMoreSpecificMatch = isSubRoute && ALL_NAV_ITEMS.some(item =>
+                  item.href !== href &&
+                  item.href.startsWith(href + '/') &&
                   (pathname === item.href || pathname.startsWith(item.href + '/'))
                 );
                 const active = isExactMatch || (isSubRoute && !hasMoreSpecificMatch);

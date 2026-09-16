@@ -83,8 +83,6 @@ export const canAccessPurchase = (req: AuthenticatedRequest, res: Response, next
   return authorize('admin', 'purchase', 'purchase_inventory')(req, res, next);
 };
 
-export const canAccessRFQ = authorize('admin', 'purchase', 'purchase_inventory', 'supplier');
-
 // ---- MARKETING MODULE ----
 /** Marketing operations: coupons, banners, reviews, CRM, campaigns */
 export const canAccessMarketing = authorize('admin', 'marketing', 'digital_marketing');
@@ -100,9 +98,9 @@ export const canAccessLogistics = authorize('admin', 'logistics');
 /** Supplier portal access */
 export const canAccessSupplier = authorize('admin', 'supplier');
 
-// ---- UPLOAD MODULE ----
-/** Upload operations: access for teams that need to upload images */
-export const canUpload = authorize('admin', 'purchase', 'purchase_inventory', 'supplier', 'marketing', 'digital_marketing');
+// ---- RFQ MODULE ----
+/** RFQ (Request for Quotation) — accessible by admin, purchase, and supplier */
+export const canAccessRFQ = authorize('admin', 'purchase', 'purchase_inventory', 'supplier');
 
 // ---- SERVICE ENGINEER MODULE ----
 /** Service center operations: view and update service requests */
@@ -112,6 +110,10 @@ export const canViewServiceRequests = authorize('admin', 'service_engineer', 'sa
 // ---- ADMIN-ONLY MODULES ----
 /** System settings, user management, activity logs */
 export const canAccessAdminOnly = authorize('admin', 'service_engineer');
+
+// ---- UPLOAD MODULE ----
+/** File/image uploads — accessible by all internal roles */
+export const canUpload = authorize('admin', 'sales', 'purchase', 'purchase_inventory', 'marketing', 'digital_marketing', 'logistics', 'service_engineer', 'supplier');
 
 // ==================== COMBINED AUTHORIZERS ====================
 
@@ -174,11 +176,18 @@ export function getAccessibleModules(role: UserRole): string[] {
       'contact_messages', 'notifications', 'product_views', 'abandoned_carts',
       'crm', 'barcode_pos', 'returns', 'wallets', 'activity_logs', 'suppliers',
       'supplier_entries', 'rfq', 'purchase_requests', 'inventory', 'policies', 'settings',
-      'delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment', 'cod_collection'
+      'delivery_management', 'pickup_management', 'shipment_tracking', 'delivery_assignment', 'cod_collection',
+      // Sales SalesJump modules (admin has full access)
+      'geo_tag', 'product_detailing', 'distance_calculation',
     ],
     sales: [
       'dashboard', 'products', 'categories', 'brands', 'orders', 'billing', 'reports', 'barcode_pos',
-      'returns', 'wallets', 'notifications', 'policies'
+      'notifications', 'policies',
+      // Sales-specific activity modules
+      'daily_activity', 'tour_plan', 'targets', 'expenses', 'attendance', 'leave',
+      // Sales SalesJump modules
+      'geo_tag', 'product_detailing', 'distance_calculation',
+      // Note: 'returns' and 'wallets' intentionally removed for sales role
     ],
     purchase: [
       'dashboard', 'products', 'categories', 'brands', 'inventory',

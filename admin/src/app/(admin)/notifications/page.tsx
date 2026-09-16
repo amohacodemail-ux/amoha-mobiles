@@ -49,6 +49,7 @@ export default function NotificationsPage() {
   const isMarketing = hasRole('marketing', 'digital_marketing');
   const isLogistics = hasRole('logistics');
   const isServiceEngineer = hasRole('service_engineer');
+  const isSales = hasRole('sales');
   
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,14 +57,19 @@ export default function NotificationsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [filterType, setFilterType] = useState(
     isMarketing || isLogistics ? 'review' :
-    isServiceEngineer ? 'service_request' : ''
+    isServiceEngineer ? 'service_request' :
+    isSales ? '' : ''
   );
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
+  // Filter notification types visible per role
   const filterTypes = isMarketing || isLogistics
     ? ALL_FILTER_TYPES.filter(f => f.value === 'review')
     : isServiceEngineer
     ? ALL_FILTER_TYPES.filter(f => f.value === 'service_request')
+    : isSales
+    // Sales users: only see order, low_stock, system notifications
+    ? ALL_FILTER_TYPES.filter(f => ['', 'order', 'low_stock', 'system'].includes(f.value))
     : ALL_FILTER_TYPES;
 
   const fetchNotifications = useCallback(async () => {
@@ -267,13 +273,28 @@ export default function NotificationsPage() {
             <Button variant="outline" onClick={() => setSelectedNotification(null)}>
               Close
             </Button>
-            {selectedNotification?.link && (
+            {selectedNotification?.link && !isSales && (
               <Button onClick={() => {
                 router.push(selectedNotification.link);
                 setSelectedNotification(null);
               }}>
                 View Related Details
               </Button>
+            )}
+            {selectedNotification?.link && isSales && (
+              // For sales, only allow navigation to order-related links; block admin-only pages
+              (() => {
+                const link = selectedNotification.link;
+                const isSafeLink = link.startsWith('/orders') || link.startsWith('/barcode') || link.startsWith('/dashboard');
+                return isSafeLink ? (
+                  <Button onClick={() => {
+                    router.push(link);
+                    setSelectedNotification(null);
+                  }}>
+                    View Details
+                  </Button>
+                ) : null;
+              })()
             )}
           </DialogFooter>
         </DialogContent>

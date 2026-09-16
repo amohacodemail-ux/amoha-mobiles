@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useDebouncedValue } from '@/lib/hooks';
+import { withRoleGuard } from '@/components/shared/role-guard';
 import toast from 'react-hot-toast';
 import { ShieldBan, ShieldCheck, Trash2, CheckCircle2, XCircle, UserPlus, X } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -132,7 +133,7 @@ function AddUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
 const LIMIT = 10;
 
-export default function UsersPage() {
+function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -283,3 +284,5 @@ export default function UsersPage() {
     </div>
   );
 }
+// Only admin can access Users management page
+export default withRoleGuard(UsersPage, ['admin']);

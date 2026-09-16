@@ -32,14 +32,24 @@ export function normalizeRole(role: UserRole): UserRole {
 
 // Module definitions
 export const MODULES = {
-  // Sales modules
+  // Core / Dashboard
   DASHBOARD: 'dashboard',
+
+  // Sales modules
   ORDERS: 'orders',
   BILLING: 'billing',
   REPORTS: 'reports',
   BARCODE_POS: 'barcode_pos',
   RETURNS: 'returns',
   WALLETS: 'wallets',
+
+  // Sales-specific activity modules (new)
+  DAILY_ACTIVITY: 'daily_activity',
+  TOUR_PLAN: 'tour_plan',
+  TARGETS: 'targets',
+  EXPENSES: 'expenses',
+  ATTENDANCE: 'attendance',
+  LEAVE: 'leave',
 
   // Purchase modules
   PRODUCTS: 'products',
@@ -83,6 +93,11 @@ export const MODULES = {
 
   // Supplier portal
   SUPPLIER_PORTAL: 'supplier_portal',
+
+  // Sales SalesJump modules
+  GEO_TAG: 'geo_tag',
+  PRODUCT_DETAILING: 'product_detailing',
+  DISTANCE_CALCULATION: 'distance_calculation',
 } as const;
 
 export type Module = typeof MODULES[keyof typeof MODULES];
@@ -108,6 +123,13 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.BARCODE_POS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.RETURNS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.WALLETS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    // Sales-specific activity modules (admin has full access)
+    [MODULES.DAILY_ACTIVITY]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.TOUR_PLAN]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.TARGETS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.EXPENSES]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.ATTENDANCE]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.LEAVE]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     // Purchase
     [MODULES.PRODUCTS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.CATEGORIES]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
@@ -145,21 +167,40 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SHIPMENT_TRACKING]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.DELIVERY_ASSIGNMENT]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.COD_COLLECTION]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    // Sales SalesJump modules (admin: full CRUD)
+    [MODULES.GEO_TAG]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.PRODUCT_DETAILING]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
+    [MODULES.DISTANCE_CALCULATION]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
   },
 
   sales: {
-    // Sales modules - full access except delete
+    // ---- Core ----
     [MODULES.DASHBOARD]: [ACTIONS.READ],
-    [MODULES.ORDERS]: [ACTIONS.READ],
-    [MODULES.BILLING]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT],
-    [MODULES.REPORTS]: [ACTIONS.READ],
-    [MODULES.BARCODE_POS]: [ACTIONS.READ, ACTIONS.CREATE],
-    [MODULES.RETURNS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT],
-    [MODULES.WALLETS]: [ACTIONS.READ],
-    // No access to purchase, marketing, admin modules
+
+    // ---- Sales operational modules ----
+    [MODULES.ORDERS]: [ACTIONS.READ, ACTIONS.CREATE],        // create own orders
+    [MODULES.BILLING]: [ACTIONS.READ, ACTIONS.CREATE],       // create POS billing
+    [MODULES.REPORTS]: [ACTIONS.READ],                       // view own reports only
+    [MODULES.BARCODE_POS]: [ACTIONS.READ, ACTIONS.CREATE],   // POS billing
+
+    // ---- NO access to Returns, Wallets ----
+    [MODULES.RETURNS]: [],
+    [MODULES.WALLETS]: [],
+
+    // ---- Sales activity modules (new) ----
+    [MODULES.DAILY_ACTIVITY]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT],
+    [MODULES.TOUR_PLAN]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT],
+    [MODULES.TARGETS]: [ACTIONS.READ],                       // view-only targets
+    [MODULES.EXPENSES]: [ACTIONS.READ, ACTIONS.CREATE],      // add + view own
+    [MODULES.ATTENDANCE]: [ACTIONS.READ, ACTIONS.CREATE],    // mark + view own
+    [MODULES.LEAVE]: [ACTIONS.READ, ACTIONS.CREATE],         // apply + view own
+
+    // ---- Catalog: view-only ----
     [MODULES.PRODUCTS]: [ACTIONS.READ],
     [MODULES.CATEGORIES]: [ACTIONS.READ],
     [MODULES.BRANDS]: [ACTIONS.READ],
+
+    // ---- No access to Purchase, Marketing, Admin, Logistics modules ----
     [MODULES.INVENTORY]: [],
     [MODULES.SUPPLIERS]: [],
     [MODULES.SUPPLIER_ENTRIES]: [],
@@ -179,7 +220,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.ABANDONED_CARTS]: [],
     [MODULES.CRM]: [],
     [MODULES.USERS]: [],
-    [MODULES.SERVICE_REQUESTS]: [ACTIONS.READ],
+    [MODULES.SERVICE_REQUESTS]: [],
     [MODULES.NOTIFICATIONS]: [ACTIONS.READ],
     [MODULES.ACTIVITY_LOGS]: [],
     [MODULES.POLICIES]: [ACTIONS.READ],
@@ -190,10 +231,21 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
     [MODULES.COD_COLLECTION]: [],
+    // ---- Sales SalesJump modules ----
+    [MODULES.GEO_TAG]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT],
+    [MODULES.PRODUCT_DETAILING]: [ACTIONS.READ],
+    [MODULES.DISTANCE_CALCULATION]: [ACTIONS.READ, ACTIONS.CREATE],
   },
 
   purchase: {
     // Purchase modules - full access including delete
+    // New sales-specific modules — no access for purchase
+    [MODULES.DAILY_ACTIVITY]: [],
+    [MODULES.TOUR_PLAN]: [],
+    [MODULES.TARGETS]: [],
+    [MODULES.EXPENSES]: [],
+    [MODULES.ATTENDANCE]: [],
+    [MODULES.LEAVE]: [],
 
     [MODULES.DASHBOARD]: [ACTIONS.READ],
     [MODULES.PRODUCTS]: [ACTIONS.READ],
@@ -236,10 +288,22 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
     [MODULES.COD_COLLECTION]: [],
+    // Sales SalesJump modules — no access for purchase
+    [MODULES.GEO_TAG]: [],
+    [MODULES.PRODUCT_DETAILING]: [],
+    [MODULES.DISTANCE_CALCULATION]: [],
   },
 
   marketing: {
     // Marketing modules - full access
+    // New sales-specific modules — no access for marketing
+    [MODULES.DAILY_ACTIVITY]: [],
+    [MODULES.TOUR_PLAN]: [],
+    [MODULES.TARGETS]: [],
+    [MODULES.EXPENSES]: [],
+    [MODULES.ATTENDANCE]: [],
+    [MODULES.LEAVE]: [],
+
     [MODULES.DASHBOARD]: [ACTIONS.READ],
     [MODULES.CAMPAIGNS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
     [MODULES.COUPONS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
@@ -281,9 +345,21 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
     [MODULES.COD_COLLECTION]: [],
+    // Sales SalesJump modules — no access for marketing
+    [MODULES.GEO_TAG]: [],
+    [MODULES.PRODUCT_DETAILING]: [],
+    [MODULES.DISTANCE_CALCULATION]: [],
   },
 
   logistics: {
+    // New sales-specific modules — no access for logistics
+    [MODULES.DAILY_ACTIVITY]: [],
+    [MODULES.TOUR_PLAN]: [],
+    [MODULES.TARGETS]: [],
+    [MODULES.EXPENSES]: [],
+    [MODULES.ATTENDANCE]: [],
+    [MODULES.LEAVE]: [],
+
     [MODULES.DASHBOARD]: [ACTIONS.READ],
     [MODULES.ORDERS]: [ACTIONS.READ, ACTIONS.EDIT],
     [MODULES.RETURNS]: [ACTIONS.READ, ACTIONS.CREATE, ACTIONS.EDIT, ACTIONS.DELETE],
@@ -325,10 +401,22 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.BARCODE_POS]: [],
     [MODULES.WALLETS]: [],
     [MODULES.COD_COLLECTION]: [ACTIONS.READ, ACTIONS.EDIT],
+    // Sales SalesJump modules — no access for logistics
+    [MODULES.GEO_TAG]: [],
+    [MODULES.PRODUCT_DETAILING]: [],
+    [MODULES.DISTANCE_CALCULATION]: [],
   },
 
   supplier: {
     // Supplier - portal access only
+    // New sales-specific modules — no access for supplier
+    [MODULES.DAILY_ACTIVITY]: [],
+    [MODULES.TOUR_PLAN]: [],
+    [MODULES.TARGETS]: [],
+    [MODULES.EXPENSES]: [],
+    [MODULES.ATTENDANCE]: [],
+    [MODULES.LEAVE]: [],
+
     [MODULES.DASHBOARD]: [],
     [MODULES.RFQ]: [ACTIONS.READ, ACTIONS.EDIT],
     [MODULES.NOTIFICATIONS]: [ACTIONS.READ],
@@ -370,10 +458,21 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
     [MODULES.COD_COLLECTION]: [],
+    // Sales SalesJump modules — no access for supplier
+    [MODULES.GEO_TAG]: [],
+    [MODULES.PRODUCT_DETAILING]: [],
+    [MODULES.DISTANCE_CALCULATION]: [],
   },
 
   user: {
     // Regular users - no admin access
+    [MODULES.DAILY_ACTIVITY]: [],
+    [MODULES.TOUR_PLAN]: [],
+    [MODULES.TARGETS]: [],
+    [MODULES.EXPENSES]: [],
+    [MODULES.ATTENDANCE]: [],
+    [MODULES.LEAVE]: [],
+
     [MODULES.DASHBOARD]: [],
     [MODULES.ORDERS]: [],
     [MODULES.BILLING]: [],
@@ -414,10 +513,21 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
     [MODULES.COD_COLLECTION]: [],
+    // Sales SalesJump modules — no access for user
+    [MODULES.GEO_TAG]: [],
+    [MODULES.PRODUCT_DETAILING]: [],
+    [MODULES.DISTANCE_CALCULATION]: [],
   },
 
   service_engineer: {
     // Service engineers - only access to service requests
+    [MODULES.DAILY_ACTIVITY]: [],
+    [MODULES.TOUR_PLAN]: [],
+    [MODULES.TARGETS]: [],
+    [MODULES.EXPENSES]: [],
+    [MODULES.ATTENDANCE]: [],
+    [MODULES.LEAVE]: [],
+
     [MODULES.DASHBOARD]: [],
     [MODULES.ORDERS]: [],
     [MODULES.BILLING]: [],
@@ -458,6 +568,10 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
     [MODULES.SHIPMENT_TRACKING]: [],
     [MODULES.DELIVERY_ASSIGNMENT]: [],
     [MODULES.COD_COLLECTION]: [],
+    // Sales SalesJump modules — no access for service_engineer
+    [MODULES.GEO_TAG]: [],
+    [MODULES.PRODUCT_DETAILING]: [],
+    [MODULES.DISTANCE_CALCULATION]: [],
   },
 
   // Legacy roles - mapped to standard roles
@@ -468,6 +582,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Record<Module, Action[]>> = {
 // Map legacy roles to standard permissions
 ROLE_PERMISSIONS.digital_marketing = ROLE_PERMISSIONS.marketing;
 ROLE_PERMISSIONS.purchase_inventory = ROLE_PERMISSIONS.purchase;
+
 
 /**
  * Check if user has permission for a module and action

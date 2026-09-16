@@ -30,7 +30,9 @@ interface AdminUser {
   created_at: string;
 }
 
-export default function AdminUsersPage() {
+import { withRoleGuard } from '@/components/shared/role-guard';
+
+function AdminUsersPage() {
   const router = useRouter();
   const { isAdmin } = usePermissions();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -432,3 +434,5 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+// Only admin can access Admin Users management
+export default withRoleGuard(AdminUsersPage, ['admin']);

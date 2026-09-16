@@ -31,6 +31,7 @@ import purchaseRoutes from './purchase.routes';
 import purchaseRequestRoutes from './purchase-request.routes';
 import healthRoutes from './health.routes';
 import reviewRoutes from './review.routes';
+import salesRoutes from './sales.routes';
 
 const router = Router();
 
@@ -68,6 +69,7 @@ router.use('/rfq', rfqRoutes);
 router.use('/purchase', purchaseRoutes);
 router.use('/purchase-requests', purchaseRequestRoutes);
 router.use('/reviews', reviewRoutes);
+router.use('/sales', salesRoutes);
 // Alias: old image URLs used /api/images/:id — redirect to canonical /api/upload/:id
 router.get('/images/:id', (req, res) => res.redirect(301, `/api/upload/${req.params.id}`));
 
