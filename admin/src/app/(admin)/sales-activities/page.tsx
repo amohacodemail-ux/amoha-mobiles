@@ -373,7 +373,7 @@ function SalesActivityView() {
       };
 
       if (editItem) {
-        await dailyActivityService.update(editItem._id, payload);
+        await dailyActivityService.update(editItem._id, payload as Partial<DailyActivity>);
         toast.success('Activity updated!');
       } else {
         await dailyActivityService.create(payload);

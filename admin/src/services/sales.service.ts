@@ -66,6 +66,7 @@ export interface Expense {
   distanceKm: number;
   status: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
+  remarks?: string;
   createdAt: string;
   user?: { id: string; name: string; email: string };
 }
@@ -198,10 +199,11 @@ export const targetsService = {
 // ====================== EXPENSES ======================
 
 export const expenseService = {
-  getAll: async (params: { page?: number; limit?: number } = {}) => {
+  getAll: async (params: { page?: number; limit?: number; status?: string } = {}) => {
     const p = new URLSearchParams();
     if (params.page) p.set('page', String(params.page));
     if (params.limit) p.set('limit', String(params.limit));
+    if (params.status) p.set('status', params.status);
     const { data } = await apiClient.get<ApiResponse<{ expenses: Expense[]; total: number; totalPages: number; currentPage: number }>>(`/sales/expenses?${p}`);
     return data.data;
   },

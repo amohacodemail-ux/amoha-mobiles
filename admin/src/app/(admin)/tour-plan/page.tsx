@@ -245,7 +245,7 @@ function SalesTourPlanView() {
       };
 
       if (editItem) {
-        await tourPlanService.update(editItem._id, payload);
+        await tourPlanService.update(editItem._id, payload as Partial<TourPlan>);
         toast.success('Tour plan updated!');
       } else {
         await tourPlanService.create(payload);
