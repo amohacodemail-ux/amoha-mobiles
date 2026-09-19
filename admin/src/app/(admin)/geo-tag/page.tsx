@@ -1,9 +1,10 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
   MapPin, Navigation, Loader2, RefreshCw, Shield, ShieldAlert,
   Plus, Pencil, History, Crosshair, Users, Filter, CircleAlert,
+  Radio, Square,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +17,13 @@ import { Pagination } from '@/components/shared/pagination';
 import { useModulePermissions, useIsAdmin, MODULES } from '@/hooks/usePermissions';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { geoTagService, geoFenceService, type GeoFence, type GeoTag, type GeoFenceValidation } from '@/services/sales.service';
+import { liveTracking, type LiveTrackingSnapshot } from '@/services/live-tracking';
+import dynamic from 'next/dynamic';
+
+const LiveTrackingView = dynamic(
+  () => import('@/components/live-tracking/live-tracking-view').then(m => m.LiveTrackingView),
+  { ssr: false },
+);
 
 const VISIT_TYPES = ['productive', 'non_productive', 'office', 'travel', 'other'];
 
@@ -287,6 +295,9 @@ function AdminGeoTagView() {
         </Button>
       </PageHeader>
 
+      {/* Live tracking */}
+      <LiveTrackingView />
+
       {/* Geo-Fences */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {loading ? (
@@ -494,15 +505,27 @@ function reverseGeocode(lat: number, lng: number): Promise<string> {
     .finally(() => clearTimeout(timer));
 }
 
+function TrackingStatusBadge({ status }: { status: LiveTrackingSnapshot['status'] }) {
+  const map: Record<LiveTrackingSnapshot['status'], { label: string; cls: string }> = {
+    not_tracking: { label: 'Not Tracking', cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+    tracking_active: { label: 'Tracking Active', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    tracking_stopped: { label: 'Tracking Stopped', cls: 'bg-gray-100 text-gray-600 border-gray-200' },
+    location_permission_denied: { label: 'Location Permission Denied', cls: 'bg-red-100 text-red-700 border-red-200' },
+    location_unavailable: { label: 'Location Unavailable', cls: 'bg-amber-100 text-amber-700 border-amber-200' },
+    last_location_available: { label: 'Last Location Available', cls: 'bg-sky-100 text-sky-700 border-sky-200' },
+  };
+  const item = map[status] || map.not_tracking;
+  return <Badge variant="outline" className={item.cls}>{item.label}</Badge>;
+}
+
 function SalesGeoTagView() {
   // Assigned territories (loaded automatically on module open — no GPS required)
   const [fences, setFences] = useState<GeoFence[]>([]);
   const [fencesLoading, setFencesLoading] = useState(true);
   const [selectedFenceId, setSelectedFenceId] = useState('');
 
-  // Current GPS location (captured only on demand)
-  const [coords, setCoords] = useState<{ lat: number; lng: number; accuracy: number | null } | null>(null);
-  const [locError, setLocError] = useState('');
+  // Live tracking — a single shared browser watcher (survives page navigation)
+  const [snap, setSnap] = useState<LiveTrackingSnapshot>(() => liveTracking.getSnapshot());
   const [locLoading, setLocLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [address, setAddress] = useState('');
@@ -517,6 +540,10 @@ function SalesGeoTagView() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+
+  const coords = snap.coords;
+  const isTracking = snap.status === 'tracking_active';
+  const locError = snap.errorMessage;
 
   const selectedFence = fences.find(f => f._id === selectedFenceId) || fences[0] || null;
   const assignedName = selectedFence?.assignedUser?.name || 'You';
@@ -555,6 +582,19 @@ function SalesGeoTagView() {
   useEffect(() => { loadFences(); }, [loadFences]);
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
+  // Subscribe to the shared tracking session and restore last-session metadata.
+  useEffect(() => {
+    liveTracking.restoreFromStorage();
+    setSnap(liveTracking.getSnapshot());
+    return liveTracking.subscribe(setSnap);
+  }, []);
+
+  // Keep the tracker bound to the assigned/selected territory.
+  useEffect(() => {
+    liveTracking.setFenceContext(selectedFence);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFenceId, fences.length]);
+
   const runValidation = useCallback(async (pos: { lat: number; lng: number }) => {
     if (!selectedFenceId) {
       setValidation(null);
@@ -572,53 +612,73 @@ function SalesGeoTagView() {
     }
   }, [selectedFenceId]);
 
-  // Re-validate when the assigned territory selection changes and a location is already captured
+  // Re-validate when the assigned territory selection changes and a fix is already present
   useEffect(() => {
     if (coords && selectedFenceId) void runValidation(coords);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFenceId]);
 
+  // Reverse-geocode the first available fix; live updates keep coords current afterwards.
+  const addressResolved = useRef(false);
+  useEffect(() => {
+    if (!coords || addressResolved.current) return;
+    setGeocoding(true);
+    let cancelled = false;
+    reverseGeocode(coords.lat, coords.lng).then((name) => {
+      if (cancelled) return;
+      addressResolved.current = true;
+      setGeocoding(false);
+      if (name) setAddress(name);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coords?.lat, coords?.lng]);
+
+  // Server-side geo-fence cross-check the first time a fix is available.
+  const didInitialValidation = useRef(false);
+  useEffect(() => {
+    if (coords) {
+      if (!didInitialValidation.current) {
+        didInitialValidation.current = true;
+        void runValidation(coords);
+      }
+    } else {
+      didInitialValidation.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coords, selectedFenceId]);
+
+  // Release the "acquiring location" spinner once a fresh fix arrives (or tracking terminates).
+  const pendingStart = useRef(false);
+  const lastFixAt = useRef<number | null>(null);
+  useEffect(() => {
+    if (snap.fixAt !== null && snap.fixAt !== undefined && snap.fixAt !== lastFixAt.current) {
+      lastFixAt.current = snap.fixAt;
+      if (pendingStart.current) {
+        pendingStart.current = false;
+        setLocLoading(false);
+      }
+    }
+    if (pendingStart.current && ['not_tracking', 'tracking_stopped', 'location_permission_denied', 'location_unavailable'].includes(snap.status)) {
+      pendingStart.current = false;
+      setLocLoading(false);
+    }
+  }, [snap.fixAt, snap.status]);
+
   const captureLocation = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setLocError('Geolocation is not supported by this browser. Use a modern browser on a device with GPS.');
+      setSnap(s => ({ ...s, errorMessage: 'Geolocation is not supported by this browser. Use a modern browser on a device with GPS.' }));
       return;
     }
+    pendingStart.current = true;
     setLocLoading(true);
-    setLocError('');
     setValidation(null);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const acc = isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null;
-        const nextCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: acc };
-        setCoords(nextCoords);
-        setLocLoading(false);
+    liveTracking.startTracking(selectedFence);
+  }, [selectedFence]);
 
-        setGeocoding(true);
-        const locationName = await reverseGeocode(nextCoords.lat, nextCoords.lng);
-        setGeocoding(false);
-        setAddress(locationName || '');
-
-        void runValidation(nextCoords);
-      },
-      (err) => {
-        setLocLoading(false);
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            setLocError('Location permission was denied. Enable location access for this site in your browser settings and try again.');
-            break;
-          case err.POSITION_UNAVAILABLE:
-            setLocError('Location is unavailable right now. Make sure GPS/Wi-Fi is enabled and try again.');
-            break;
-          case err.TIMEOUT:
-            setLocError('Location request timed out. Move to an open area and try again.');
-            break;
-          default:
-            setLocError('An unknown error occurred while retrieving your location.');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-    );
-  }, [runValidation]);
+  const stopTracking = useCallback(() => {
+    liveTracking.stopTracking();
+  }, []);
 
   const handleSave = async () => {
     if (!coords) {
@@ -653,13 +713,22 @@ function SalesGeoTagView() {
     }
   };
 
+  // Prefer the live server-computed geo-fence result when a fix is present.
+  const liveInside = coords ? snap.geofenceStatus : null; // 'inside' | 'outside' | null
   const fenceRef = validation?.assignedFence || validation?.fence || null;
-  const distanceRef = validation?.distanceToAssigned;
-  const insideStatus = validation?.assignedFence
-    ? validation.assignedInFence
-    : validation?.fence
-      ? validation.inFence
-      : null;
+  const distanceRef = coords
+    ? (snap.distanceFromGeofence !== null && snap.distanceFromGeofence !== undefined
+      ? snap.distanceFromGeofence
+      : (validation?.distanceToAssigned ?? null))
+    : (validation?.distanceToAssigned ?? null);
+  const insideStatus = liveInside === 'inside' ? true : liveInside === 'outside' ? false
+    : validation?.assignedFence
+      ? validation.assignedInFence
+      : validation?.fence
+        ? validation.inFence
+        : null;
+
+  const lowAccuracy = coords?.accuracy != null && coords.accuracy > 100;
 
   return (
     <div className="max-w-3xl mx-auto py-2 space-y-6">
@@ -730,10 +799,13 @@ function SalesGeoTagView() {
             <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center">
               <Navigation className="h-6 w-6 text-primary" />
             </div>
-            <div>
-              <CardTitle className="text-xl font-bold">Current Location</CardTitle>
+            <div className="flex-1">
+              <CardTitle className="text-xl font-bold flex items-center gap-2 flex-wrap">
+                Current Location
+                <TrackingStatusBadge status={snap.status} />
+              </CardTitle>
               <p className="text-muted-foreground text-sm mt-0.5">
-                Allow browser location permission, then capture your GPS position.
+                Allow browser location permission, then capture your GPS position. Capturing also starts live tracking.
               </p>
             </div>
           </div>
@@ -745,11 +817,33 @@ function SalesGeoTagView() {
               size="lg"
               className="w-full sm:w-auto px-8"
               onClick={captureLocation}
-              disabled={locLoading || validating || geocoding}
+              disabled={isTracking || locLoading || validating || geocoding}
             >
-              {locLoading ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Crosshair className="h-5 w-5 mr-2" />}
-              {locLoading ? 'Acquiring Location...' : 'Get Current Location'}
+              {isTracking ? (
+                <><Radio className="h-5 w-5 mr-2 animate-pulse text-emerald-600" /> Live Tracking Active</>
+              ) : locLoading ? (
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              ) : (
+                <Crosshair className="h-5 w-5 mr-2" />
+              )}
+              {isTracking ? 'Tracking your location…' : locLoading ? 'Acquiring Location…' : 'Get Current Location'}
             </Button>
+
+            {isTracking && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                </span>
+                Tracking active — location streams to Admin automatically.
+                {snap.updatedAt && <span>Last update: {formatDateTime(snap.updatedAt)}</span>}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground max-w-md text-center">
+              Live tracking runs in the foreground while this page stays open. If the browser or app is closed or
+              suspended, tracking pauses (true background tracking requires a PWA or native app).
+            </p>
 
             {locError && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 w-full">
@@ -761,10 +855,20 @@ function SalesGeoTagView() {
             {coords && !locError && (
               <div className="w-full bg-secondary/50 rounded-xl p-5 border text-center space-y-4">
                 <p className="text-sm font-medium text-foreground">
-                  Location captured successfully
+                  {isTracking ? 'Live location' : 'Location captured'}
                   {geocoding && <span className="text-muted-foreground"> — resolving address…</span>}
                   {validating && <span className="text-muted-foreground"> — checking geo-fence…</span>}
                 </p>
+
+                {lowAccuracy && (
+                  <div className="flex items-start gap-2 text-left text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3">
+                    <CircleAlert className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>
+                      Low GPS accuracy ({coords.accuracy?.toFixed(1)} m) — the position may be imprecise. Move to an open
+                      area for a better signal.
+                    </span>
+                  </div>
+                )}
 
                 <div className="text-left space-y-3">
                   <CoordinatesBlock lat={coords.lat} lng={coords.lng} accuracy={coords.accuracy} />
@@ -808,10 +912,10 @@ function SalesGeoTagView() {
                         <p className="text-xs mt-0.5">No geo-fence territory has been assigned to you yet. Please contact Admin.</p>
                       </div>
                     </div>
-                  ) : validating && !validation ? (
+                  ) : validating && !validation && liveInside === null ? (
                     <p className="text-sm text-muted-foreground animate-pulse">Checking your location against {selectedFence.name}…</p>
-                  ) : !validation ? (
-                    <p className="text-sm text-muted-foreground">Could not check geo-fence status. Use <span className="font-medium">Recapture</span> to try again.</p>
+                  ) : !validation && liveInside === null ? (
+                    <p className="text-sm text-muted-foreground">Could not check geo-fence status. Use <span className="font-medium">Get Current Location</span> to try again.</p>
                   ) : fenceRef ? (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -859,9 +963,15 @@ function SalesGeoTagView() {
                   >
                     <Navigation className="h-4 w-4 mr-2" /> Save Location
                   </Button>
-                  <Button variant="outline" onClick={captureLocation}>
-                    <RefreshCw className="h-4 w-4 mr-2" /> Recapture
-                  </Button>
+                  {isTracking ? (
+                    <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={stopTracking}>
+                      <Square className="h-4 w-4 mr-2" /> Stop Live Tracking
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={captureLocation}>
+                      <RefreshCw className="h-4 w-4 mr-2" /> Start Live Tracking
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

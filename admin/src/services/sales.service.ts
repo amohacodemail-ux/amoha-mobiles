@@ -327,6 +327,32 @@ export interface GeoFenceValidation {
   distanceToAssigned: number | null;
 }
 
+export type TrackingStatus =
+  | 'not_tracking'
+  | 'tracking_active'
+  | 'tracking_stopped'
+  | 'location_permission_denied'
+  | 'location_unavailable'
+  | 'last_location_available';
+
+export interface LiveLocation {
+  _id: string;
+  id: string;
+  salespersonId: string;
+  userName: string;
+  latitude: number | null;
+  longitude: number | null;
+  accuracyMeters: number | null;
+  timestamp: string;
+  trackingStatus: TrackingStatus;
+  geofenceStatus: 'inside' | 'outside' | null;
+  distanceFromGeofence: number | null;
+  fenceId?: string | null;
+  fenceName?: string;
+  updatedAt: string;
+  user?: { _id: string; name: string; email: string } | null;
+}
+
 export const geoTagService = {
   /** Get ALL active geo-fence territories assigned to the logged-in salesperson */
   getMyFences: async (): Promise<GeoFence[]> => {
@@ -408,5 +434,36 @@ export const geoFenceService = {
   /** Delete geo-fence (admin only). Existing location history is preserved. */
   remove: async (id: string): Promise<void> => {
     await apiClient.delete(`/sales/geo-fences/${id}`);
+  },
+};
+
+// ====================== LIVE TRACKING ======================
+
+export const liveLocationService = {
+  /**
+   * Update the logged-in salesperson's latest live location.
+   * The backend upserts a single row per salesperson (no duplicate history records).
+   */
+  update: async (payload: {
+    latitude?: number | null;
+    longitude?: number | null;
+    accuracyMeters?: number | null;
+    trackingStatus: TrackingStatus;
+    timestamp?: string;
+    fenceId?: string | null;
+  }): Promise<LiveLocation> => {
+    const { data } = await apiClient.post<ApiResponse<LiveLocation>>('/sales/live-location', payload);
+    return data.data;
+  },
+
+  /**
+   * Latest live location of every salesperson (admin) or own record (sales).
+   */
+  getAll: async (params: { userId?: string } = {}): Promise<LiveLocation[]> => {
+    const p = new URLSearchParams();
+    if (params.userId) p.set('userId', params.userId);
+    const qs = p.toString();
+    const { data } = await apiClient.get<ApiResponse<LiveLocation[]>>(`/sales/live-locations${qs ? `?${qs}` : ''}`);
+    return data.data;
   },
 };

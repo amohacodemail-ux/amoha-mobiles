@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth.service';
+import { liveTracking } from '@/services/live-tracking';
 import { useAuthStore } from '@/store/auth.store';
 import { usePermissions, getRoleDisplayName, getRoleBadgeColor, type Module } from '@/hooks/usePermissions';
 
@@ -165,6 +166,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
   }, [filteredNavItems, collapsed]);
 
   const handleLogout = () => {
+    liveTracking.stopForUnload();
     clearUser();
     authService.logout();
   };
