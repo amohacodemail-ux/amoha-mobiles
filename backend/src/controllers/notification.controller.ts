@@ -37,6 +37,7 @@ class NotificationController {
       const unreadCount = await notificationService.getUnreadCount(type);
       sendSuccess(res, { notifications, unreadCount }, 'Recent notifications fetched');
     } catch (error) {
+      console.error('[NotificationController.getRecent] Error:', error);
       next(error);
     }
   }

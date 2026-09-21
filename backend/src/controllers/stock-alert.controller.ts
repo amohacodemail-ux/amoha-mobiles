@@ -5,7 +5,7 @@ import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 class StockAlertController {
   async subscribe(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const { productId, whatsappOptIn } = req.body;
       const data = await stockNotificationService.subscribeUser(userId, productId, whatsappOptIn);
       return sendCreated(res, data, 'Successfully subscribed to stock alerts');
@@ -16,7 +16,7 @@ class StockAlertController {
 
   async unsubscribe(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const { productId } = req.params;
       await stockNotificationService.unsubscribeUser(userId, productId);
       return sendMessage(res, 'Successfully unsubscribed from stock alerts');
@@ -27,7 +27,7 @@ class StockAlertController {
 
   async checkStatus(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.userId;
       const { productId } = req.params;
       const data = await stockNotificationService.checkSubscription(userId, productId);
       return sendSuccess(res, data, 'Subscription status retrieved');

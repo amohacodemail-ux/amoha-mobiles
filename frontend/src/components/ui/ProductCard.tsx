@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { HiOutlineHeart, HiHeart, HiStar, HiOutlineShoppingCart, HiOutlineSwitchHorizontal, HiShieldCheck } from 'react-icons/hi';
 import type { Product } from '@/types';
-import { formatPrice, safeImageSrc } from '@/lib/utils';
+import { formatPrice, safeImageSrc, formatProductName } from '@/lib/utils';
+import ProductNameDisplay from '@/components/ui/ProductNameDisplay';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
@@ -146,7 +147,7 @@ function ProductCard({ product }: ProductCardProps) {
         {/* Product Name */}
         <Link href={`/product/${product.slug}`} prefetch={true} className="md:group-hover:text-blue-600 transition-colors">
           <h3 className="line-clamp-2 text-[12px] sm:text-[13px] font-bold leading-snug text-gray-900 dark:text-white">
-            {product.name}
+            <ProductNameDisplay name={product.name} product={product} />
           </h3>
         </Link>
 

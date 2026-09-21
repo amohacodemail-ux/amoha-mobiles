@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { HiOutlineX, HiOutlineSwitchHorizontal } from 'react-icons/hi';
 import { useCompareStore } from '@/store/compare.store';
+import { formatProductName } from '@/lib/utils';
 
 const PLACEHOLDER_IMG = '/images/no-product.png';
 
@@ -36,7 +37,7 @@ export default function CompareBar() {
               <div className="relative h-12 w-12 overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5 sm:h-14 sm:w-14">
                 <Image
                   src={product.thumbnail || PLACEHOLDER_IMG}
-                  alt={product.name}
+                  alt={formatProductName(product.name, product)}
                   fill
                  
                   className="object-cover p-0.5"

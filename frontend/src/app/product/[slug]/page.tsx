@@ -1,5 +1,6 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import ProductDetailClient from './ProductDetailClient';
+import { formatProductName } from '@/lib/utils';
 
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -54,23 +55,24 @@ export async function generateMetadata({
     maximumFractionDigits: 0,
   }).format(product.price);
 
-  const title = `Buy ${product.name} in Coimbatore – ${price} | Amohamobiles`;
+  const formattedName = formatProductName(product.name, product);
+  const title = `Buy ${formattedName} in Coimbatore – ${price} | Amohamobiles`;
   const description =
     product.shortDescription ||
     product.description ||
-    `Buy ${product.name} at best price in Coimbatore. ${product.brand} smartphone available at Amohamobiles, Idikarai – genuine warranty, fast delivery.`;
+    `Buy ${formattedName} at best price in Coimbatore. ${product.brand} smartphone available at Amohamobiles, Idikarai – genuine warranty, fast delivery.`;
 
-  const imageAlt = `${product.name} – Buy at Amohamobiles Coimbatore`;
+  const imageAlt = `${formattedName} – Buy at Amohamobiles Coimbatore`;
 
   return {
     title,
     description,
     keywords: [
-      `${product.name} coimbatore`,
-      `buy ${product.name} idikarai`,
+      `${formattedName} coimbatore`,
+      `buy ${formattedName} idikarai`,
       `${product.brand} phones coimbatore`,
-      `${product.name} price coimbatore`,
-      `${product.name} amohamobiles`,
+      `${formattedName} price coimbatore`,
+      `${formattedName} amohamobiles`,
     ],
     openGraph: {
       title,
@@ -100,12 +102,13 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
   const product = await getProduct(slug);
+  const formattedName = product ? formatProductName(product.name, product) : '';
 
   const productJsonLd = product
     ? {
         '@context': 'https://schema.org',
         '@type': 'Product',
-        name: product.name,
+        name: formattedName,
         description: product.shortDescription || product.description,
         image: product.images || [],
         brand: { '@type': 'Brand', name: product.brand },

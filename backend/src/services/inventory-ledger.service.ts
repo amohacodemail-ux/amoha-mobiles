@@ -294,7 +294,16 @@ class InventoryLedgerService {
     await supabase.from('products').update({ stock: newAvailableStock }).eq('id', productId);
 
     const after = { ...before, totalStock: Math.max(0, newTotal), availableStock: newAvailableStock };
-    await this.audit(inv._id, productId, 'stock_adjusted', Math.abs(diff), before, after, 'manual', null, notes || `Adjusted stock to ${newAvailableStock}`, performedBy);
+    const auditId = await this.audit(inv._id, productId, 'stock_adjusted', Math.abs(diff), before, after, 'manual', null, notes || `Adjusted stock to ${newAvailableStock}`, performedBy);
+
+    // TRIGGER WHATSAPP STOCK NOTIFICATIONS
+    // We do this in the background (fire-and-forget) to not block the request 
+    // or fail the inventory update if WhatsApp API fails.
+    if (before.availableStock === 0 && newAvailableStock > 0 && auditId) {
+      this.triggerStockNotifications(productId, auditId).catch(err => {
+         logger.error(`[InventoryLedgerService] Failed to process background stock notifications for product ${productId}:`, err);
+      });
+    }
 
     return { before, after, quantityChanged: diff };
   }

@@ -142,7 +142,12 @@ class AdminService {
   async getTopProducts(limit: number = 10) {
     const { data, error } = await supabase.rpc('get_top_products', { p_limit: limit });
     if (error) throw error;
-    return data;
+    return (data || []).map((row: any) => {
+      const transformed = transformRow(row);
+      // Map total_revenue to revenue to match frontend TopProduct type
+      transformed.revenue = transformed.totalRevenue;
+      return transformed;
+    });
   }
 
   async getSalesReport(startDate?: string, endDate?: string) {

@@ -10,7 +10,8 @@ import type { Address } from '@/types';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
 import { orderService } from '@/services/order.service';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatProductName } from '@/lib/utils';
+import ProductNameDisplay from '@/components/ui/ProductNameDisplay';
 
 /** COD handling fee — always ₹49 for Cash on Delivery orders. Keep in sync with backend COD_FEE constant. */
 const COD_FEE = 49;
@@ -435,7 +436,7 @@ export default function CheckoutPage() {
                       <Image src={item.product?.thumbnail || '/images/no-product.svg'} alt={item.product?.name || 'Product'} fill className="object-cover" sizes="56px" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{item.product?.name || 'Product'}</p>
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-white"><ProductNameDisplay name={item.product?.name || 'Product'} product={item.product} /></p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Qty: {item.quantity}</p>
                     </div>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{formatPrice(item.totalPrice)}</span>

@@ -25,7 +25,8 @@ import type { Order, ReturnReason, ReturnType } from '@/types';
 import { orderService } from '@/services/order.service';
 import returnService from '@/services/return.service';
 import { useAuthStore } from '@/store/auth.store';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice, formatDate, formatProductName } from '@/lib/utils';
+import ProductNameDisplay from '@/components/ui/ProductNameDisplay';
 import { OrderCardSkeleton } from '@/components/ui/Skeletons';
 import Pagination from '@/components/ui/Pagination';
 import toast from 'react-hot-toast';
@@ -367,8 +368,8 @@ export default function OrdersPage() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                           {order.items.length === 1
-                            ? (order.items[0].product?.name || 'Product')
-                            : `${order.items[0].product?.name || 'Product'} + ${order.items.length - 1} more`}
+                            ? <ProductNameDisplay name={order.items[0].product?.name || 'Product'} product={order.items[0].product} />
+                            : <><ProductNameDisplay name={order.items[0].product?.name || 'Product'} product={order.items[0].product} /> + {order.items.length - 1} more</>}
                         </p>
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                           <span className="text-[11px] text-gray-400">#{order.orderNumber}</span>
@@ -431,7 +432,7 @@ export default function OrdersPage() {
                             </Link>
                             <div className="min-w-0 flex-1 flex flex-col justify-center">
                               <Link href={`/product/${item.product?.slug || '#'}`} className="block text-[15px] font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 line-clamp-2 transition-colors">
-                                {item.product?.name || 'Product'}
+                                <ProductNameDisplay name={item.product?.name || 'Product'} product={item.product} />
                               </Link>
                               <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs font-medium text-gray-500">
                                 <span className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md text-gray-700 dark:text-gray-300">Qty: {item.quantity}</span>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { HiOutlineSearch, HiOutlineX } from 'react-icons/hi';
 import { useSearch } from '@/hooks/useSearch';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatProductName } from '@/lib/utils';
 
 interface SearchBarProps {
   onSelect?: () => void;
@@ -155,7 +155,7 @@ export default function SearchBar({ onSelect, onClear, className = '' }: SearchB
                     <div className="relative h-[44px] w-[44px] shrink-0 overflow-hidden rounded-lg bg-slate-50 dark:bg-[#121212] border border-slate-100 dark:border-white/5">
                       <Image
                         src={item.thumbnail || '/images/no-product.svg'}
-                        alt={item.name || 'Product'}
+                        alt={formatProductName(item.name, item) || 'Product'}
                         fill
                         className="object-contain p-1"
                         sizes="44px"
@@ -163,7 +163,7 @@ export default function SearchBar({ onSelect, onClear, className = '' }: SearchB
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 dark:text-white">
-                        <HighlightedText text={item.name} highlight={query} />
+                        <HighlightedText text={formatProductName(item.name, item)} highlight={query} />
                       </p>
                       <p className="text-[11px] md:text-[12px] font-normal text-gray-500 mt-0.5">{item.brand}</p>
                     </div>

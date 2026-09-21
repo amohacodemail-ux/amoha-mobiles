@@ -20,6 +20,7 @@ const envSchema = z.object({
   WHATSAPP_ACCESS_TOKEN: z.string().optional(),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_API_VERSION: z.string().default('v20.0'),
+  WHATSAPP_STOCK_ALERT_TEST_PHONE: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -48,6 +49,7 @@ const env = {
   WHATSAPP_ACCESS_TOKEN: parsed.data.WHATSAPP_ACCESS_TOKEN,
   WHATSAPP_PHONE_NUMBER_ID: parsed.data.WHATSAPP_PHONE_NUMBER_ID,
   WHATSAPP_API_VERSION: parsed.data.WHATSAPP_API_VERSION,
+  WHATSAPP_STOCK_ALERT_TEST_PHONE: parsed.data.WHATSAPP_STOCK_ALERT_TEST_PHONE,
 } as const;
 
 export default env;

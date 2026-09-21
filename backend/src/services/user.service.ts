@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow, toDbRow, transformUser, flattenKycForDb } from '../utils/transform.util';
 import { hashPassword } from '../utils/password.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
@@ -61,8 +61,40 @@ class UserService {
   }
 
   async deleteUser(userId: string) {
-    const { error } = await supabase.from('users').delete().eq('id', userId);
-    if (error) throw error;
+    try {
+      // 1. Delete dependent reviews first (they reference service_requests or products)
+      await Promise.all([
+        supabase.from('service_reviews').delete().eq('user_id', userId),
+        supabase.from('product_reviews').delete().eq('user_id', userId),
+      ]);
+
+      // 2. Delete other dependent records
+      await Promise.all([
+        supabase.from('service_requests').delete().eq('user_id', userId),
+        supabase.from('addresses').delete().eq('user_id', userId),
+        supabase.from('cart_items').delete().eq('user_id', userId),
+        supabase.from('wishlists').delete().eq('user_id', userId),
+        supabase.from('stock_notification_subscriptions').delete().eq('user_id', userId),
+        supabase.from('device_tokens').delete().eq('user_id', userId),
+        supabase.from('user_sessions').delete().eq('user_id', userId),
+        supabase.from('refresh_tokens').delete().eq('user_id', userId),
+        supabase.from('product_views').delete().eq('user_id', userId),
+        supabase.from('activity_logs').delete().eq('user_id', userId),
+        
+        // For accounting/history preservation, we just disconnect orders, logs, and audit trails from the user
+        supabase.from('orders').update({ user_id: null }).eq('user_id', userId),
+        supabase.from('payments').update({ user_id: null }).eq('user_id', userId),
+        supabase.from('stock_notification_logs').update({ user_id: null }).eq('user_id', userId),
+        supabase.from('inventory_audit_log').update({ performed_by: null }).eq('performed_by', userId)
+      ]);
+
+      // 3. Finally, delete the user
+      const { error } = await supabase.from('users').delete().eq('id', userId);
+      if (error) throw error;
+    } catch (err) {
+      logger.error(`[UserService] Error deleting user ${userId}:`, err);
+      throw err;
+    }
   }
 
   async blockUser(userId: string) {

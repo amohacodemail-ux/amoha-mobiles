@@ -19,7 +19,8 @@ import {
   Plus
 } from 'lucide-react';
 import { useCompareStore } from '@/store/compare.store';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatProductName } from '@/lib/utils';
+import ProductNameDisplay from '@/components/ui/ProductNameDisplay';
 
 const PLACEHOLDER_IMG = '/images/no-product.svg';
 
@@ -143,7 +144,7 @@ export default function ComparePage() {
                     <Link href={`/product/${product.slug}`} className="relative h-[140px] w-full max-w-[140px] group">
                       <Image 
                         src={product.thumbnail || PLACEHOLDER_IMG} 
-                        alt={product.name} 
+                        alt={formatProductName(product.name, product)} 
                         fill 
                         className="object-contain transition-transform duration-300 group-hover:scale-105" 
                         sizes="140px" 
@@ -179,7 +180,7 @@ export default function ComparePage() {
                 {items.map(p => (
                   <div key={p._id} className="flex flex-col items-center justify-center px-4 text-center">
                     <Link href={`/product/${p.slug}`} className="text-[14px] font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
-                      {p.name}
+                      <ProductNameDisplay name={p.name} product={p} />
                     </Link>
                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">{p.brand}</p>
                   </div>
@@ -354,7 +355,7 @@ export default function ComparePage() {
               <div key={product._id} className="relative h-10 w-10 sm:h-14 sm:w-14 overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/10 flex items-center justify-center p-1 shrink-0">
                 <Image 
                   src={product.thumbnail || PLACEHOLDER_IMG} 
-                  alt={product.name} 
+                  alt={formatProductName(product.name, product)} 
                   fill 
                   className="object-contain p-1.5" 
                   sizes="56px"

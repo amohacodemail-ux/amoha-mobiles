@@ -2,6 +2,7 @@ import supabase from '../config/supabase';
 import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import logger from '../utils/logger.util';
+import stockNotificationService from './stock-notification.service';
 
 class InventoryService {
   // ==================== Warehouses CRUD ====================
@@ -172,6 +173,22 @@ class InventoryService {
     // Update warehouse stock if applicable
     if (warehouseId) {
       await this.upsertWarehouseStock(warehouseId, productId, afterQty);
+    }
+
+    // TRIGGER WHATSAPP STOCK NOTIFICATIONS
+    // We do this in the background (fire-and-forget) to not block the request 
+    // or fail the inventory update if WhatsApp API fails.
+    if (beforeQty === 0 && afterQty > 0) {
+      const movementId = movementData.id || `inv-move-${Date.now()}`;
+      
+      // Fetch product slug and name for URL
+      const { data: pData } = await supabase.from('products').select('name, slug').eq('id', productId).single();
+      if (pData) {
+        const productUrl = `${process.env.FRONTEND_URL || 'https://amohamobiles.com'}/products/${pData.slug}`;
+        stockNotificationService.processRestockNotifications(productId, pData.name, productUrl, movementId).catch(err => {
+          logger.error(`[InventoryService] Failed to process background stock notifications for product ${productId}:`, err);
+        });
+      }
     }
 
     return { productId, beforeQty, afterQty, type };

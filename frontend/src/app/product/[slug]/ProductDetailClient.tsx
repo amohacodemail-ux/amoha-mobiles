@@ -30,7 +30,8 @@ import { useCartStore } from '@/store/cart.store';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { useAuthStore } from '@/store/auth.store';
 import { useCompareStore } from '@/store/compare.store';
-import { formatPrice, getStockStatus, getRatingColor, formatDate, safeImageSrc } from '@/lib/utils';
+import apiClient from '@/lib/api-client';
+import { formatPrice, getStockStatus, getRatingColor, formatDate, safeImageSrc, formatProductName, isUsedPhone } from '@/lib/utils';
 import ProductCard from '@/components/ui/ProductCard';
 import { ProductDetailSkeleton } from '@/components/ui/Skeletons';
 
@@ -59,6 +60,9 @@ export default function ProductDetailClient() {
   const [activeTab, setActiveTab] = useState<'specs' | 'reviews' | 'qa'>('specs');
   const [imageZoomed, setImageZoomed] = useState(false);
   const [showStickyCart, setShowStickyCart] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
   const ctaRef = useRef<HTMLDivElement>(null);
 
   const addToCart = useCartStore((s) => s.addToCart);
@@ -186,8 +190,8 @@ export default function ProductDetailClient() {
   const handleShare = useCallback(async () => {
     if (!product) return;
     const shareData = {
-      title: product.name,
-      text: `Check out ${product.name} at ${formatPrice(product.price)}`,
+      title: formatProductName(product.name, product),
+      text: `Check out ${formatProductName(product.name, product)} at ${formatPrice(product.price)}`,
       url: window.location.href,
     };
     try {
@@ -213,6 +217,58 @@ export default function ProductDetailClient() {
       toast.success('Added to compare');
     }
   }, [product, isInCompare, removeFromCompare, addToCompare]);
+
+  useEffect(() => {
+    if (!product || !isAuthenticated || (product.stock > 0 && typeof (product as any).inStock !== 'boolean')) return;
+    
+    const checkSubscription = async () => {
+      setIsCheckingSubscription(true);
+      try {
+        const { data } = await apiClient.get(`/stock-alerts/check/${product._id}`);
+        setIsSubscribed(data.data.subscribed);
+      } catch (error) {
+        // Silently fail if subscription check fails, just don't show subscribed state
+      } finally {
+        setIsCheckingSubscription(false);
+      }
+    };
+    checkSubscription();
+  }, [product, isAuthenticated]);
+
+  const handleSubscribe = async () => {
+    if (!product) return;
+    if (!isAuthenticated) {
+      router.push('/login?redirect=' + encodeURIComponent('/product/' + slug));
+      return;
+    }
+    
+    setIsSubscribing(true);
+    try {
+      await apiClient.post('/stock-alerts', {
+        productId: product._id,
+        whatsappOptIn: true
+      });
+      setIsSubscribed(true);
+      toast.success("You'll receive a WhatsApp notification when this product is back in stock.");
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message || 'Failed to subscribe';
+      toast.error(errMsg);
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    if (!product) return;
+    try {
+      await apiClient.delete(`/stock-alerts/${product._id}`);
+      setIsSubscribed(false);
+      toast.success("WhatsApp stock notification cancelled.");
+    } catch (err: any) {
+      toast.error('Failed to unsubscribe');
+    }
+  };
+
 
   const handleSubmitReview = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -309,7 +365,7 @@ export default function ProductDetailClient() {
           <HiOutlineChevronRight className="h-3 w-3 flex-shrink-0" />
           <Link href="/products" className="transition-colors hover:text-primary-400">All Mobiles</Link>
           <HiOutlineChevronRight className="h-3 w-3 flex-shrink-0" />
-          <span className="truncate text-gray-500 dark:text-gray-400">{product.name}</span>
+          <span className="truncate text-gray-500 dark:text-gray-400">{formatProductName(product.name, product)}</span>
         </div>
       </nav>
 
@@ -328,7 +384,7 @@ export default function ProductDetailClient() {
               >
                 <Image
                   src={safeImageSrc(productImages[selectedImage], PLACEHOLDER_IMG)}
-                  alt={`${product.name} – image ${selectedImage + 1}`}
+                  alt={`${formatProductName(product.name, product)} – image ${selectedImage + 1}`}
                   fill
                   priority
                   quality={90}
@@ -400,7 +456,7 @@ export default function ProductDetailClient() {
                   >
                     <Image
                       src={safeImageSrc(img, PLACEHOLDER_IMG)}
-                      alt={`${product.name} thumbnail ${idx + 1}`}
+                      alt={`${formatProductName(product.name, product)} thumbnail ${idx + 1}`}
                       fill
                       priority={idx < 6}
                       quality={85}
@@ -441,6 +497,12 @@ export default function ProductDetailClient() {
               <span className="text-sm text-gray-500">{reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}</span>
               <span className="hidden h-4 w-px bg-gray-200 dark:bg-white/10 sm:block" />
               <span className={`text-sm font-medium ${stockStatus.color}`}>{stockStatus.label}</span>
+              {isUsedPhone(product) && (
+                <>
+                  <span className="hidden h-4 w-px bg-gray-200 dark:bg-white/10 sm:block" />
+                  <span className="text-sm text-gray-500">Used Phone</span>
+                </>
+              )}
             </div>
 
             {/* Price */}
@@ -579,14 +641,44 @@ export default function ProductDetailClient() {
 
             {/* Action Buttons */}
             <div ref={ctaRef} className="mt-6 flex gap-3">
-              <button
-                onClick={handleAddToCart}
-                disabled={!inStock || addPending}
-                className="flex flex-1 items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-[0_8px_20px_-4px_rgba(79,70,229,0.4)] py-4 text-sm font-bold text-white transition-all duration-200 hover:bg-primary-500 hover:shadow-[0_0_24px_rgba(99,102,241,0.25)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:py-4 sm:text-base"
-              >
-                <HiOutlineShoppingBag className="h-5 w-5" />
-                {!inStock ? 'Out of Stock' : addPending ? 'Adding...' : 'Add to Cart'}
-              </button>
+              {inStock ? (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={addPending}
+                  className="flex flex-1 items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-[0_8px_20px_-4px_rgba(79,70,229,0.4)] py-4 text-sm font-bold text-white transition-all duration-200 hover:bg-primary-500 hover:shadow-[0_0_24px_rgba(99,102,241,0.25)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:py-4 sm:text-base"
+                >
+                  <HiOutlineShoppingBag className="h-5 w-5" />
+                  {addPending ? 'Adding...' : 'Add to Cart'}
+                </button>
+              ) : (
+                <div className="flex flex-1 flex-col gap-2">
+                  {isSubscribed ? (
+                    <>
+                      <button
+                        disabled
+                        className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 py-4 text-sm font-bold text-emerald-600 dark:text-emerald-400 sm:py-4 sm:text-base"
+                      >
+                        <HiCheck className="h-5 w-5" />
+                        We'll notify you on WhatsApp
+                      </button>
+                      <button
+                        onClick={handleUnsubscribe}
+                        className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline underline-offset-2"
+                      >
+                        Stop WhatsApp Notification
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleSubscribe}
+                      disabled={isCheckingSubscription || isSubscribing}
+                      className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 py-4 text-sm font-bold text-white dark:text-gray-900 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:py-4 sm:text-base"
+                    >
+                      {isSubscribing ? 'Subscribing...' : 'Notify Me When Available'}
+                    </button>
+                  )}
+                </div>
+              )}
               <button
                 onClick={handleCompare}
                 className={`flex h-auto w-14 items-center justify-center rounded-xl border transition-all duration-200 active:scale-95 sm:w-16 ${compared

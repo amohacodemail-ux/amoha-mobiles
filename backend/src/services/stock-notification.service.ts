@@ -1,12 +1,14 @@
 import supabase from '../config/supabase';
 import logger from '../utils/logger.util';
 import whatsappService from './whatsapp.service';
+import env from '../config/env';
 import { BadRequestError } from '../errors/app-error';
 
 export interface StockNotificationTarget {
-  subscriptionId: string;
+  subscriptionId?: string | null;
   userId?: string;
   phone: string;
+  isTestTarget?: boolean;
 }
 
 class StockNotificationService {
@@ -62,7 +64,7 @@ class StockNotificationService {
    * Process restock notifications for a product and dispatch them via WhatsApp
    */
   async processRestockNotifications(productId: string, productName: string, productUrl: string, stockEventReference?: string) {
-    const customers = await this.getEligibleCustomersForRestock(productId);
+    const customers: StockNotificationTarget[] = await this.getEligibleCustomersForRestock(productId);
     
     if (customers.length === 0) {
       logger.info(`[StockNotificationService] No eligible customers for restock of product ${productId}`);
@@ -72,13 +74,13 @@ class StockNotificationService {
     logger.info(`[StockNotificationService] Found ${customers.length} eligible customers for restock of product ${productId}`);
     
     for (const customer of customers) {
-      if (!customer.userId) continue; // Currently we rely on user_id for tracking logs as per v14 schema
+      if (!customer.userId && !customer.isTestTarget) continue; // Currently we rely on user_id for tracking logs as per v14 schema
       
       // PHASE 6: Prevent duplicates and create pending log
       let logId: string | undefined;
       try {
         const { data: log, error: logError } = await supabase.from('stock_notification_logs').insert({
-          user_id: customer.userId,
+          user_id: customer.userId || null,
           product_id: productId,
           stock_event_reference: stockEventReference || null,
           status: 'pending'
@@ -101,19 +103,12 @@ class StockNotificationService {
       const response = await whatsappService.sendTemplateMessage({
         to: customer.phone,
         templateName: 'restock_alert', 
+        languageCode: 'en_US',
         components: [
           {
             type: 'body',
             parameters: [
               { type: 'text', text: productName }
-            ]
-          },
-          {
-            type: 'button',
-            sub_type: 'url',
-            index: '0',
-            parameters: [
-              { type: 'text', text: productUrl }
             ]
           }
         ]
@@ -121,6 +116,12 @@ class StockNotificationService {
       
       // PHASE 6: Update log with results
       const notificationStatus = response.success ? 'sent' : 'failed';
+      
+      if (response.success) {
+        logger.info(`stack update sent to whatsapp for ${customer.phone}`);
+      } else {
+        logger.error(`stack update not sent to whatsapp for ${customer.phone}:`, response.error);
+      }
       
       await supabase.from('stock_notification_logs').update({
         status: notificationStatus,
@@ -131,7 +132,7 @@ class StockNotificationService {
 
       // Update subscription timestamp based on the delivery result
       // We keep the status as 'active' so they can be notified again if stock drops to 0 and restocks later.
-      if (response.success) {
+      if (response.success && !customer.isTestTarget && customer.subscriptionId) {
         await supabase
           .from('stock_notification_subscriptions')
           .update({
@@ -150,24 +151,58 @@ class StockNotificationService {
       throw new BadRequestError('WhatsApp opt-in is required to subscribe to stock notifications.');
     }
 
-    // Upsert subscription for this user & product
-    const { data, error } = await supabase
-      .from('stock_notification_subscriptions')
-      .upsert({
-        user_id: userId,
-        product_id: productId,
-        whatsapp_opt_in: whatsappOptIn,
-        status: 'active',
-        notification_status: 'pending',
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id, product_id', ignoreDuplicates: false })
-      .select()
+    // Phase 7 Validation: Verify the user has a valid phone number before subscribing
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('phone')
+      .eq('id', userId)
       .single();
-
-    if (error) {
-      throw new BadRequestError(`Failed to subscribe: ${error.message}`);
+      
+    if (userError || !user?.phone || user.phone.trim().length < 10) {
+      throw new BadRequestError('Please add a valid mobile number in your profile to subscribe to WhatsApp notifications.');
     }
-    return data;
+
+    // Check for existing active subscription
+    const { data: existingSub } = await supabase
+      .from('stock_notification_subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('product_id', productId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    let result;
+    if (existingSub) {
+      result = await supabase
+        .from('stock_notification_subscriptions')
+        .update({
+          whatsapp_opt_in: whatsappOptIn,
+          notification_status: 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingSub.id)
+        .select()
+        .single();
+    } else {
+      result = await supabase
+        .from('stock_notification_subscriptions')
+        .insert({
+          user_id: userId,
+          product_id: productId,
+          whatsapp_opt_in: whatsappOptIn,
+          status: 'active',
+          notification_status: 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+    }
+
+    if (result.error) {
+      throw new BadRequestError(`Failed to subscribe: ${result.error.message}`);
+    }
+
+    return result.data;
   }
 
   async unsubscribeUser(userId: string, productId: string) {

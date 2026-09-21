@@ -7,7 +7,8 @@ import { HiOutlineTrash, HiOutlineShoppingBag, HiOutlineTag, HiOutlinePlus, HiOu
 import toast from 'react-hot-toast';
 import { useCartStore } from '@/store/cart.store';
 import { cartService } from '@/services/cart.service';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatProductName } from '@/lib/utils';
+import ProductNameDisplay from '@/components/ui/ProductNameDisplay';
 import type { Product } from '@/types';
 
 export default function CartPage() {
@@ -118,7 +119,7 @@ export default function CartPage() {
                   <div className="flex justify-between items-start gap-4">
                     <div>
                       <Link href={`/product/${item.product?.slug || '#'}`} className="text-base sm:text-lg font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 line-clamp-2 transition-colors">
-                        {item.product?.name || 'Product'}
+                        <ProductNameDisplay name={item.product?.name || 'Product'} product={item.product} />
                       </Link>
                       <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs font-medium text-gray-500">
                         {item.product?.brand && <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md text-gray-700 dark:text-gray-300">{item.product.brand}</span>}
@@ -218,7 +219,7 @@ export default function CartPage() {
                     <div className="flex flex-1 flex-col justify-between min-w-0">
                       <div>
                         <Link href={`/product/${item.product?.slug || '#'}`} className="text-sm font-semibold text-gray-900 dark:text-white hover:text-primary-400 line-clamp-2">
-                          {item.product?.name || 'Product'}
+                          <ProductNameDisplay name={item.product?.name || 'Product'} product={item.product} />
                         </Link>
                         <p className="mt-0.5 text-xs text-gray-500">{formatPrice(item.price)}</p>
                       </div>
@@ -255,7 +256,7 @@ export default function CartPage() {
                     <Link href={`/product/${acc.slug}`} className="relative mx-auto h-24 w-24 sm:h-32 sm:w-32 overflow-hidden rounded-xl bg-gray-50 dark:bg-gray-800">
                       <Image src={acc.images?.[0] || '/images/no-product.svg'} alt={acc.name} fill className="object-cover transition-transform duration-500 group-hover/acc:scale-110" sizes="128px" onError={(e) => { const t = e.currentTarget; t.srcset = ''; t.src = '/images/no-product.svg'; }} />
                     </Link>
-                    <Link href={`/product/${acc.slug}`} className="mt-3 text-[13px] sm:text-sm font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 line-clamp-2 transition-colors">{acc.name}</Link>
+                    <Link href={`/product/${acc.slug}`} className="mt-3 text-[13px] sm:text-sm font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 line-clamp-2 transition-colors"><ProductNameDisplay name={acc.name} product={acc} /></Link>
                     <div className="mt-1.5 flex items-center gap-1.5">
                       <span className="text-sm font-black text-gray-900 dark:text-white">{formatPrice(acc.price)}</span>
                       {acc.originalPrice > acc.price && <span className="text-[11px] font-medium text-gray-400 line-through">{formatPrice(acc.originalPrice)}</span>}

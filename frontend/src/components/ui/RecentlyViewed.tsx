@@ -22,7 +22,8 @@ import { useWishlistStore } from '@/store/wishlist.store';
 import { useCartStore } from '@/store/cart.store';
 import { useCompareStore } from '@/store/compare.store';
 import { useRouter } from 'next/navigation';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatProductName } from '@/lib/utils';
+import ProductNameDisplay from '@/components/ui/ProductNameDisplay';
 import toast from 'react-hot-toast';
 
 export default function RecentlyViewed() {
@@ -266,7 +267,7 @@ function RecentlyViewedCard({ product, idx }: { product: Product; idx: number })
     e.stopPropagation();
     if (navigator.share) {
       navigator.share({
-        title: product.name,
+        title: formatProductName(product.name, product),
         url: `${window.location.origin}/product/${product.slug}`
       });
     } else {
@@ -317,7 +318,7 @@ function RecentlyViewedCard({ product, idx }: { product: Product; idx: number })
                       <div className="relative h-[60%] w-full bg-gradient-to-b from-gray-50 to-white dark:from-white/5 dark:to-transparent">
                         <Image
                           src={product.thumbnail || '/images/no-product.svg'}
-                          alt={product.name || 'Product'}
+                          alt={formatProductName(product.name, product) || 'Product'}
                           fill
                           className="object-contain p-12 sm:p-14 transition-transform duration-500 group-hover:scale-[1.08]"
                           sizes="280px"
@@ -333,7 +334,7 @@ function RecentlyViewedCard({ product, idx }: { product: Product; idx: number })
                             {product.brand || 'Brand'}
                           </p>
                           <h3 className="mt-1 line-clamp-2 text-[15px] font-semibold leading-snug text-gray-900 dark:text-white">
-                            {product.name || 'Premium Smartphone'}
+                            <ProductNameDisplay name={product.name || 'Premium Smartphone'} product={product} />
                           </h3>
                           
                           <div className="mt-2 flex items-center gap-1">

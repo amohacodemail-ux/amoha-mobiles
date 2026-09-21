@@ -88,3 +88,17 @@ export function debounce<T extends (...args: unknown[]) => void>(
     timeout = setTimeout(() => func(...args), wait);
   };
 }
+
+export function isUsedPhone(productData?: any): boolean {
+  if (!productData) return false;
+  if (productData.condition === 'used') return true;
+  if (productData.categorySlug === 'used-phones') return true;
+  if (typeof productData.category === 'string' && productData.category.toLowerCase().includes('used')) return true;
+  if (productData.category && typeof productData.category === 'object' && productData.category.slug === 'used-phones') return true;
+  return false;
+}
+
+export function formatProductName(productName: string, productData?: any): string {
+  if (!productName || typeof productName !== 'string') return productName || '';
+  return productName;
+}

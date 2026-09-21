@@ -13,7 +13,8 @@ import toast from 'react-hot-toast';
 import { useWishlistStore } from '@/store/wishlist.store';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatProductName } from '@/lib/utils';
+import ProductNameDisplay from '@/components/ui/ProductNameDisplay';
 import { productService } from '@/services/product.service';
 import ProductCard from '@/components/ui/ProductCard';
 
@@ -139,7 +140,7 @@ export default function WishlistPage() {
                     <Link href={`/product/${item.product?.slug || '#'}`} className="block w-full h-full p-2 sm:p-3">
                       <Image
                         src={item.product?.thumbnail || '/images/no-product.svg'}
-                        alt={item.product?.name || 'Product'}
+                        alt={formatProductName(item.product?.name || 'Product', item.product)}
                         fill
                         className="object-contain p-2 sm:p-3 transition-transform duration-500 group-hover:scale-110"
                         sizes="(max-width: 768px) 110px, 130px"
@@ -161,7 +162,7 @@ export default function WishlistPage() {
                       {/* Product Name */}
                       <Link href={`/product/${item.product?.slug || '#'}`} className="block pr-8">
                         <h3 className="text-sm sm:text-[15px] font-extrabold text-gray-900 dark:text-white line-clamp-1 leading-tight hover:text-blue-600 transition-colors">
-                          {item.product?.name || 'Product'}
+                          <ProductNameDisplay name={item.product?.name || 'Product'} product={item.product} />
                         </h3>
                       </Link>
 
