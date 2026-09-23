@@ -33,6 +33,7 @@ import healthRoutes from './health.routes';
 import reviewRoutes from './review.routes';
 import salesRoutes from './sales.routes';
 import liveLocationRoutes from './live-location.routes';
+import webhookRoutes from './webhook.routes';
 
 const router = Router();
 
@@ -72,6 +73,7 @@ router.use('/purchase-requests', purchaseRequestRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/sales', liveLocationRoutes);
 router.use('/sales', salesRoutes);
+router.use('/webhooks', webhookRoutes);
 // Alias: old image URLs used /api/images/:id — redirect to canonical /api/upload/:id
 router.get('/images/:id', (req, res) => res.redirect(301, `/api/upload/${req.params.id}`));
 

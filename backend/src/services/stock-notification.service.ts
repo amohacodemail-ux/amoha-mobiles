@@ -144,6 +144,78 @@ class StockNotificationService {
     }
   }
 
+  // ==================== PHASE 8: Webhook Methods ====================
+
+  /**
+   * Process a status update from WhatsApp Webhook
+   * Ensures idempotency and doesn't overwrite newer states with older ones.
+   */
+  async updateLogFromWebhook(
+    messageId: string, 
+    status: 'sent' | 'delivered' | 'read' | 'failed', 
+    timestamp: string, 
+    errorInfo?: { code?: string; title?: string; message?: string }
+  ) {
+    try {
+      // Find the existing log
+      const { data: log, error: fetchError } = await supabase
+        .from('stock_notification_logs')
+        .select('id, delivery_status, delivered_at, read_at')
+        .eq('message_id', messageId)
+        .single();
+
+      if (fetchError || !log) {
+        logger.debug(`[StockNotificationService] Log not found for message_id: ${messageId}`);
+        return;
+      }
+
+      // Determine idempotency / state progression
+      // The natural progression is sent -> delivered -> read.
+      // If we already have a 'read' status, we shouldn't downgrade to 'delivered' or 'sent'.
+      // If we already have a 'delivered' status, we shouldn't downgrade to 'sent'.
+      const currentStatus = log.delivery_status;
+      
+      if (currentStatus === 'read') {
+        // If it's already read, we don't care about delayed sent/delivered webhooks
+        // But if it failed later (rare), we might still want to log it? Usually failure happens before read.
+        if (status !== 'failed') return;
+      } else if (currentStatus === 'delivered') {
+        if (status === 'sent') return;
+      }
+
+      const updateData: any = {
+        delivery_status: status
+      };
+
+      const dateObj = new Date(parseInt(timestamp) * 1000).toISOString();
+
+      if (status === 'delivered' && !log.delivered_at) {
+        updateData.delivered_at = dateObj;
+      } else if (status === 'read' && !log.read_at) {
+        updateData.read_at = dateObj;
+      } else if (status === 'failed') {
+        updateData.failed_at = dateObj;
+        updateData.error_code = errorInfo?.code || null;
+        updateData.error_title = errorInfo?.title || null;
+        updateData.error_message = errorInfo?.message || null;
+        // Optionally update the main status to 'failed' if it wasn't already.
+        // We avoid touching main 'status' if we don't have to, but since 'failed' is a core state:
+        updateData.status = 'failed';
+      }
+
+      const { error: updateError } = await supabase
+        .from('stock_notification_logs')
+        .update(updateData)
+        .eq('id', log.id);
+
+      if (updateError) {
+        logger.error(`[StockNotificationService] Error updating webhook status for log ${log.id}:`, updateError);
+      }
+    } catch (err) {
+      logger.error(`[StockNotificationService] Exception processing webhook for message ${messageId}:`, err);
+    }
+  }
+
   // ==================== PHASE 7: API Methods ====================
 
   async subscribeUser(userId: string, productId: string, whatsappOptIn: boolean) {

@@ -9,17 +9,21 @@ import { Textarea } from '@/components/ui/textarea';
 import apiClient from '@/lib/api-client';
 import type { ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
-import { Plus, RefreshCw, Eye, Trash2, Send, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, RefreshCw, Eye, Trash2, Send, CheckCircle, XCircle, ShoppingCart } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
+import { useRouter } from 'next/navigation';
 
-interface Supplier { _id: string; name: string; companyName: string; email: string; }
-interface RFQItem { name: string; sku?: string; quantity: number; unitPrice?: number; notes?: string; }
+interface Supplier { _id: string; id?: string; name: string; companyName: string; email: string; }
+interface RFQItem { productId?: string; name: string; sku?: string; quantity: number; unitPrice?: number; notes?: string; }
 interface RFQ {
   _id: string;
+  id?: string;
   rfqNumber: string;
   createdAt: string;
   status: string;
   supplier?: Supplier;
+  supplierId?: string;
+  supplier_id?: string;
   items: RFQItem[];
   notes?: string;
   supplierNotes?: string;
@@ -39,6 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export default function RFQPage() {
+  const router = useRouter();
   const { user } = useAuthStore();
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [total, setTotal] = useState(0);
@@ -65,7 +70,7 @@ export default function RFQPage() {
   const [updateRFQ, setUpdateRFQ] = useState<RFQ | null>(null);
   const [newStatus, setNewStatus] = useState('');
   const [supplierNotes, setSupplierNotes] = useState('');
-  const [quotedPrice, setQuotedPrice] = useState('');
+  const [itemQuotes, setItemQuotes] = useState<any[]>([]);
   const [deliveryDate, setDeliveryDate] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -126,13 +131,15 @@ export default function RFQPage() {
     try {
       let payload: any = { status: newStatus, supplierNotes };
       if (user?.role === 'supplier') {
+        const totalQuotedPrice = itemQuotes.reduce((sum, item) => sum + (item.lineTotal || 0), 0);
         payload.supplierQuote = JSON.stringify({
-          quotedPrice,
+          quotedPrice: totalQuotedPrice,
           deliveryDate,
-          paymentTerms
+          paymentTerms,
+          itemQuotes
         });
       }
-      await apiClient.put(`/rfq/${updateRFQ._id}`, payload);
+      await apiClient.put(`/rfq/${updateRFQ._id || updateRFQ.id}`, payload);
       toast.success(user?.role === 'supplier' ? 'Quotation submitted' : 'RFQ status updated');
       setUpdateOpen(false); setUpdateRFQ(null);
       load();
@@ -164,10 +171,65 @@ export default function RFQPage() {
     }
   };
 
+  const handleCreatePO = async (rfq: RFQ) => {
+    // Validate mapping
+    const unmapped = rfq.items.filter(i => !i.productId);
+    if (unmapped.length > 0) {
+      toast.error('Some RFQ products are not mapped to Master Products. Please map them before creating the PO.');
+      return;
+    }
+
+    let parsedQuote: any = {};
+    if (rfq.supplierQuote) {
+      try {
+        parsedQuote = typeof rfq.supplierQuote === 'string' ? JSON.parse(rfq.supplierQuote) : rfq.supplierQuote;
+      } catch (e) {}
+    }
+
+    const poItems = rfq.items.map(item => {
+      let unitCost = item.unitPrice || 0;
+      if (parsedQuote?.itemQuotes) {
+        const quoteItem = parsedQuote.itemQuotes.find((qi: any) => qi.productId === item.productId || qi.name === item.name);
+        if (quoteItem) {
+          unitCost = quoteItem.unitPrice;
+        }
+      }
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        unitCost: unitCost,
+        totalCost: item.quantity * unitCost
+      };
+    });
+
+    try {
+      const payload = {
+        supplierId: rfq.supplier?._id || rfq.supplier?.id || rfq.supplierId || rfq.supplier_id,
+        items: poItems,
+        notes: `Generated from RFQ ${rfq.rfqNumber}`,
+        status: 'draft',
+      };
+      
+      await apiClient.post('/purchase/orders', payload);
+      toast.success('Purchase Order created successfully');
+      router.push('/purchase/orders');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Failed to create PO');
+    }
+  };
+
   const addItem = () => setRfqItems(prev => [...prev, { name: '', quantity: 1 }]);
   const removeItem = (i: number) => setRfqItems(prev => prev.filter((_, idx) => idx !== i));
   const updateItem = (i: number, field: keyof RFQItem, val: string | number) => {
     setRfqItems(prev => prev.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
+  };
+
+  const handleItemQuoteChange = (index: number, val: string) => {
+    const newQuotes = [...itemQuotes];
+    const unitPrice = parseFloat(val) || 0;
+    newQuotes[index].unitPrice = unitPrice;
+    newQuotes[index].lineTotal = newQuotes[index].quantity * unitPrice;
+    setItemQuotes(newQuotes);
   };
 
   return (
@@ -230,7 +292,7 @@ export default function RFQPage() {
             ) : rfqs.length === 0 ? (
               <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No RFQs found. Create your first one.</td></tr>
             ) : rfqs.map((rfq) => (
-              <tr key={rfq._id} className="border-b border-border/50 hover:bg-muted/20">
+              <tr key={rfq._id || rfq.id} className="border-b border-border/50 hover:bg-muted/20">
                 <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">{rfq.rfqNumber}</td>
                 <td className="px-4 py-3 text-muted-foreground">{fmtDate(rfq.createdAt)}</td>
                 <td className="px-4 py-3">
@@ -245,12 +307,32 @@ export default function RFQPage() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
+                    {user?.role !== 'supplier' && rfq.status === 'accepted' && (
+                      <button onClick={() => handleCreatePO(rfq)} className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 flex items-center gap-1 text-xs font-medium px-2" title="Create PO">
+                        <ShoppingCart className="h-3 w-3" /> Create PO
+                      </button>
+                    )}
                     <button onClick={() => setViewRFQ(rfq)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title="View">
                       <Eye className="h-4 w-4" />
                     </button>
                     {user?.role === 'supplier' && rfq.status === 'sent' && (
                       <button
-                        onClick={() => { setUpdateRFQ(rfq); setNewStatus('quoted'); setSupplierNotes(rfq.supplierNotes || ''); setQuotedPrice(''); setDeliveryDate(''); setPaymentTerms(''); setUpdateOpen(true); }}
+                        onClick={() => { 
+                          setUpdateRFQ(rfq); 
+                          setNewStatus('quoted'); 
+                          setSupplierNotes(rfq.supplierNotes || ''); 
+                          setItemQuotes((rfq.items || []).map(i => ({
+                            productId: i.productId,
+                            name: i.name,
+                            sku: i.sku,
+                            quantity: i.quantity,
+                            unitPrice: i.unitPrice || 0,
+                            lineTotal: (i.quantity || 0) * (i.unitPrice || 0)
+                          })));
+                          setDeliveryDate(''); 
+                          setPaymentTerms(''); 
+                          setUpdateOpen(true); 
+                        }}
                         className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
                         title="Submit Quotation"
                       >
@@ -259,16 +341,16 @@ export default function RFQPage() {
                     )}
                     {user?.role !== 'supplier' && rfq.status === 'quoted' && (
                       <>
-                        <button onClick={() => handlePurchaseAction(rfq._id, 'accepted')} className="p-1.5 rounded hover:bg-green-50 text-muted-foreground hover:text-green-600" title="Accept Quotation">
+                        <button onClick={() => handlePurchaseAction(rfq._id || rfq.id!, 'accepted')} className="p-1.5 rounded hover:bg-green-50 text-muted-foreground hover:text-green-600" title="Accept Quotation">
                           <CheckCircle className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handlePurchaseAction(rfq._id, 'rejected')} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Reject Quotation">
+                        <button onClick={() => handlePurchaseAction(rfq._id || rfq.id!, 'rejected')} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Reject Quotation">
                           <XCircle className="h-4 w-4" />
                         </button>
                       </>
                     )}
                     {user?.role !== 'supplier' && (
-                      <button onClick={() => handleDelete(rfq._id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive" title="Delete">
+                      <button onClick={() => handleDelete(rfq._id || rfq.id!)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive" title="Delete">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     )}
@@ -307,7 +389,7 @@ export default function RFQPage() {
               >
                 <option value="">Select supplier...</option>
                 {suppliers.map((s) => (
-                  <option key={s._id} value={s._id}>{s.companyName || s.name}</option>
+                  <option key={s._id || s.id} value={s._id || s.id}>{s.companyName || s.name}</option>
                 ))}
               </select>
             </div>
@@ -362,54 +444,93 @@ export default function RFQPage() {
                 <span className="ml-1 font-medium">{viewRFQ.supplier?.companyName || viewRFQ.supplier?.name || 'N/A'}</span>
                 {viewRFQ.supplier?.email && <span className="ml-1 text-muted-foreground">({viewRFQ.supplier.email})</span>}
               </div>
-              <div>
-                <p className="text-muted-foreground font-medium mb-1">Items:</p>
-                <table className="w-full text-xs border rounded-lg overflow-hidden">
-                  <thead><tr className="bg-muted/40"><th className="text-left px-3 py-1.5">Name</th><th className="text-left px-3 py-1.5">SKU</th><th className="text-right px-3 py-1.5">Qty</th><th className="text-right px-3 py-1.5">Est. Price</th></tr></thead>
-                  <tbody>
-                    {(viewRFQ.items || []).map((item, i) => (
-                      <tr key={i} className="border-t border-border/30">
-                        <td className="px-3 py-1.5">{item.name}</td>
-                        <td className="px-3 py-1.5 text-muted-foreground">{item.sku || '-'}</td>
-                        <td className="px-3 py-1.5 text-right">{item.quantity}</td>
-                        <td className="px-3 py-1.5 text-right">{item.unitPrice ? `₹${item.unitPrice}` : '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {viewRFQ.notes && <div><span className="text-muted-foreground">Notes:</span> <span className="ml-1">{viewRFQ.notes}</span></div>}
-              {viewRFQ.supplierNotes && <div><span className="text-muted-foreground">Supplier Response:</span> <span className="ml-1">{viewRFQ.supplierNotes}</span></div>}
+              
               {(() => {
-                if (!viewRFQ.supplierQuote) return null;
-                let parsedQuote: any = {};
-                try {
-                  parsedQuote = typeof viewRFQ.supplierQuote === 'string' ? JSON.parse(viewRFQ.supplierQuote) : viewRFQ.supplierQuote;
-                } catch (e) {
-                  parsedQuote = { quotedPrice: viewRFQ.supplierQuote };
+                let parsedQuote: any = null;
+                if (viewRFQ.supplierQuote) {
+                  try {
+                    parsedQuote = typeof viewRFQ.supplierQuote === 'string' ? JSON.parse(viewRFQ.supplierQuote) : viewRFQ.supplierQuote;
+                  } catch (e) {
+                    parsedQuote = { quotedPrice: viewRFQ.supplierQuote };
+                  }
                 }
+
                 return (
-                  <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-100 mt-3">
-                    <p className="font-medium mb-2 text-emerald-800">Supplier Quotation</p>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Total Quoted Price</span>
-                        <span className="font-semibold text-emerald-700">₹{parsedQuote.quotedPrice || '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground block text-xs">Expected Delivery</span>
-                        <span className="font-medium text-foreground">{parsedQuote.deliveryDate || '-'}</span>
-                      </div>
-                      {parsedQuote.paymentTerms && (
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground block text-xs">Payment Terms</span>
-                          <span className="font-medium text-foreground">{parsedQuote.paymentTerms}</span>
+                  <div>
+                    <p className="text-muted-foreground font-medium mb-1">Items:</p>
+                    <table className="w-full text-xs border rounded-lg overflow-hidden">
+                      <thead>
+                        <tr className="bg-muted/40">
+                          <th className="text-left px-3 py-1.5">Name</th>
+                          <th className="text-left px-3 py-1.5">SKU</th>
+                          <th className="text-right px-3 py-1.5">Qty</th>
+                          <th className="text-right px-3 py-1.5">{parsedQuote?.itemQuotes ? 'Quoted Price' : 'Est. Price'}</th>
+                          {parsedQuote?.itemQuotes && <th className="text-right px-3 py-1.5">Line Total</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(viewRFQ.items || []).map((item, i) => {
+                          let quotedPrice = null;
+                          let lineTotal = null;
+                          if (parsedQuote?.itemQuotes) {
+                            const quoteItem = parsedQuote.itemQuotes.find((qi: any) => qi.productId === item.productId || qi.name === item.name);
+                            if (quoteItem) {
+                              quotedPrice = quoteItem.unitPrice;
+                              lineTotal = quoteItem.lineTotal;
+                            }
+                          }
+
+                          return (
+                            <tr key={i} className="border-t border-border/30">
+                              <td className="px-3 py-1.5">
+                                {item.name}
+                                {!item.productId && (
+                                  <div className="text-[9px] text-yellow-600">Unmapped</div>
+                                )}
+                              </td>
+                              <td className="px-3 py-1.5 text-muted-foreground">{item.sku || '-'}</td>
+                              <td className="px-3 py-1.5 text-right">{item.quantity}</td>
+                              <td className="px-3 py-1.5 text-right font-medium">
+                                {quotedPrice != null ? `₹${quotedPrice.toLocaleString('en-IN')}` : (item.unitPrice ? `₹${item.unitPrice.toLocaleString('en-IN')}` : '-')}
+                              </td>
+                              {parsedQuote?.itemQuotes && (
+                                <td className="px-3 py-1.5 text-right font-semibold text-emerald-700">
+                                  {lineTotal != null ? `₹${lineTotal.toLocaleString('en-IN')}` : '-'}
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    
+                    {parsedQuote && (
+                      <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-100 mt-3">
+                        <p className="font-medium mb-2 text-emerald-800">Supplier Quotation Summary</p>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-muted-foreground block text-xs">Total Quoted Price</span>
+                            <span className="font-semibold text-emerald-700">₹{parsedQuote.quotedPrice?.toLocaleString('en-IN') || '-'}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-xs">Expected Delivery</span>
+                            <span className="font-medium text-foreground">{parsedQuote.deliveryDate || '-'}</span>
+                          </div>
+                          {parsedQuote.paymentTerms && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground block text-xs">Payment Terms</span>
+                              <span className="font-medium text-foreground">{parsedQuote.paymentTerms}</span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
+
+              {viewRFQ.notes && <div><span className="text-muted-foreground">Notes:</span> <span className="ml-1">{viewRFQ.notes}</span></div>}
+              {viewRFQ.supplierNotes && <div><span className="text-muted-foreground">Supplier Response:</span> <span className="ml-1">{viewRFQ.supplierNotes}</span></div>}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setViewRFQ(null)}>Close</Button>
@@ -420,9 +541,9 @@ export default function RFQPage() {
 
       {/* Update Status / Quotation Modal */}
       <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className={user?.role === 'supplier' ? "max-w-3xl max-h-[90vh] overflow-y-auto" : "max-w-sm"}>
           <DialogHeader><DialogTitle>{user?.role === 'supplier' ? 'Submit Quotation' : 'Update RFQ Status'}</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
+          <div className="space-y-4 py-2">
             {user?.role !== 'supplier' && (
               <div>
                 <label className="text-sm font-medium mb-1 block">New Status</label>
@@ -440,17 +561,55 @@ export default function RFQPage() {
             
             {user?.role === 'supplier' && (
               <>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Total Quoted Price</label>
-                  <Input type="number" value={quotedPrice} onChange={(e) => setQuotedPrice(e.target.value)} className="h-8 text-sm" placeholder="₹ Total Amount" />
+                <div className="rounded-md border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 text-xs">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium">Product</th>
+                        <th className="text-right px-3 py-2 font-medium">Qty</th>
+                        <th className="text-right px-3 py-2 font-medium w-32">Unit Price (₹)</th>
+                        <th className="text-right px-3 py-2 font-medium w-32">Line Total (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itemQuotes.map((item, idx) => (
+                        <tr key={idx} className="border-t border-border">
+                          <td className="px-3 py-2">{item.name}</td>
+                          <td className="px-3 py-2 text-right">{item.quantity}</td>
+                          <td className="px-3 py-2">
+                            <Input 
+                              type="number" 
+                              className="h-8 text-right w-full"
+                              value={item.unitPrice || ''}
+                              onChange={(e) => handleItemQuoteChange(idx, e.target.value)}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium text-emerald-700">
+                            {item.lineTotal ? item.lineTotal.toLocaleString('en-IN') : '0'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-muted/30 font-semibold border-t">
+                      <tr>
+                        <td colSpan={3} className="text-right px-3 py-3">Total Quoted Price:</td>
+                        <td className="text-right px-3 py-3 text-emerald-700 text-base">
+                          ₹{itemQuotes.reduce((sum, item) => sum + (item.lineTotal || 0), 0).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Expected Delivery Date</label>
-                  <Input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="h-8 text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Payment Terms</label>
-                  <Input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} className="h-8 text-sm" placeholder="e.g., Net 30, Advance..." />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Expected Delivery Date</label>
+                    <Input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="h-8 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Payment Terms</label>
+                    <Input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} className="h-8 text-sm" placeholder="e.g., Net 30, Advance..." />
+                  </div>
                 </div>
               </>
             )}

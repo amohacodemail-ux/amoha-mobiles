@@ -6,10 +6,12 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package, PlusCircle, Loader2 } from 'lucide-react';
+import { Search, Package, PlusCircle, Loader2, X, FileText } from 'lucide-react';
 import { supplierService } from '@/services/supplier.service';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddToPOModal } from '@/components/purchase/AddToPOModal';
+import { CreateRFQModal } from '@/components/purchase/CreateRFQModal';
+import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -23,7 +25,11 @@ export default function SupplierProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   
   // Modal state
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedProductForPO, setSelectedProductForPO] = useState<any>(null);
+  const [isRFQModalOpen, setIsRFQModalOpen] = useState(false);
+
+  // Selection state
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
 
   useEffect(() => {
     fetchSuppliers();
@@ -58,8 +64,30 @@ export default function SupplierProductsPage() {
     }
   };
 
+  const handleSelectProduct = (product: any, checked: boolean) => {
+    if (checked) {
+      // Validate same supplier
+      if (selectedProducts.length > 0) {
+        const currentSupplierId = selectedProducts[0].supplierId || selectedProducts[0].supplier_id;
+        const newSupplierId = product.supplierId || product.supplier_id;
+        
+        if (currentSupplierId !== newSupplierId) {
+          toast.error('Please select products from the same supplier to create an RFQ.');
+          return;
+        }
+      }
+      setSelectedProducts([...selectedProducts, product]);
+    } else {
+      setSelectedProducts(selectedProducts.filter(p => p.id !== product.id));
+    }
+  };
+
+  const isSelected = (productId: string) => {
+    return selectedProducts.some(p => p.id === productId);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <PageHeader 
         title="Supplier Catalogues" 
         description="Browse and order products directly from suppliers."
@@ -91,6 +119,34 @@ export default function SupplierProductsPage() {
         </div>
       </div>
 
+      {/* Action Bar for Selected Products */}
+      {selectedProducts.length > 0 && (
+        <div className="sticky top-4 z-10 bg-primary/10 border border-primary/20 rounded-lg p-3 flex items-center justify-between shadow-sm backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <Badge variant="default" className="text-sm px-2.5 py-0.5">
+              {selectedProducts.length} {selectedProducts.length === 1 ? 'Product' : 'Products'} Selected
+            </Badge>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setSelectedProducts([])}
+              className="text-muted-foreground hover:text-foreground h-7 px-2"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Clear Selection
+            </Button>
+          </div>
+          <Button 
+            onClick={() => setIsRFQModalOpen(true)}
+            size="sm"
+            className="shadow-sm"
+          >
+            <FileText className="h-4 w-4 mr-1.5" />
+            Create RFQ
+          </Button>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -107,83 +163,111 @@ export default function SupplierProductsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {products.map((product) => (
-            <Card key={product.id} className="group overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border-muted/60 bg-card">
-              <div className="aspect-[4/3] bg-muted/20 relative overflow-hidden">
-                {product.imageUrl ? (
-                  <img 
-                    src={product.imageUrl} 
-                    alt={product.productName} 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground/40">
-                    <Package className="h-10 w-10" />
+          {products.map((product) => {
+            const selected = isSelected(product.id);
+            return (
+              <Card 
+                key={product.id} 
+                className={`group overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-card ${selected ? 'border-primary ring-1 ring-primary shadow-md' : 'border-muted/60'}`}
+              >
+                <div className="aspect-[4/3] bg-muted/20 relative overflow-hidden">
+                  {product.imageUrl ? (
+                    <img 
+                      src={product.imageUrl} 
+                      alt={product.productName} 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground/40">
+                      <Package className="h-10 w-10" />
+                    </div>
+                  )}
+                  
+                  {/* Selection Checkbox */}
+                  <div className="absolute top-2.5 left-2.5 z-10 bg-background/80 backdrop-blur-sm rounded-sm p-0.5">
+                    <Checkbox 
+                      checked={selected}
+                      onCheckedChange={(checked) => handleSelectProduct(product, checked as boolean)}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground border-foreground/30 h-5 w-5"
+                    />
                   </div>
-                )}
-                {product.mappedProductId && (
-                  <div className="absolute top-2.5 right-2.5">
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none shadow-sm font-medium px-2 py-0">Mapped</Badge>
-                  </div>
-                )}
-              </div>
-              
-              <div className="p-3.5 flex-1 flex flex-col">
-                <div className="mb-1.5 flex justify-between items-start">
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded-sm">
-                    {product.category || 'Uncategorized'}
-                  </span>
-                  <span className="text-[10px] font-medium text-muted-foreground truncate max-w-[100px]" title={product.supplier?.name || product.supplier?.companyName}>
-                    By {product.supplier?.name || product.supplier?.companyName}
-                  </span>
-                </div>
-                
-                <h3 className="font-semibold text-sm leading-tight line-clamp-1 mb-1.5 text-foreground/90" title={product.productName}>
-                  {product.productName}
-                </h3>
-                
-                <div className="flex items-baseline text-primary font-bold mb-3">
-                  <span className="text-base tracking-tight">{formatCurrency(product.supplierPrice)}</span>
-                  {product.unit && <span className="text-muted-foreground text-[10px] font-medium ml-1">/ {product.unit}</span>}
-                </div>
 
-                <div className="flex flex-wrap gap-1.5 text-[10px] mb-3 flex-1">
-                  <div className="flex items-center gap-1 bg-muted/40 px-2 py-1 rounded text-muted-foreground border border-border/50">
-                    <span className="font-semibold text-foreground/80">MOQ:</span> {product.moq}
-                  </div>
-                  <div className="flex items-center gap-1 bg-muted/40 px-2 py-1 rounded text-muted-foreground border border-border/50">
-                    <span className="font-semibold text-foreground/80">Stock:</span> {product.availableStock}
-                  </div>
-                  {product.deliveryTimeDays && (
-                    <div className="flex items-center gap-1 bg-muted/40 px-2 py-1 rounded text-muted-foreground border border-border/50">
-                      <span className="font-semibold text-foreground/80">Delivers:</span> {product.deliveryTimeDays}d
+                  {product.mappedProductId && (
+                    <div className="absolute top-2.5 right-2.5">
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none shadow-sm font-medium px-2 py-0">Mapped</Badge>
                     </div>
                   )}
                 </div>
                 
-                <Button 
-                  className="w-full mt-auto h-8 text-xs font-medium"
-                  onClick={() => setSelectedProduct(product)}
-                >
-                  <PlusCircle className="h-3.5 w-3.5 mr-1.5" />
-                  Add to PO
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="p-3.5 flex-1 flex flex-col">
+                  <div className="mb-1.5 flex justify-between items-start">
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-primary/70 bg-primary/10 px-1.5 py-0.5 rounded-sm">
+                      {product.category || 'Uncategorized'}
+                    </span>
+                    <span className="text-[10px] font-medium text-muted-foreground truncate max-w-[100px]" title={product.supplier?.name || product.supplier?.companyName}>
+                      By {product.supplier?.name || product.supplier?.companyName}
+                    </span>
+                  </div>
+                  
+                  <h3 className="font-semibold text-sm leading-tight line-clamp-1 mb-1.5 text-foreground/90" title={product.productName}>
+                    {product.productName}
+                  </h3>
+                  
+                  <div className="flex items-baseline text-primary font-bold mb-3">
+                    <span className="text-base tracking-tight">{formatCurrency(product.supplierPrice)}</span>
+                    {product.unit && <span className="text-muted-foreground text-[10px] font-medium ml-1">/ {product.unit}</span>}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 text-[10px] mb-3 flex-1">
+                    <div className="flex items-center gap-1 bg-muted/40 px-2 py-1 rounded text-muted-foreground border border-border/50">
+                      <span className="font-semibold text-foreground/80">MOQ:</span> {product.moq}
+                    </div>
+                    <div className="flex items-center gap-1 bg-muted/40 px-2 py-1 rounded text-muted-foreground border border-border/50">
+                      <span className="font-semibold text-foreground/80">Stock:</span> {product.availableStock}
+                    </div>
+                    {product.deliveryTimeDays && (
+                      <div className="flex items-center gap-1 bg-muted/40 px-2 py-1 rounded text-muted-foreground border border-border/50">
+                        <span className="font-semibold text-foreground/80">Delivers:</span> {product.deliveryTimeDays}d
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Button 
+                    variant="outline"
+                    className="w-full mt-auto h-8 text-xs font-medium"
+                    onClick={() => setSelectedProductForPO(product)}
+                  >
+                    <PlusCircle className="h-3.5 w-3.5 mr-1.5" />
+                    Direct PO
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {selectedProduct && (
+      {selectedProductForPO && (
         <AddToPOModal 
-          isOpen={!!selectedProduct}
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
+          isOpen={!!selectedProductForPO}
+          product={selectedProductForPO}
+          onClose={() => setSelectedProductForPO(null)}
           onSuccess={() => {
             fetchProducts();
           }}
         />
       )}
+
+      <CreateRFQModal 
+        isOpen={isRFQModalOpen}
+        selectedProducts={selectedProducts}
+        onClose={() => setIsRFQModalOpen(false)}
+        onSuccess={() => {
+          setSelectedProducts([]);
+          setIsRFQModalOpen(false);
+        }}
+      />
     </div>
   );
 }
+
