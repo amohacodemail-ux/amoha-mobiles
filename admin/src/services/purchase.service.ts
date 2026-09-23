@@ -10,6 +10,11 @@ export interface PurchaseStats {
 
 export const purchaseService = {
   // GRN
+  async createRFQ(data: any) {
+    const response = await apiClient.post('/rfq', data);
+    return response.data.data;
+  },
+
   async createGRN(data: any) {
     const response = await apiClient.post('/purchase/grn', data);
     return response.data.data;
