@@ -42,13 +42,20 @@ class StockNotificationService {
       for (const sub of (data || [])) {
         const userPhone = Array.isArray(sub.users) ? (sub.users[0] as any)?.phone : (sub.users as any)?.phone;
         const guestPhone = sub.phone;
-        const phone = userPhone || guestPhone;
+        let rawPhone = guestPhone || userPhone;
 
-        if (phone && phone.trim().length >= 10) {
+        if (rawPhone && rawPhone.trim().length >= 10) {
+          let phone = rawPhone.replace(/\D/g, '');
+          if (phone.length === 10) {
+            phone = '91' + phone;
+          } else if (phone.startsWith('0') && phone.length === 11) {
+            phone = '91' + phone.substring(1);
+          }
+          
           targets.push({
             subscriptionId: sub.id,
             userId: sub.user_id,
-            phone: phone.trim()
+            phone: phone
           });
         }
       }
@@ -99,6 +106,8 @@ class StockNotificationService {
         continue; // Skip if we can't reliably track
       }
 
+      logger.info(`[StockNotificationService] Attempting to send WhatsApp notification. Product: ${productId}, Subscription: ${customer.subscriptionId}, User: ${customer.userId}, PhoneFound: true`);
+
       // Send the approved WhatsApp template for restock notifications (Utility template)
       const response = await whatsappService.sendTemplateMessage({
         to: customer.phone,
@@ -118,9 +127,9 @@ class StockNotificationService {
       const notificationStatus = response.success ? 'sent' : 'failed';
       
       if (response.success) {
-        logger.info(`stack update sent to whatsapp for ${customer.phone}`);
+        logger.info(`[StockNotificationService] WhatsApp notification sent successfully for Product: ${productId}, Subscription: ${customer.subscriptionId}, User: ${customer.userId}. Message ID: ${response.messageId}`);
       } else {
-        logger.error(`stack update not sent to whatsapp for ${customer.phone}:`, response.error);
+        logger.error(`[StockNotificationService] WhatsApp notification failed for Product: ${productId}, Subscription: ${customer.subscriptionId}, User: ${customer.userId}. Error:`, response.error);
       }
       
       await supabase.from('stock_notification_logs').update({
@@ -130,16 +139,25 @@ class StockNotificationService {
         sent_at: response.success ? new Date().toISOString() : null
       }).eq('id', logId);
 
-      // Update subscription timestamp based on the delivery result
-      // We keep the status as 'active' so they can be notified again if stock drops to 0 and restocks later.
-      if (response.success && !customer.isTestTarget && customer.subscriptionId) {
+      // Update subscription timestamp and status based on the delivery result
+      if (customer.subscriptionId) {
+        const updateData: any = { updated_at: new Date().toISOString() };
+        
+        if (response.success && !customer.isTestTarget) {
+          updateData.notified_at = new Date().toISOString();
+          updateData.notification_status = 'sent';
+        } else if (!response.success && !customer.isTestTarget) {
+          // If the schema supports it, we could set notification_status to 'failed' here
+          // But based on requirement we just don't mark it as sent, leaving it pending or setting to failed
+          updateData.notification_status = 'failed';
+        }
+
         await supabase
           .from('stock_notification_subscriptions')
-          .update({
-            notified_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', customer.subscriptionId);
+          
+        logger.info(`[StockNotificationService] Subscription ${customer.subscriptionId} status updated to ${updateData.notification_status}`);
       }
     }
   }
@@ -234,13 +252,20 @@ class StockNotificationService {
       throw new BadRequestError('Please add a valid mobile number in your profile to subscribe to WhatsApp notifications.');
     }
 
-    // Check for existing active subscription
+    // Normalize phone number (adding 91 for India if exactly 10 digits)
+    let normalizedPhone = user.phone.replace(/\D/g, '');
+    if (normalizedPhone.length === 10) {
+      normalizedPhone = '91' + normalizedPhone;
+    } else if (normalizedPhone.startsWith('0') && normalizedPhone.length === 11) {
+      normalizedPhone = '91' + normalizedPhone.substring(1);
+    }
+
+    // Check for existing subscription (including cancelled ones)
     const { data: existingSub } = await supabase
       .from('stock_notification_subscriptions')
       .select('id')
       .eq('user_id', userId)
       .eq('product_id', productId)
-      .eq('status', 'active')
       .maybeSingle();
 
     let result;
@@ -248,7 +273,9 @@ class StockNotificationService {
       result = await supabase
         .from('stock_notification_subscriptions')
         .update({
+          phone: normalizedPhone,
           whatsapp_opt_in: whatsappOptIn,
+          status: 'active',
           notification_status: 'pending',
           updated_at: new Date().toISOString()
         })
@@ -261,6 +288,7 @@ class StockNotificationService {
         .insert({
           user_id: userId,
           product_id: productId,
+          phone: normalizedPhone,
           whatsapp_opt_in: whatsappOptIn,
           status: 'active',
           notification_status: 'pending',
