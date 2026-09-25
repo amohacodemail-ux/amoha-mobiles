@@ -1,4 +1,4 @@
-import api from './auth.service';
+import apiClient from '@/lib/api-client';
 
 export interface PaymentTransaction {
   id: string;
@@ -43,7 +43,7 @@ export interface PaymentSummary {
 
 export const paymentHistoryService = {
   getSummary: async (params?: { from?: string; to?: string }) => {
-    const response = await api.get('/admin/payment-history/summary', { params });
+    const response = await apiClient.get('/admin/payment-history/summary', { params });
     return response.data;
   },
 
@@ -56,12 +56,12 @@ export const paymentHistoryService = {
     from?: string;
     to?: string;
   }) => {
-    const response = await api.get('/admin/payment-history', { params });
+    const response = await apiClient.get('/admin/payment-history', { params });
     return response.data;
   },
 
   getDetails: async (id: string) => {
-    const response = await api.get(`/admin/payment-history/${id}`);
+    const response = await apiClient.get(`/admin/payment-history/${id}`);
     return response.data;
   }
 };

@@ -14,7 +14,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 
 interface Supplier { _id: string; id?: string; name: string; companyName: string; email: string; }
-interface RFQItem { productId?: string; name: string; sku?: string; quantity: number; unitPrice?: number; notes?: string; }
+interface RFQItem { productId?: string; catalogueId?: string; name: string; sku?: string; quantity: number; unitPrice?: number; notes?: string; }
 interface RFQ {
   _id: string;
   id?: string;
