@@ -108,6 +108,9 @@ class StockNotificationService {
 
       logger.info(`[StockNotificationService] Attempting to send WhatsApp notification. Product: ${productId}, Subscription: ${customer.subscriptionId}, User: ${customer.userId}, PhoneFound: true`);
 
+      // Extract the slug from the productUrl (e.g., https://amohamobiles.com/product/my-slug)
+      const slug = productUrl.split('/').pop() || '';
+
       // Send the approved WhatsApp template for restock notifications (Utility template)
       const response = await whatsappService.sendTemplateMessage({
         to: customer.phone,
@@ -118,6 +121,14 @@ class StockNotificationService {
             type: 'body',
             parameters: [
               { type: 'text', text: productName }
+            ]
+          },
+          {
+            type: 'button',
+            sub_type: 'url',
+            index: '0',
+            parameters: [
+              { type: 'text', text: slug }
             ]
           }
         ]
