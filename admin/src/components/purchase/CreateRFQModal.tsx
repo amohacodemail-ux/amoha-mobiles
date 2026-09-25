@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2, Loader2, Calendar } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
+import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
 
 interface CreateRFQModalProps {
@@ -27,18 +28,39 @@ export function CreateRFQModal({ isOpen, selectedProducts, onClose, onSuccess }:
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
   const [notes, setNotes] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
+
+  useEffect(() => {
+    // Fetch suppliers for the dropdown
+    const fetchSuppliers = async () => {
+      try {
+        const { data } = await apiClient.get('/suppliers?limit=100');
+        if (data?.data?.suppliers) {
+          setSuppliers(data.data.suppliers);
+        }
+      } catch (err) {
+        console.error('Failed to load suppliers');
+      }
+    };
+    fetchSuppliers();
+  }, []);
 
   // Initialize items when modal opens
   useEffect(() => {
     if (isOpen && selectedProducts.length > 0) {
+      const initialSupplier = selectedProducts[0]?.supplierId || selectedProducts[0]?.supplier_id || '';
+      setSelectedSupplierId(initialSupplier);
+
       setItems(
         selectedProducts.map(p => ({
-          productId: p.mappedProductId || p.mapped_product_id || null, // Keep null if not mapped
+          productId: p.mappedProductId || p.mapped_product_id || p.productId || p.product_id || null, // Must be null if not mapped to a master product
           catalogueId: p.id,
-          name: p.productName || p.product_name,
+          name: p.productName || p.product_name || p.name,
           sku: p.sku || '',
           quantity: p.moq || 1,
-          unitPrice: p.supplierPrice || p.supplier_price || 0, // Used as est price
+          supplierPrice: p.supplierPrice || p.supplier_price || p.sellingPrice || p.selling_price || 0,
+          unitPrice: p.supplierPrice || p.supplier_price || p.sellingPrice || p.selling_price || 0, // Used as est price
           remarks: ''
         }))
       );
@@ -48,6 +70,12 @@ export function CreateRFQModal({ isOpen, selectedProducts, onClose, onSuccess }:
   const handleQuantityChange = (index: number, val: string) => {
     const newItems = [...items];
     newItems[index].quantity = parseInt(val) || 0;
+    setItems(newItems);
+  };
+
+  const handlePriceChange = (index: number, val: string) => {
+    const newItems = [...items];
+    newItems[index].unitPrice = parseFloat(val) || 0;
     setItems(newItems);
   };
 
@@ -74,16 +102,13 @@ export function CreateRFQModal({ isOpen, selectedProducts, onClose, onSuccess }:
 
     try {
       setIsLoading(true);
-      // All selected products must be from the same supplier due to previous validation
-      const supplierId = selectedProducts[0]?.supplierId || selectedProducts[0]?.supplier_id;
-      
-      if (!supplierId) {
-         toast.error('Supplier information is missing');
+      if (!selectedSupplierId) {
+         toast.error('Supplier information is missing. Please select a supplier.');
          return;
       }
 
       await purchaseService.createRFQ({
-        supplierId,
+        supplierId: selectedSupplierId,
         items,
         notes,
         expectedDeliveryDate: expectedDeliveryDate || undefined,
@@ -110,6 +135,19 @@ export function CreateRFQModal({ isOpen, selectedProducts, onClose, onSuccess }:
 
         <div className="space-y-6 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label>Supplier *</Label>
+              <select
+                value={selectedSupplierId}
+                onChange={(e) => setSelectedSupplierId(e.target.value)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Select a supplier...</option>
+                {suppliers.map(s => (
+                  <option key={s._id || s.id} value={s._id || s.id}>{s.companyName || s.name}</option>
+                ))}
+              </select>
+            </div>
             <div className="space-y-2">
               <Label>Expected Delivery Date</Label>
               <Input
@@ -142,7 +180,9 @@ export function CreateRFQModal({ isOpen, selectedProducts, onClose, onSuccess }:
                 <TableRow>
                   <TableHead>Product</TableHead>
                   <TableHead>SKU</TableHead>
-                  <TableHead className="w-[120px]">Quantity</TableHead>
+                  <TableHead className="w-[100px]">Quantity</TableHead>
+                  <TableHead className="w-[120px]">Supplier Price (₹)</TableHead>
+                  <TableHead className="w-[120px]">Est. Price (₹)</TableHead>
                   <TableHead>Remarks</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
@@ -164,6 +204,21 @@ export function CreateRFQModal({ isOpen, selectedProducts, onClose, onSuccess }:
                         className="w-20"
                         value={item.quantity || ''}
                         onChange={(e) => handleQuantityChange(index, e.target.value)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium px-2 py-1 bg-muted/50 rounded-md border border-border inline-block min-w-[60px] text-center">
+                        {item.supplierPrice ? `₹${item.supplierPrice}` : '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="w-24"
+                        value={item.unitPrice || ''}
+                        onChange={(e) => handlePriceChange(index, e.target.value)}
                       />
                     </TableCell>
                     <TableCell>

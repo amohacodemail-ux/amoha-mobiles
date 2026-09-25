@@ -6,6 +6,8 @@ import { transformRow, toDbRow } from '../utils/transform.util';
 import { NotFoundError } from '../errors/app-error';
 import { authorize, canAccessRFQ, canAccessPurchase, canAccessAdminOnly } from '../middleware/role.middleware';
 import { generateSequentialRfqNumber } from '../utils/rfq.util';
+import whatsappService from '../services/whatsapp.service';
+import { generateRfqPDF } from '../utils/purchase-pdf.util';
 
 interface AuthenticatedRequest extends Request {
   user?: { userId: string; role: string };
@@ -89,6 +91,54 @@ router.get('/:id', canAccessRFQ, async (req: Request, res: Response, next: NextF
   }
 });
 
+// ====== DOWNLOAD RFQ PDF ======
+router.get('/:id/pdf', canAccessRFQ, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data, error } = await supabase
+      .from('rfqs')
+      .select('*, suppliers:supplier_id(id, name, company_name, email, phone)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new NotFoundError('RFQ');
+    
+    // Authorization: if user is supplier, verify ownership
+    const userRole = (req as any).user?.role;
+    if (userRole === 'supplier') {
+       const userEmail = (req as any).user?.email || ''; // Not reliable here without db fetch
+       const userId = (req as any).user?.userId;
+       
+       const { data: supRecord } = await supabase.from('suppliers').select('id').eq('email', supabase.from('users').select('email').eq('id', userId)).maybeSingle();
+       
+       // actually let's just do a simple query to verify supplier
+       const { data: userRec } = await supabase.from('users').select('email').eq('id', userId).single();
+       if (userRec?.email) {
+          const { data: supplierRec } = await supabase.from('suppliers').select('id').eq('email', userRec.email).maybeSingle();
+          if (supplierRec && data.supplier_id !== supplierRec.id && data.supplier_id !== userId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized to download this RFQ' });
+          }
+       } else if (data.supplier_id !== userId) {
+          return res.status(403).json({ success: false, message: 'Unauthorized to download this RFQ' });
+       }
+    }
+
+    const t = transformRow(data);
+    if (t.suppliers) { t.supplier = t.suppliers; delete t.suppliers; }
+    
+    let generatedByEmail = 'purchase@amohamobiles.com';
+    if (userRole !== 'supplier') {
+      const { data: userRec } = await supabase.from('users').select('email').eq('id', (req as any).user?.userId).maybeSingle();
+      if (userRec?.email) {
+        generatedByEmail = userRec.email;
+      }
+    }
+    
+    generateRfqPDF(res, t, { generatedByEmail });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ====== CREATE RFQ ======
 router.post('/', canAccessPurchase, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -117,6 +167,20 @@ router.post('/', canAccessPurchase, async (req: Request, res: Response, next: Ne
       .single();
 
     if (error) throw error;
+
+    // Fetch supplier to send WhatsApp notification
+    const { data: supplier } = await supabase.from('suppliers').select('name, phone').eq('id', supplierId).maybeSingle();
+    
+    if (supplier?.phone) {
+      // Send WhatsApp notification
+      whatsappService.sendTemplateMessage({
+        to: supplier.phone,
+        templateName: 'rfq_created_notification',
+        components: [
+          { type: 'body', parameters: [{ type: 'text', text: supplier.name }, { type: 'text', text: rfqNumber }] }
+        ]
+      }).catch(err => console.error('Failed to send WhatsApp notification for RFQ:', err));
+    }
 
     const t = transformRow(data);
     if (t.suppliers) { t.supplier = t.suppliers; delete t.suppliers; }

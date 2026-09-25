@@ -19,6 +19,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { SalesDashboard } from './SalesDashboard';
 import { PurchaseDashboard } from './PurchaseDashboard';
 import { MarketingDashboard } from './MarketingDashboard';
+import { SalesPersonPerformance } from './SalesPersonPerformance';
 
 const RevenueChart = dynamic(
   () => import('@/components/charts/revenue-chart').then((m) => ({ default: m.RevenueChart })),
@@ -293,6 +294,8 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      <SalesPersonPerformance />
     </div>
   );
 }

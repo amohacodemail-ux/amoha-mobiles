@@ -3,7 +3,9 @@ import { Router, Request } from 'express';
 interface AuthenticatedRequest extends Request {
   user?: { userId: string; role: string };
 }
+import supabase from '../config/supabase';
 import supplierController from '../controllers/supplier.controller';
+import supplierService from '../services/supplier.service';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize, canAccessAdminOnly, canAccessPurchase, canAccessSupplier } from '../middleware/role.middleware';
 import { validate } from '../middleware/validate.middleware';
@@ -15,6 +17,7 @@ import {
   createPurchaseOrderSchema,
   receivePurchaseOrderSchema,
 } from '../validators/supplier.validator';
+import { generatePoPDF } from '../utils/purchase-pdf.util';
 
 const router = Router();
 
@@ -40,6 +43,32 @@ router.get('/analytics', canAccessPurchase, supplierController.getAnalytics);
 // Purchase Orders
 router.get('/purchase-orders', canAccessPO, supplierController.getAllPurchaseOrders);
 router.get('/purchase-orders/:id', canAccessPO, supplierController.getPurchaseOrderById);
+
+// ====== DOWNLOAD PO PDF ======
+router.get('/purchase-orders/:id/pdf', canAccessPO, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    const po = await supplierService.getPurchaseOrderById(req.params.id);
+    
+    // Authorization: if user is supplier, verify ownership
+    if (req.user?.role === 'supplier') {
+       const userId = req.user.userId;
+       const { data: userRec } = await supabase.from('users').select('email').eq('id', userId).single();
+       if (userRec?.email) {
+          const { data: supplierRec } = await supabase.from('suppliers').select('id').eq('email', userRec.email).maybeSingle();
+          if (supplierRec && po.supplierId !== supplierRec.id && po.supplierId !== userId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized to download this PO' });
+          }
+       } else if (po.supplierId !== userId) {
+          return res.status(403).json({ success: false, message: 'Unauthorized to download this PO' });
+       }
+    }
+    
+    generatePoPDF(res, po);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/purchase-orders', canAccessPurchase, validate(createPurchaseOrderSchema), supplierController.createPurchaseOrder);
 router.put('/purchase-orders/:id', canAccessPO, (req: AuthenticatedRequest, res, next) => {
   if (req.user?.role === 'supplier') {

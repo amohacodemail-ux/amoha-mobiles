@@ -71,7 +71,10 @@ export const createPurchaseOrderSchema = z.object({
     shippingCost: z.coerce.number().min(0).optional(),
     notes: z.string().optional(),
     items: z.array(z.object({
-      productId: z.string().uuid('Invalid product ID'),
+      productId: z.string().uuid('Invalid product ID').nullable().optional(),
+      catalogueId: z.string().uuid().nullable().optional(),
+      name: z.string().optional(),
+      sku: z.string().optional(),
       quantity: z.coerce.number().int().min(1, 'Quantity must be at least 1'),
       unitCost: z.coerce.number().min(0, 'Unit cost must be >= 0'),
     })).min(1, 'At least one item is required'),

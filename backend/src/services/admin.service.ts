@@ -299,6 +299,58 @@ class AdminService {
       recentSuppliers
     };
   }
+
+  async getSalesPersonPerformance(userId: string) {
+    const { data: allOrders, error } = await supabase
+      .from('orders')
+      .select('id, total, created_at, status, order_number, payment_status, user_id')
+      .eq('created_by', userId);
+
+    if (error) throw error;
+
+    const orders = allOrders || [];
+    const nonCancelledOrders = orders.filter((o: any) => o.status !== 'cancelled' && o.status !== 'returned');
+
+    const totalOrders = orders.length;
+    // Assuming 'delivered' or 'completed' is completed state
+    const completedOrders = orders.filter((o: any) => o.status === 'delivered' || o.status === 'completed').length;
+    // Assuming 'pending' or 'processing' is pending state
+    const pendingOrders = orders.filter((o: any) => o.status === 'pending' || o.status === 'processing').length;
+    const cancelledOrders = orders.filter((o: any) => o.status === 'cancelled').length;
+
+    const totalRevenue = nonCancelledOrders.reduce((sum: number, o: any) => sum + (o.total ?? 0), 0);
+    const revenueGeneratingCount = nonCancelledOrders.length;
+    const averageOrderValue = revenueGeneratingCount > 0 ? totalRevenue / revenueGeneratingCount : 0;
+    
+    // Batch fetch user data for the orders if needed
+    const userIds = [...new Set((orders || []).map((o: any) => o.user_id).filter(Boolean))];
+    const usersMap: Record<string, any> = {};
+    if (userIds.length > 0) {
+      const { data: users } = await supabase.from('users').select('id, name, email').in('id', userIds);
+      (users || []).forEach((u: any) => { usersMap[u.id] = transformRow(u); });
+    }
+
+    const transformedOrders = orders.map((o: any) => {
+      const t = transformRow(o);
+      t.user = usersMap[o.user_id] || { _id: o.user_id, name: 'Unknown', email: '' };
+      t.orderStatus = o.status || 'pending';
+      t.totalAmount = o.total ?? 0;
+      t.paymentStatus = o.payment_status || 'pending';
+      return t;
+    });
+
+    return {
+      summary: {
+        totalOrders,
+        completedOrders,
+        pendingOrders,
+        cancelledOrders,
+        totalRevenue,
+        averageOrderValue
+      },
+      orders: transformedOrders
+    };
+  }
 }
 
 export default new AdminService();

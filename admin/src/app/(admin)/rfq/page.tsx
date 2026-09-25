@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import apiClient from '@/lib/api-client';
 import type { ApiResponse } from '@/types';
 import toast from 'react-hot-toast';
-import { Plus, RefreshCw, Eye, Trash2, Send, CheckCircle, XCircle, ShoppingCart } from 'lucide-react';
+import { Plus, RefreshCw, Eye, Trash2, Send, CheckCircle, XCircle, ShoppingCart, Download } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 
@@ -171,13 +171,23 @@ export default function RFQPage() {
     }
   };
 
-  const handleCreatePO = async (rfq: RFQ) => {
-    // Validate mapping
-    const unmapped = rfq.items.filter(i => !i.productId);
-    if (unmapped.length > 0) {
-      toast.error('Some RFQ products are not mapped to Master Products. Please map them before creating the PO.');
-      return;
+  const handleDownloadPdf = async (rfq: RFQ) => {
+    try {
+      const response = await apiClient.get(`/rfq/${rfq._id || rfq.id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data as any]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `RFQ-${rfq.rfqNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (e) {
+      toast.error('Failed to download PDF');
     }
+  };
+
+  const handleCreatePO = async (rfq: RFQ) => {
+    // Allow unmapped products to be sent to backend; the backend will auto-create draft products.
 
     let parsedQuote: any = {};
     if (rfq.supplierQuote) {
@@ -196,6 +206,9 @@ export default function RFQPage() {
       }
       return {
         productId: item.productId,
+        catalogueId: item.catalogueId,
+        name: item.name,
+        sku: item.sku,
         quantity: item.quantity,
         unitCost: unitCost,
         totalCost: item.quantity * unitCost
@@ -210,7 +223,7 @@ export default function RFQPage() {
         status: 'draft',
       };
       
-      await apiClient.post('/purchase/orders', payload);
+      await apiClient.post('/suppliers/purchase-orders', payload);
       toast.success('Purchase Order created successfully');
       router.push('/purchase/orders');
     } catch (e: any) {
@@ -312,6 +325,9 @@ export default function RFQPage() {
                         <ShoppingCart className="h-3 w-3" /> Create PO
                       </button>
                     )}
+                    <button onClick={() => handleDownloadPdf(rfq)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title="Download PDF">
+                      <Download className="h-4 w-4" />
+                    </button>
                     <button onClick={() => setViewRFQ(rfq)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground" title="View">
                       <Eye className="h-4 w-4" />
                     </button>

@@ -428,6 +428,37 @@ class SupplierService {
     const poNumber = data.poNumber || await generateSequentialPoNumber();
     const items = data.items || [];
 
+    // Auto-create master products for any unmapped items
+    for (const item of items) {
+      if (!item.productId) {
+        // Create draft master product
+        const slug = `${item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
+        const { data: newProd, error: pErr } = await supabase.from('products').insert({
+          name: item.name || 'Unknown Product',
+          slug: slug,
+          sku: item.sku || `SKU-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          is_active: false,
+          price: item.unitCost,
+          selling_price: item.unitCost,
+          original_price: item.unitCost,
+          description: `Auto-created from Purchase Order for supplier product`,
+          thumbnail: 'https://placehold.co/150x150/png?text=Auto+Product',
+        }).select('id').single();
+
+        if (!pErr && newProd) {
+          item.productId = newProd.id;
+          // Try to map it back to the catalogue if we have the ID
+          if (item.catalogueId) {
+            await supabase.from('supplier_catalogues')
+              .update({ mapped_product_id: newProd.id })
+              .eq('id', item.catalogueId);
+          }
+        } else {
+           throw new BadRequestError(`Failed to auto-create master product for ${item.name}`);
+        }
+      }
+    }
+
     // Calculate totals
     let subtotal = 0;
     for (const item of items) {
@@ -468,7 +499,21 @@ class SupplierService {
       const { error: itemsError } = await supabase.from('purchase_order_items').insert(itemRows);
       if (itemsError) {
         logger.error('Failed to insert PO items:', itemsError);
+        if (itemsError.code === '23503') {
+           throw new BadRequestError('One or more products in the order do not exist in the Master Product list. Please ensure all items are mapped correctly.');
+        }
         throw itemsError;
+      }
+
+      // Update the supplier's catalog price to match the final agreed PO price
+      for (const item of items) {
+        if (item.productId && data.supplierId) {
+          await supabase
+            .from('supplier_products')
+            .update({ supplier_price: item.unitCost })
+            .eq('supplier_id', data.supplierId)
+            .eq('product_id', item.productId);
+        }
       }
     }
 

@@ -72,6 +72,16 @@ class AdminController {
       next(error);
     }
   }
+
+  async getSalesPersonPerformance(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const { salesPersonId } = req.params;
+      const performance = await adminService.getSalesPersonPerformance(salesPersonId);
+      sendSuccess(res, performance, 'Sales person performance fetched');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AdminController();

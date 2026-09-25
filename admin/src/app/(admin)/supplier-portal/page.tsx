@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { ClipboardList, Plus, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, User, Building2, ShieldAlert } from 'lucide-react';
+import { ClipboardList, Plus, Clock, CheckCircle, XCircle, ChevronLeft, ChevronRight, User, Building2, ShieldAlert, Download } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,6 +221,21 @@ export default function SupplierPortalPage() {
       loadPurchaseOrders();
     } catch {
       toast.error('Failed to reject Purchase Order');
+    }
+  };
+
+  const handleDownloadPdf = async (po: any) => {
+    try {
+      const response = await apiClient.get(`/suppliers/purchase-orders/${po.id || po._id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data as any]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `PO-${po.poNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (err) {
+      toast.error('Failed to download PDF');
     }
   };
 
@@ -469,6 +484,9 @@ export default function SupplierPortalPage() {
                       </td>
                       <td className="px-4 py-3 font-medium">₹{Number(po.totalAmount).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right space-x-2">
+                        <Button size="sm" variant="ghost" onClick={() => handleDownloadPdf(po)} title="Download PDF">
+                          <Download className="h-4 w-4" />
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => setViewPO(po)}>View Details</Button>
                         {po.status === 'sent' && (
                           <>

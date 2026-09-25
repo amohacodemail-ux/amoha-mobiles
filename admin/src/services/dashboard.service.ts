@@ -51,4 +51,12 @@ export const dashboardService = {
     const { data } = await apiClient.get<ApiResponse<RecentOrder[]>>('/admin/dashboard/recent-orders');
     return Array.isArray(data?.data) ? data.data : [];
   },
+  getSalesPersons: async (): Promise<any[]> => {
+    const { data } = await apiClient.get<ApiResponse<any>>('/admin/admin-users?role=sales');
+    return Array.isArray(data?.data?.users) ? data.data.users : [];
+  },
+  getSalesPersonPerformance: async (salesPersonId: string): Promise<any> => {
+    const { data } = await apiClient.get<ApiResponse<any>>(`/admin/dashboard/sales-person-performance/${salesPersonId}`);
+    return data?.data;
+  },
 };

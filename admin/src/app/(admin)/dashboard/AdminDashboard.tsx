@@ -14,6 +14,7 @@ import Image from 'next/image';
 import Cookies from 'js-cookie';
 import toast from 'react-hot-toast';
 import { downloadExcelFromBlob } from '@/lib/excel-export';
+import { SalesPersonPerformance } from './SalesPersonPerformance';
 
 const RevenueChart = dynamic(
   () => import('@/components/charts/revenue-chart').then((m) => ({ default: m.RevenueChart })),
@@ -245,6 +246,8 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      <SalesPersonPerformance />
     </div>
   );
 }

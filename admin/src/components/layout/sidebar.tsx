@@ -33,6 +33,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/brands', label: 'Brands', icon: Award, module: 'brands' },
   { href: '/orders', label: 'Orders', icon: ShoppingCart, module: 'orders' },
   { href: '/billing', label: 'Billing & Invoices', icon: IndianRupee, module: 'billing' },
+  { href: '/payment-history', label: 'Payment History', icon: Receipt, module: 'settings' },
 
   { href: '/users', label: 'Users', icon: Users, module: 'users' },
   { href: '/admin-users', label: 'Admin Users', icon: Shield, module: 'users' },
@@ -116,7 +117,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {
         title: collapsed ? undefined : 'Sales',
         items: filteredNavItems.filter(i =>
-          ['orders', 'billing', 'barcode_pos', 'returns', 'wallets'].includes(i.module)
+          ['orders', 'billing', 'barcode_pos', 'returns', 'wallets'].includes(i.module) || i.href === '/payment-history'
         ),
       },
       {
@@ -153,7 +154,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
       {
         title: collapsed ? undefined : 'Admin',
         items: filteredNavItems.filter(i =>
-          ['users', 'activity_logs', 'settings'].includes(i.module)
+          ['users', 'activity_logs', 'settings'].includes(i.module) && i.href !== '/payment-history'
         ),
       },
       {

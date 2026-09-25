@@ -43,11 +43,33 @@ import { sendSuccess, sendCreated, sendMessage } from '../utils/response.util';
 import { sendReviewStatusEmail } from '../utils/email.util';
 import logger from '../utils/logger.util';
 import activityLogService from '../services/activity-log.service';
+import adminPaymentController from '../controllers/admin-payment.controller';
 
 const router = Router();
 
 // Apply authentication to all admin routes
 router.use(authenticate);
+
+// ==========================================
+// PAYMENT HISTORY (Admin Only)
+// ==========================================
+router.get(
+  '/payment-history/summary',
+  isAdmin,
+  adminPaymentController.getPaymentSummary
+);
+
+router.get(
+  '/payment-history/:id',
+  isAdmin,
+  adminPaymentController.getPaymentDetails
+);
+
+router.get(
+  '/payment-history',
+  isAdmin,
+  adminPaymentController.getPaymentHistory
+);
 
 // ====== Dashboard - Accessible by all internal roles ======
 router.get('/dashboard/sales-stats', canAccessDashboard, adminController.getSalesDashboard);
@@ -56,6 +78,7 @@ router.get('/dashboard/stats', canAccessDashboard, adminController.getDashboard)
 router.get('/dashboard/revenue', canAccessDashboard, adminController.getMonthlyRevenue);
 router.get('/dashboard/top-products', canAccessDashboard, adminController.getTopProducts);
 router.get('/dashboard/recent-orders', canAccessDashboard, adminController.getRecentOrders);
+router.get('/dashboard/sales-person-performance/:salesPersonId', canAccessDashboard, adminController.getSalesPersonPerformance);
 router.get('/sales-report', canAccessReports, adminController.getSalesReport);
 
 // ====== Report Downloads - Admin, Sales, Purchase only ======

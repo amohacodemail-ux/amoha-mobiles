@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Eye, Download } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -38,6 +38,21 @@ export default function PurchaseOrdersPage() {
       setLoading(false);
     }
   }, []);
+
+  const handleDownloadPdf = async (po: any) => {
+    try {
+      const response = await apiClient.get(`/suppliers/purchase-orders/${po.id || po._id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data as any]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `PO-${po.poNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (err) {
+      toast.error('Failed to download PDF');
+    }
+  };
 
   const handleMakePayment = (po: any) => {
     setPaymentPO(po);
@@ -128,6 +143,9 @@ export default function PurchaseOrdersPage() {
                             Make Payment
                           </Button>
                         )}
+                        <Button variant="ghost" size="sm" onClick={() => handleDownloadPdf(po)} title="Download PDF">
+                          <Download className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => setViewPO(po)}>
                           <Eye className="w-4 h-4 mr-2" /> View
                         </Button>

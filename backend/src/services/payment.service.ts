@@ -1,4 +1,4 @@
-﻿import supabase from '../config/supabase';
+import supabase from '../config/supabase';
 import { transformRow } from '../utils/transform.util';
 import { NotFoundError, BadRequestError } from '../errors/app-error';
 import Razorpay from 'razorpay';
@@ -48,7 +48,34 @@ class PaymentService {
     const verification = await this.verifyPayment(paymentData);
     if (!verification.verified) throw new BadRequestError('Payment verification failed');
 
-    // Create the order
+    const paymentId = paymentData.razorpay_payment_id;
+
+    // 1. Idempotency check: see if transaction already exists and has an order linked
+    const { data: existingTx } = await supabase
+      .from('payment_transactions')
+      .select('id, order_id, status')
+      .eq('razorpay_payment_id', paymentId)
+      .maybeSingle();
+
+    if (existingTx?.order_id && existingTx.status === 'success') {
+      // Order already created, just return it
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('*, order_status_history(*)')
+        .eq('id', existingTx.order_id)
+        .single();
+      
+      const { data: existingItems } = await supabase.from('order_items').select('*').eq('order_id', existingTx.order_id);
+      
+      const transformed = transformRow(existingOrder);
+      transformed.items = (existingItems || []).map(transformRow);
+      transformed.statusHistory = (existingOrder.order_status_history || []).map(transformRow);
+      delete transformed.orderItems;
+      delete transformed.orderStatusHistory;
+      return transformed;
+    }
+
+    // 2. Create the order
     const orderInsert: any = {
       user_id: userId,
       order_number: orderData.orderNumber || this.generateOrderNumber(),
@@ -57,7 +84,7 @@ class PaymentService {
       payment_method: orderData.paymentMethod || 'razorpay',
       payment_status: 'paid',
       razorpay_order_id: paymentData.razorpay_order_id,
-      razorpay_payment_id: paymentData.razorpay_payment_id,
+      razorpay_payment_id: paymentId,
       subtotal: orderData.subtotal,
       tax: orderData.tax || 0,
       shipping_fee: orderData.shippingFee || 0,
@@ -70,6 +97,25 @@ class PaymentService {
 
     const { data: order, error } = await supabase.from('orders').insert(orderInsert).select('*').single();
     if (error) throw error;
+
+    // 3. Upsert the payment transaction linked to this order
+    const txData = {
+      order_id: order.id,
+      razorpay_order_id: paymentData.razorpay_order_id,
+      razorpay_payment_id: paymentId,
+      razorpay_signature: paymentData.razorpay_signature,
+      customer_id: userId,
+      amount: orderData.total,
+      currency: 'INR',
+      payment_method: 'razorpay',
+      status: 'success'
+    };
+
+    if (existingTx) {
+      await supabase.from('payment_transactions').update(txData).eq('id', existingTx.id);
+    } else {
+      await supabase.from('payment_transactions').insert([txData]);
+    }
 
     // Insert order items
     if (orderData.items?.length) {
